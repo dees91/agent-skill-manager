@@ -16,8 +16,9 @@ intentionally excluded.
 
 - Upgraded desktop `golang.org/x/crypto`, `x/net`, and `x/sys` after Dependabot
   identified patched 2026 advisories before the release tag was created.
-- Raised the root CLI module requirement to Go 1.25 so its transitive `x/sys`
-  dependency also contains the available security fix.
+- Raised both module requirements to Go 1.25.12 so their standard libraries and
+  the root CLI's transitive `x/sys` dependency contain the available security
+  fixes.
 - Added pinned `govulncheck` gates to local release verification and public CI.
 
 ## [2026-08-13] implementation | Hardened the public preview boundary
