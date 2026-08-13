@@ -1,0 +1,6 @@
+.DS_Store
+bin/
+desktop/build/bin/
+desktop/frontend/dist/
+desktop/frontend/node_modules/
+desktop/frontend/package.json.md5

@@ -1,0 +1,99 @@
+# State, Safety, And Recovery
+
+## Managed Layout
+
+```text
+~/.skill-manager/
+  state.json
+  backups/
+  disabled/
+    claude/<skill-name>
+    codex/<skill-name>
+  repos/<host>/<repo-path>
+  trash/uninstall-<operation-id>/
+```
+
+All paths are derived from `$HOME` by [`internal/paths`](../../../internal/paths/paths.go).
+Configuration-file overrides are intentionally absent in the current scope.
+
+## Manifest Responsibilities
+
+`state.json` version 2 stores three collections:
+
+- Disabled entries: tool, skill name, original and disabled paths, entry type,
+  optional symlink target, source, group, and disable timestamp.
+- Managed repositories: original/canonical URL, normalized host/path, checkout,
+  group, installed skill relative paths/tools, install timestamp, and optional
+  last seen commit.
+- Local sources: original and canonical absolute paths, group, installed skill
+  relative paths/tools, and install timestamp.
+
+Version 1 manifests load in memory with an empty local-source collection and
+are written as version 2 on the next mutation. Unknown newer versions are
+rejected. Repository identities, local source paths, skills, and tool lists are
+normalized into deterministic order during load/save operations.
+
+The skills.sh catalog cache is separate from `state.json` at
+`cache/skills-sh/catalog-v1.json`. It stores normalized pages and parsed detail
+metadata only, is replace-written atomically, and is never an ownership source
+of truth. Deleting it loses only offline browsing data; installed-state
+projection still comes from the filesystem and manifest.
+
+## Persistence Guarantees
+
+- A missing manifest loads as an empty versioned manifest.
+- Save writes indented JSON to a same-directory temporary file and replaces the
+  manifest with `rename`.
+- Before the first apply in a toggle, install, update, or uninstall service
+  process, an existing manifest is copied to a timestamped backup.
+- Toggle apply persists the successfully completed prefix when a later move
+  fails.
+- Install symlink apply updates repository metadata only after link creation
+  succeeds.
+- Update writes `lastSeenCommit` only after a successful fetch, target-tree
+  preflight, and fast-forward (or confirmed up-to-date checkout).
+- Uninstall stages only audited owned paths, saves the reduced manifest, and
+  then removes staging. Pre-save failures restore staged paths in reverse order.
+
+## Mutation Boundary
+
+The tool may:
+
+- move user skill entries between active and disabled directories;
+- create managed checkout directories through `git clone`;
+- create user-skill symlinks into those checkouts;
+- create user-skill symlinks into user-owned local sources;
+- fetch and fast-forward clean Skill Manager-managed checkouts;
+- remove a complete audited managed repository installation through staging;
+- remove an audited local installation's links and state through staging;
+- write Skill Manager state and backups.
+
+The tool must not:
+
+- delete or edit skill source repositories or `SKILL.md`;
+- copy, update, move, stage, or delete a link-in-place local source directory;
+- rewrite Skills CLI or plugin metadata/lockfiles;
+- mutate Codex system skills or Claude plugin cache skills;
+- overwrite, merge, delete, or rename a conflict blocker;
+- implicitly enable a matching skill that is already disabled.
+
+## Recovery Limits
+
+- Restore requires both the manifest record and the disabled filesystem entry.
+- Full recovery by scanning `disabled/` without a manifest is deferred.
+- Toggle batches do not provide transactional rollback; their completed prefix
+  is the recoverable truth.
+- Install rollback covers symlinks created by the failed apply, not a checkout
+  cloned earlier in the operation.
+- Local install rolls back its newly created links if state persistence fails.
+- If state save fails after a Git fast-forward, the checkout is already updated
+  and the error reports that state persistence failed.
+- Uninstall rollback is available only before state save. If final staging
+  cleanup fails after state save, the logical uninstall is complete and the
+  reported `trash/` path requires manual cleanup.
+- Conflict remediation is manual and should preserve both the disabled entry
+  and the unexpected blocker until the user chooses a resolution.
+
+Use CLI dry-run before a direct mutation and temporary-home tests during
+development. Never validate destructive behavior against the real global skill
+directories.

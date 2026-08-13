@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Skill Manager",
+  "outputfilename": "skill-manager-gui",
+  "frontend:install": "npm ci",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "wailsjsdir": "./frontend",
+  "author": {
+    "name": "Skill Manager contributors"
+  },
+  "info": {
+    "companyName": "dees91",
+    "productName": "Skill Manager",
+    "productVersion": "0.4.0",
+    "comments": "Local manager for Claude Code and Codex skills"
+  }
+}

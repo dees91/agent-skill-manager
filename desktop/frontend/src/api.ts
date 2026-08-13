@@ -1,0 +1,157 @@
+import {
+  ApplyInstall,
+  ApplyPending,
+  ChooseLocalInstall,
+  ClearPending,
+  GetDiscoverPage,
+  GetDiscoverSkill,
+  GetSnapshot,
+  InstallDiscoverSkill,
+  PrepareGitInstall,
+  PreviewUninstall,
+  ReviewInstall,
+  SearchDiscover,
+  ToggleBoth,
+  ToggleCell,
+  ToggleGroup,
+  ToggleGroupScope,
+  ToggleSkillScope,
+  ToggleVisible,
+  UndoCell,
+  UninstallSource,
+  UpdateAllSources,
+  UpdateSource,
+} from '../wailsjs/go/main/App'
+import type { contextbudget, gui } from '../wailsjs/go/models'
+
+export type Snapshot = gui.Snapshot
+export type SkillRow = gui.SkillRow
+export type SkillCell = gui.SkillCell
+export type PendingChange = gui.PendingChange
+export type ActionResult = gui.ActionResult
+export type ApplyResult = gui.ApplyResult
+export type ContextBudgetReports = contextbudget.Reports
+export type ContextBudgetToolReport = contextbudget.ToolReport
+export type ManagedSource = gui.ManagedSource
+export type InstallDraft = gui.InstallDraft
+export type InstallReview = gui.InstallReview
+export type InstallCellRequest = gui.InstallCellRequest
+export type SourceMutationResult = gui.SourceMutationResult
+export type UninstallPreview = gui.UninstallPreview
+export type DiscoverPage = gui.DiscoverPage
+export type DiscoverSkill = gui.DiscoverSkill
+export type DiscoverDetail = gui.DiscoverDetail
+export interface SourceProgress {
+  operation: string
+  phase: string
+  group?: string
+  current?: number
+  total?: number
+  message: string
+}
+
+export interface Backend {
+  getSnapshot(includeReadOnly: boolean): Promise<Snapshot>
+  toggleCell(skillName: string, tool: string): Promise<ActionResult>
+  toggleBoth(skillName: string): Promise<ActionResult>
+  toggleGroup(group: string): Promise<ActionResult>
+  toggleGroupScope(group: string, tools: string[]): Promise<ActionResult>
+  toggleSkillScope(skillNames: string[], tools: string[]): Promise<ActionResult>
+  toggleVisible(skillNames: string[]): Promise<ActionResult>
+  undoCell(skillName: string, tool: string): Promise<ActionResult>
+  clearPending(): Promise<ActionResult>
+  applyPending(includeReadOnly: boolean): Promise<ApplyResult>
+  prepareGitInstall(gitURL: string): Promise<InstallDraft>
+  chooseLocalInstall(): Promise<InstallDraft>
+  reviewInstall(draftID: string, selections: InstallCellRequest[]): Promise<InstallReview>
+  applyInstall(reviewID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
+  getDiscoverPage(view: string, page: number, forceRefresh: boolean): Promise<DiscoverPage>
+  searchDiscover(query: string): Promise<DiscoverPage>
+  getDiscoverSkill(skillID: string, forceRefresh: boolean): Promise<DiscoverDetail>
+  installDiscoverSkill(skillID: string, tools: string[], includeReadOnly: boolean): Promise<SourceMutationResult>
+  updateSource(sourceID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
+  updateAllSources(includeReadOnly: boolean): Promise<SourceMutationResult>
+  previewUninstall(sourceID: string): Promise<UninstallPreview>
+  uninstallSource(sourceID: string, confirmation: string, includeReadOnly: boolean): Promise<SourceMutationResult>
+}
+
+const generatedBackend: Backend = {
+  getSnapshot: GetSnapshot,
+  toggleCell: ToggleCell,
+  toggleBoth: ToggleBoth,
+  toggleGroup: ToggleGroup,
+  toggleGroupScope: ToggleGroupScope,
+  toggleSkillScope: ToggleSkillScope,
+  toggleVisible: ToggleVisible,
+  undoCell: UndoCell,
+  clearPending: ClearPending,
+  applyPending: ApplyPending,
+  prepareGitInstall: PrepareGitInstall,
+  chooseLocalInstall: ChooseLocalInstall,
+  reviewInstall: ReviewInstall,
+  applyInstall: ApplyInstall,
+  getDiscoverPage: GetDiscoverPage,
+  searchDiscover: SearchDiscover,
+  getDiscoverSkill: GetDiscoverSkill,
+  installDiscoverSkill: InstallDiscoverSkill,
+  updateSource: UpdateSource,
+  updateAllSources: UpdateAllSources,
+  previewUninstall: PreviewUninstall,
+  uninstallSource: UninstallSource,
+}
+
+async function activeBackend(): Promise<Backend> {
+  const bridgeAvailable = Boolean((window as Window & { go?: unknown }).go)
+  if (bridgeAvailable) return generatedBackend
+  if (import.meta.env.DEV) return (await import('./demoBackend')).demoBackend
+  throw new Error('The native Skill Manager bridge is unavailable.')
+}
+
+export const wailsBackend: Backend = {
+  getSnapshot: async (...args) => (await activeBackend()).getSnapshot(...args),
+  toggleCell: async (...args) => (await activeBackend()).toggleCell(...args),
+  toggleBoth: async (...args) => (await activeBackend()).toggleBoth(...args),
+  toggleGroup: async (...args) => (await activeBackend()).toggleGroup(...args),
+  toggleGroupScope: async (...args) => (await activeBackend()).toggleGroupScope(...args),
+  toggleSkillScope: async (...args) => (await activeBackend()).toggleSkillScope(...args),
+  toggleVisible: async (...args) => (await activeBackend()).toggleVisible(...args),
+  undoCell: async (...args) => (await activeBackend()).undoCell(...args),
+  clearPending: async (...args) => (await activeBackend()).clearPending(...args),
+  applyPending: async (...args) => (await activeBackend()).applyPending(...args),
+  prepareGitInstall: async (...args) => (await activeBackend()).prepareGitInstall(...args),
+  chooseLocalInstall: async (...args) => (await activeBackend()).chooseLocalInstall(...args),
+  reviewInstall: async (...args) => (await activeBackend()).reviewInstall(...args),
+  applyInstall: async (...args) => (await activeBackend()).applyInstall(...args),
+  getDiscoverPage: async (...args) => (await activeBackend()).getDiscoverPage(...args),
+  searchDiscover: async (...args) => (await activeBackend()).searchDiscover(...args),
+  getDiscoverSkill: async (...args) => (await activeBackend()).getDiscoverSkill(...args),
+  installDiscoverSkill: async (...args) => (await activeBackend()).installDiscoverSkill(...args),
+  updateSource: async (...args) => (await activeBackend()).updateSource(...args),
+  updateAllSources: async (...args) => (await activeBackend()).updateAllSources(...args),
+  previewUninstall: async (...args) => (await activeBackend()).previewUninstall(...args),
+  uninstallSource: async (...args) => (await activeBackend()).uninstallSource(...args),
+}
+
+export function projectPending(snapshot: Snapshot, pending: PendingChange[], contextBudgets: ContextBudgetReports): Snapshot {
+  const byCell = new Map(pending.map((change) => [`${change.tool}:${change.skillName}`, change.operation]))
+  return {
+    ...snapshot,
+    pending,
+    contextBudgets,
+    rows: snapshot.rows.map((row) => ({
+      ...row,
+      claude: projectCell(row.claude, byCell),
+      codex: projectCell(row.codex, byCell),
+    })),
+  } as Snapshot
+}
+
+function projectCell(cell: SkillCell | undefined, pending: Map<string, string>): SkillCell | undefined {
+  if (!cell) return undefined
+  const operation = pending.get(`${cell.tool}:${cell.name}`)
+  return {
+    ...cell,
+    pending: operation,
+    effectiveState: operation === 'disable' ? 'OFF' : operation === 'enable' ? 'ON' : cell.state,
+  } as SkillCell
+}
