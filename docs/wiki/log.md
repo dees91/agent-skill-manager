@@ -4,6 +4,14 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-13] publication | Published the v0.4.1 public preview
+
+- Replaced the private `v0.4.0` prerelease/tag with verified Apple Silicon
+  `v0.4.1` desktop and CLI artifacts plus checksums and dependency notices.
+- Made the repository public, added passing pinned-action CI and Dependabot,
+  enabled private vulnerability reporting and GitHub security scanning, and
+  protected `main` from deletion and non-fast-forward pushes.
+
 ## [2026-08-13] implementation | Hardened the public preview boundary
 
 - Version `0.4.1` uses owner-only state/cache metadata, bounded state backups,

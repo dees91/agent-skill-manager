@@ -1,8 +1,7 @@
 # Phase 13: Public Preview Hardening - Task Breakdown
 
-> **Status:** implemented pending final clean-commit packaging and GitHub
-> repository operations (2026-08-13). This phase publishes `v0.4.1` as the
-> first public binary preview and addresses the privacy/licensing audit.
+> **Status:** done (2026-08-13). This phase publishes `v0.4.1` as the first
+> public binary preview and addresses the privacy/licensing audit.
 
 ## Accepted Decisions
 
@@ -27,8 +26,8 @@
 | P13-T04 | Remove Discover from public Wails bindings and React navigation | done |
 | P13-T05 | Generate and package dependency notices for CLI and desktop | done |
 | P13-T06 | Update privacy, security, release, README, agent brief, and wiki | done |
-| P13-T07 | Add CI, Dependabot, templates, and repository security settings | pending |
-| P13-T08 | Run clean release packaging, replace tag/release, and publish repo | pending |
+| P13-T07 | Add CI, Dependabot, templates, and repository security settings | done |
+| P13-T08 | Run clean release packaging, replace tag/release, and publish repo | done |
 
 ## Completion Criteria
 

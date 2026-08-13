@@ -121,8 +121,8 @@ make release-package RELEASE_VERSION=0.4.1
   hidden Discover binding/UI, dependency notices, and public `v0.4.1`
   repository/release hardening.
 
-Phase 13's local implementation is complete; clean-commit packaging and GitHub
-repository/release operations remain the final publication steps.
+All Phase 13 tasks are complete after clean-commit packaging, successful public
+CI, repository security configuration, and `v0.4.1` prerelease publication.
 
 ## Explicitly Deferred Work
 
