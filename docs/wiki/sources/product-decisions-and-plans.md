@@ -57,6 +57,10 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   - `documented`: public namespace and policy files, anonymized documentation
     and screenshots, clean-clone verification, local publication checks, and
     single-root public history.
+- [`planning/phase-12-github-release-tasks.md`](../../../planning/phase-12-github-release-tasks.md)
+  - `documented`: locally verified macOS ARM64 desktop/CLI archives, CLI
+    version reporting, versioned release notes, checksums, and manual GitHub
+    prerelease publication.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.

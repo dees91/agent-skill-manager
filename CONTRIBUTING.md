@@ -64,6 +64,30 @@ For GUI changes, also run `make gui-build` and verify the ad-hoc signature,
 ARM64 architecture, launch behavior, relevant viewport sizes, keyboard use,
 and accessible names. Regenerate Wails bindings when the bound Go API changes.
 
+## Release Packaging
+
+Release artifacts are built locally on Apple Silicon macOS from a clean
+checkout. The packaging command does not create tags, push commits, or change
+GitHub releases:
+
+```bash
+make release-package RELEASE_VERSION=0.4.0
+```
+
+It verifies version metadata, root/desktop/frontend tests and vet, frontend
+type checking/build, the npm high-severity audit, Wails packaging, ad-hoc
+signatures, thin ARM64 binaries, bundle metadata, isolated-home launch,
+re-extracted archives, and SHA-256 sums. Successful output is ignored under
+`dist/release/`.
+
+For an approved version, commit first and run the command from that clean
+commit. Push `main` without force, create and push an annotated `v<version>`
+tag at the verified commit, and create a draft prerelease with
+`docs/releases/v<version>.md` and all three generated files. Download the draft
+assets into a temporary directory and repeat checksum, archive, signature,
+architecture, and version checks before publishing it as a non-latest
+prerelease. GitHub Actions and automatic publishing are intentionally absent.
+
 ## Pull Requests
 
 Keep changes focused and explain their user-visible behavior, safety impact,

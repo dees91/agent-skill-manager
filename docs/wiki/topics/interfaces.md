@@ -3,6 +3,8 @@
 ## CLI Surface
 
 - `skill-manager tui` and bare `skill-manager` launch the Bubble Tea UI.
+- `version` and `--version` print the release version, tagged Go module version,
+  or `dev` for an unversioned repository build.
 - `list` shows discovered skill rows and tool states.
 - `status` summarizes `ON`, `OFF`, `CONFLICT`, and `RO` cells.
 - `groups` summarizes group rows, per-tool state counts, and sources.

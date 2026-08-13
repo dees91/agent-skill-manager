@@ -22,9 +22,10 @@ The current source version is `0.4.0`.
   contract yet.
 - Provider locations are fixed relative to the current user's home directory.
   Custom Claude or Codex skill roots are not configurable in this version.
-- Desktop builds are ad-hoc signed, not Developer ID signed or notarized.
-- Universal macOS binaries, packaged releases, auto-update, and telemetry are
-  not included.
+- Release downloads are built for Apple Silicon and ad-hoc signed, not
+  Developer ID signed or notarized.
+- Universal macOS binaries, DMG installers, auto-update, and telemetry are not
+  included.
 
 ## Managed Paths
 
@@ -43,7 +44,45 @@ Entries without a regular `SKILL.md` are hidden. The filesystem is rescanned
 at startup, on explicit refresh, and after mutations; the manifest is not used
 as a replacement for live discovery.
 
-## Installation From Source
+## Installation
+
+### GitHub Release Preview
+
+The private [`v0.4.0` prerelease](https://github.com/dees91/agent-skill-manager/releases/tag/v0.4.0)
+provides two Apple Silicon downloads:
+
+- `skill-manager-desktop-0.4.0-macos-arm64.zip` contains `Skill Manager.app`;
+- `skill-manager-cli-0.4.0-macos-arm64.tar.gz` contains the terminal binary,
+  README, and license.
+
+Download the matching archive together with `SHA256SUMS.txt`, then compare its
+SHA-256 digest with the corresponding manifest line. For example:
+
+```bash
+shasum -a 256 skill-manager-desktop-0.4.0-macos-arm64.zip
+grep 'skill-manager-desktop-0.4.0-macos-arm64.zip' SHA256SUMS.txt
+```
+
+The two hashes must be identical. The checksum detects an incomplete or
+changed download; it is not a Developer ID signature or notarization ticket.
+
+For the desktop app, expand the ZIP and move `Skill Manager.app` to
+`/Applications`. On first launch, macOS may block the app because the preview
+is not notarized. Control-click the app, choose **Open**, then confirm **Open**.
+If that option is not offered, try once normally and use **System Settings →
+Privacy & Security → Open Anyway** only after verifying the checksum and source.
+
+For the CLI, extract the archive and install the executable on `PATH`:
+
+```bash
+tar -xzf skill-manager-cli-0.4.0-macos-arm64.tar.gz
+install -m 0755 \
+  skill-manager-cli-0.4.0-macos-arm64/skill-manager \
+  "$HOME/.local/bin/skill-manager"
+skill-manager --version
+```
+
+### Installation From Source
 
 The terminal application requires Go 1.22 or newer:
 
@@ -67,7 +106,7 @@ make build
 make dev BIN="$HOME/bin/skill-manager"
 ```
 
-### Desktop Application
+### Building The Desktop Application
 
 The desktop build requires Go 1.25 or newer, Node.js/npm, Xcode command-line
 tools, and network access for dependency installation:
@@ -93,6 +132,7 @@ skill-manager tui
 Read-only commands:
 
 ```bash
+skill-manager version
 skill-manager list
 skill-manager status
 skill-manager groups

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -92,7 +93,7 @@ func TestRunHelpListsCommands(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run(help) code = %d, want 0", code)
 	}
-	for _, command := range []string{"tui", "list", "status", "groups", "repos", "install", "update", "uninstall", "enable", "disable"} {
+	for _, command := range []string{"tui", "version", "list", "status", "groups", "repos", "install", "update", "uninstall", "enable", "disable"} {
 		if !strings.Contains(stdout.String(), command) {
 			t.Fatalf("stdout = %q, want command %q", stdout.String(), command)
 		}
@@ -104,6 +105,67 @@ func TestRunHelpListsCommands(t *testing.T) {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestRunVersionEntryPoints(t *testing.T) {
+	originalVersion := Version
+	Version = "v0.4.0"
+	t.Cleanup(func() { Version = originalVersion })
+
+	for _, args := range [][]string{{"version"}, {"--version"}} {
+		var stdout, stderr strings.Builder
+		code := Run(args, &stdout, &stderr)
+
+		if code != 0 {
+			t.Fatalf("Run(%q) code = %d, want 0", args, code)
+		}
+		if stdout.String() != "skill-manager 0.4.0\n" {
+			t.Fatalf("Run(%q) stdout = %q", args, stdout.String())
+		}
+		if stderr.Len() != 0 {
+			t.Fatalf("Run(%q) stderr = %q, want empty", args, stderr.String())
+		}
+	}
+}
+
+func TestRunVersionRejectsArguments(t *testing.T) {
+	for _, args := range [][]string{{"version", "extra"}, {"--version", "extra"}} {
+		var stdout, stderr strings.Builder
+		code := Run(args, &stdout, &stderr)
+
+		if code == 0 {
+			t.Fatalf("Run(%q) code = 0, want non-zero", args)
+		}
+		if stdout.Len() != 0 {
+			t.Fatalf("Run(%q) stdout = %q, want empty", args, stdout.String())
+		}
+		if !strings.Contains(stderr.String(), "does not accept arguments") {
+			t.Fatalf("Run(%q) stderr = %q", args, stderr.String())
+		}
+	}
+}
+
+func TestResolveVersion(t *testing.T) {
+	tests := []struct {
+		name          string
+		linkerVersion string
+		buildInfo     *debug.BuildInfo
+		buildInfoOK   bool
+		want          string
+	}{
+		{name: "development", linkerVersion: "dev", want: "dev"},
+		{name: "linker", linkerVersion: "v0.4.0", buildInfo: &debug.BuildInfo{Main: debug.Module{Version: "v9.9.9"}}, buildInfoOK: true, want: "0.4.0"},
+		{name: "tagged module", linkerVersion: "dev", buildInfo: &debug.BuildInfo{Main: debug.Module{Version: "v0.5.0"}}, buildInfoOK: true, want: "0.5.0"},
+		{name: "devel module", linkerVersion: "dev", buildInfo: &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}}, buildInfoOK: true, want: "dev"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := resolveVersion(test.linkerVersion, test.buildInfo, test.buildInfoOK); got != test.want {
+				t.Fatalf("resolveVersion() = %q, want %q", got, test.want)
+			}
+		})
 	}
 }
 

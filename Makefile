@@ -2,7 +2,7 @@ BIN ?= $(HOME)/.local/bin/skill-manager
 WAILS_VERSION ?= v2.13.0
 WAILS = go run github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)
 
-.PHONY: dev install build test test-all gui-dev gui-bindings gui-test gui-build clean
+.PHONY: dev install build test test-all gui-dev gui-bindings gui-test gui-build release-package clean
 
 dev: install
 
@@ -34,8 +34,11 @@ gui-test:
 	cd desktop && go test ./...
 
 gui-build:
-	cd desktop && $(WAILS) build -platform darwin/arm64 -clean -nocolour
+	cd desktop && $(WAILS) build -platform darwin/arm64 -clean -nocolour -skipbindings
 	@echo "Built desktop/build/bin/Skill Manager.app (local ad-hoc signed darwin/arm64)"
+
+release-package:
+	@RELEASE_VERSION="$(RELEASE_VERSION)" ./scripts/package-release.sh
 
 clean:
 	rm -rf bin

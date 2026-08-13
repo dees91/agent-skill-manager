@@ -1,5 +1,6 @@
 .DS_Store
 bin/
+/dist/
 desktop/build/bin/
 desktop/frontend/dist/
 desktop/frontend/node_modules/

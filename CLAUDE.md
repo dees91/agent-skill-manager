@@ -13,7 +13,8 @@ Before making code or documentation changes:
 7. If working on local path install or uninstall behavior or documentation, read [planning/phase-5-local-path-install-tasks.md](./planning/phase-5-local-path-install-tasks.md).
 8. If working on the desktop app, read the relevant Phase 6-10 planning file.
 9. If working on publication or repository hygiene, read [planning/phase-11-publication-readiness-tasks.md](./planning/phase-11-publication-readiness-tasks.md).
-10. Follow the task status rules in the relevant planning file before starting and after finishing work.
+10. If working on GitHub release artifacts, read [planning/phase-12-github-release-tasks.md](./planning/phase-12-github-release-tasks.md).
+11. Follow the task status rules in the relevant planning file before starting and after finishing work.
 
 After non-trivial work that creates reusable knowledge, update the relevant wiki topic/source pages and append to [docs/wiki/log.md](./docs/wiki/log.md). The wiki is a synthesis layer; verify current behavior against code and tests and keep accepted product decisions in `AGENTS.md` and the relevant planning file.
 

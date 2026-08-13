@@ -4,6 +4,21 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-13] decision | Approved private GitHub preview binaries
+
+- Version `0.4.0` gains locally built Apple Silicon desktop and CLI archives,
+  one SHA-256 manifest, and repository-owned release notes.
+- Publication remains a manual `gh` workflow; signing is ad-hoc and CI,
+  notarization, DMG, universal binaries, and auto-update remain deferred.
+
+## [2026-08-13] implementation | Added local release packaging
+
+- Added CLI version reporting and a clean-checkout packaging workflow that
+  validates source, frontend, desktop, extracted archives, signatures,
+  architecture, metadata, isolated-home launch, and checksums.
+- Documented downloads, integrity checks, Gatekeeper approval, maintainer
+  publication steps, and the Phase 12 distribution contract.
+
 ## [2026-08-13] decision | Simplified local release verification
 
 - Removed the repository-specific release-check target and its documentation.

@@ -62,6 +62,12 @@ func (a App) Run(args []string, stdout, stderr io.Writer) int {
 	case "help", "-h", "--help":
 		printUsage(stdout)
 		return 0
+	case "version", "--version":
+		if len(args) != 1 {
+			return usageError(stderr, args[0]+" does not accept arguments")
+		}
+		fmt.Fprintf(stdout, "skill-manager %s\n", currentVersion())
+		return 0
 	case "tui":
 		if len(args) != 1 {
 			return usageError(stderr, "tui does not accept arguments")
@@ -996,6 +1002,7 @@ func printUsage(stdout io.Writer) {
 
 Commands:
   tui                          Open the terminal UI
+  version                      Print the Skill Manager version
   list                         List discovered skills
   status                       Summarize skill states
   groups                       Summarize detected groups

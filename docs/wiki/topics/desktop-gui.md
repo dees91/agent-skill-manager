@@ -139,14 +139,18 @@ make gui-dev
 make gui-bindings
 make gui-test
 make gui-build
+make release-package RELEASE_VERSION=0.4.0
 ```
 
-`make gui-build` produces a locally ad-hoc-signed Apple Silicon app. Developer
-ID signing, notarization, universal packaging, publishing, and update delivery
-are deferred. The build retains Wails' ad-hoc signature because it is required
-for reliable launch on the supported macOS target. Verification uses an
-isolated temporary home and synthetic frontend data; it must not inspect or
-publish the developer's actual provider directories.
+`make gui-build` produces a local ad-hoc-signed Apple Silicon app.
+`make release-package` requires a clean Apple Silicon macOS checkout, runs the
+full local verification suite, builds the versioned desktop ZIP and CLI
+tarball, re-extracts them, checks their signatures/metadata/architecture and an
+isolated-home launch, and writes a SHA-256 manifest under ignored
+`dist/release/`. Developer ID signing, notarization, DMG and universal
+packaging, automatic publishing, and update delivery remain deferred. Release
+verification must not inspect or publish the developer's actual provider
+directories.
 
 See [architecture-and-data-flow.md](architecture-and-data-flow.md) for the
 service flow, [interfaces.md](interfaces.md) for controls, and

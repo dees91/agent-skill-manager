@@ -10,6 +10,7 @@ make build
 make dev
 make gui-test
 make gui-build
+make release-package RELEASE_VERSION=0.4.0
 ```
 
 - `go run .` is suitable for repository-local checks.
@@ -17,6 +18,8 @@ make gui-build
   `~/.local/bin/skill-manager`; run it after user-visible code changes.
 - Documentation-only changes do not require rebuilding the binary.
 - Release verification is local; the repository does not include CI yet.
+- Release packaging requires a clean Apple Silicon macOS checkout and leaves
+  only ignored archives and checksums under `dist/release/`.
 
 ## Test Strategy
 
@@ -108,8 +111,11 @@ make gui-build
 - Phase 11: public namespace and bundle identifier, MIT/public policy files,
   clean-clone build order, synthetic screenshots, documentation anonymization,
   release verification, and a single-root public history.
+- Phase 12: CLI version reporting, locally verified Apple Silicon desktop/CLI
+  archives, SHA-256 manifest, download/Gatekeeper documentation, and manual
+  private GitHub prerelease publication.
 
-All tasks in the eleven current planning summary tables are `done` after final
+All tasks in the twelve current planning summary tables are `done` after final
 verification.
 
 ## Explicitly Deferred Work
@@ -122,8 +128,8 @@ verification.
   ratings/comments, telemetry, and individual-skill uninstall from Discover.
 - Plugin enable/disable and disabled-state disaster recovery without a
   manifest.
-- Developer ID signing, notarization, universal macOS builds, publishing,
-  auto-update, and a light theme.
+- Developer ID signing, notarization, DMG and universal macOS builds, automated
+  publishing, auto-update, and a light theme.
 
 These are roadmap candidates, not implied commitments. A future iteration must
 define their semantics and safety model before implementation.

@@ -18,7 +18,8 @@
   experimental skills.sh discovery with exact selected-skill installation,
   Phase 10 active-first source-grouped Skills workspace, and Phase 11 public
   namespace, documentation, synthetic assets, clean-checkout verification, and
-  history hygiene.
+  history hygiene. Phase 12 adds locally verified Apple Silicon desktop and CLI
+  archives for a manually published GitHub prerelease.
 
 ## Product Shape
 

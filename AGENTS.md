@@ -712,6 +712,32 @@ changing runtime skill-management semantics.
   binaries, notarization, release automation, configurable provider paths, and
   supported non-macOS behavior remain deferred.
 
+### GitHub Binary Distribution (Iteration 12)
+
+Iteration 12 adds manually published GitHub Release artifacts without changing
+runtime skill-management semantics.
+
+- Build and verify releases locally. Do not add GitHub Actions or automatic
+  publishing in this iteration.
+- Publish `v0.4.0` as a prerelease in the private
+  `dees91/agent-skill-manager` repository.
+- Package the ad-hoc-signed Apple Silicon macOS app as ZIP and the
+  `darwin/arm64` CLI as `tar.gz`; publish one SHA-256 manifest for both.
+- The CLI exposes `skill-manager version` and `skill-manager --version`.
+  Release builds embed the release version; development builds report `dev`
+  unless tagged Go module build information supplies a version.
+- The packaging entry point validates a clean checkout, version consistency,
+  tests, vet, frontend checks, build output, signatures, architecture, archive
+  contents, and checksums before leaving ignored artifacts under
+  `dist/release/`.
+- Keep versioned release notes in the repository. README and release notes must
+  disclose Apple Silicon/macOS 13+ support, ad-hoc signing, lack of
+  notarization, and the expected Gatekeeper approval flow.
+- Developer ID signing, notarization, DMG packaging, universal binaries,
+  GitHub Actions, automatic publishing, and auto-update remain out of scope.
+- Never restore or commit `scripts/public-check.sh`; release packaging uses the
+  dedicated `scripts/package-release.sh` workflow.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -810,6 +836,8 @@ Keep [planning/phase-9-skillssh-discover-tasks.md](./planning/phase-9-skillssh-d
 Keep [planning/phase-10-skills-workspace-tasks.md](./planning/phase-10-skills-workspace-tasks.md) as the source of truth for Iteration 10 active-first Skills workspace task status.
 
 Keep [planning/phase-11-publication-readiness-tasks.md](./planning/phase-11-publication-readiness-tasks.md) as the source of truth for Iteration 11 public-source preparation task status.
+
+Keep [planning/phase-12-github-release-tasks.md](./planning/phase-12-github-release-tasks.md) as the source of truth for Iteration 12 GitHub binary release task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 
