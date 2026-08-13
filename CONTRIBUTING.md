@@ -58,7 +58,8 @@ make test-all
 ```
 
 Before submitting a change, also run `go vet ./...` in the root and desktop Go
-modules and `npm audit --audit-level=high` in `desktop/frontend`.
+modules, `make vulncheck`, and `npm audit --audit-level=high` in
+`desktop/frontend`.
 
 For GUI changes, also run `make gui-build` and verify the ad-hoc signature,
 ARM64 architecture, launch behavior, relevant viewport sizes, keyboard use,

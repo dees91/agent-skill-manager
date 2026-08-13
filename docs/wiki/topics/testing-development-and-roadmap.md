@@ -4,6 +4,7 @@
 
 ```bash
 go test ./...
+make vulncheck
 go run . help
 go run .
 make build
@@ -71,6 +72,7 @@ make release-package RELEASE_VERSION=0.4.1
 
 - Run focused package tests while iterating.
 - Run `go test ./...` before considering implementation work complete.
+- Run pinned `make vulncheck` across both Go modules before a release.
 - For user-visible behavior changes, update `README.md` and run `make dev` after
   tests.
 - If scope, semantics, paths, or UX change, update `AGENTS.md` and the relevant

@@ -684,7 +684,7 @@ shall terminate as of the date such litigation is filed.
 
 
 ================================================================================
-Go module: golang.org/x/sys v0.24.0
+Go module: golang.org/x/sys v0.44.0
 ================================================================================
 
 --- LICENSE ---

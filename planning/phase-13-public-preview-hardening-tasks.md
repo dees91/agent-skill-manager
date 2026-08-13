@@ -28,6 +28,7 @@
 | P13-T06 | Update privacy, security, release, README, agent brief, and wiki | done |
 | P13-T07 | Add CI, Dependabot, templates, and repository security settings | done |
 | P13-T08 | Run clean release packaging, replace tag/release, and publish repo | done |
+| P13-T09 | Upgrade vulnerable desktop Go modules and add govulncheck gates | done |
 
 ## Completion Criteria
 

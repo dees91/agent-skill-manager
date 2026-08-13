@@ -12,6 +12,14 @@ intentionally excluded.
   enabled private vulnerability reporting and GitHub security scanning, and
   protected `main` from deletion and non-fast-forward pushes.
 
+## [2026-08-13] security | Cleared initial dependency alerts
+
+- Upgraded desktop `golang.org/x/crypto`, `x/net`, and `x/sys` after Dependabot
+  identified patched 2026 advisories before the release tag was created.
+- Raised the root CLI module requirement to Go 1.25 so its transitive `x/sys`
+  dependency also contains the available security fix.
+- Added pinned `govulncheck` gates to local release verification and public CI.
+
 ## [2026-08-13] implementation | Hardened the public preview boundary
 
 - Version `0.4.1` uses owner-only state/cache metadata, bounded state backups,

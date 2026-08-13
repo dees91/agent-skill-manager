@@ -85,7 +85,7 @@ skill-manager --version
 
 ### Installation From Source
 
-The terminal application requires Go 1.22 or newer:
+The terminal application requires Go 1.25 or newer:
 
 ```bash
 go install github.com/dees91/agent-skill-manager@latest

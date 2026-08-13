@@ -148,6 +148,7 @@ fi
 
 printf '==> Verifying Go and frontend sources\n'
 make notices-check
+make vulncheck
 go test ./...
 go vet ./...
 (
