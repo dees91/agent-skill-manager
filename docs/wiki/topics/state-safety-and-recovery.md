@@ -33,19 +33,25 @@ are written as version 2 on the next mutation. Unknown newer versions are
 rejected. Repository identities, local source paths, skills, and tool lists are
 normalized into deterministic order during load/save operations.
 
-The skills.sh catalog cache is separate from `state.json` at
-`cache/skills-sh/catalog-v1.json`. It stores normalized pages and parsed detail
-metadata only, is replace-written atomically, and is never an ownership source
-of truth. Deleting it loses only offline browsing data; installed-state
-projection still comes from the filesystem and manifest.
+The dormant skills.sh catalog cache is separate from `state.json` at
+`cache/skills-sh/catalog-v1.json`. Its internal format is version 2: ranking
+pages and parsed detail metadata may remain, but search terms/results are never
+persisted. First desktop launch upgrades legacy version 1 caches and removes
+their query data. Deleting the cache loses only offline catalog metadata;
+installed-state projection still comes from the filesystem and manifest.
 
 ## Persistence Guarantees
 
 - A missing manifest loads as an empty versioned manifest.
 - Save writes indented JSON to a same-directory temporary file and replaces the
   manifest with `rename`.
+- Skill Manager state directories use mode `0700`; state, backup, and cache
+  JSON use `0600`. Startup/mutation repairs metadata permissions without
+  following symlinks or changing managed checkout file modes.
 - Before the first apply in a toggle, install, update, or uninstall service
   process, an existing manifest is copied to a timestamped backup.
+- Backup rotation preserves the newest valid backup, retains at most 10, and
+  removes valid backups older than 30 days while leaving foreign files alone.
 - Toggle apply persists the successfully completed prefix when a later move
   fails.
 - Install symlink apply updates repository metadata only after link creation

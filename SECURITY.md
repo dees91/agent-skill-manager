@@ -18,13 +18,14 @@ mitigation is available.
 
 ## Supported Versions
 
-Until tagged releases are published, only the current `main` branch is
-supported. The desktop application is supported only on the macOS target
-described in [README.md](README.md).
+The current `0.4.x` public preview and the current `main` branch receive
+best-effort support. The desktop application is supported only on the macOS
+target described in [README.md](README.md).
 
 ## Security Boundaries
 
-Skill Manager validates and moves filesystem entries, invokes Git for explicit
-repository operations, and can download metadata and skill files from
-skills.sh. It does not sandbox or attest third-party skills. Treat every skill
-source as executable instruction content and review it before installation.
+Skill Manager validates and moves filesystem entries and invokes Git for
+explicit repository operations. It does not sandbox or attest third-party
+skills. Treat every skill source as executable instruction content and review
+it before installation. The dormant skills.sh adapter is not exposed by the
+public preview desktop binding or interface.

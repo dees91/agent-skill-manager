@@ -90,7 +90,7 @@ native directory picker. Source operations share one non-cancellable mutation
 lane, block skill staging/apply and app close while active, and are themselves
 blocked by pending toggles.
 
-## skills.sh Discover Flow
+## Dormant skills.sh Discover Flow
 
 ```text
 ranking tab/search
@@ -103,17 +103,16 @@ ranking tab/search
   -> existing checkout, discovery, preflight, install apply, and rescan
 ```
 
-Catalog reads use observed anonymous JSON endpoints and degrade to an explicit
-offline cache without affecting local screens or mutations. Raw downloaded
-skill files are never cached. Offline and well-known/non-GitHub entries cannot
-be installed. Mutation calls carry only opaque catalog session/skill IDs and
-tool names; repository and skill paths are resolved again in Go immediately
-before apply.
+The Go adapter and domain tests preserve this experimental flow, but `v0.4.1`
+does not expose it through Wails or React and therefore makes no skills.sh
+request. Search queries remain in memory only; legacy persisted queries are
+removed on the first desktop snapshot. Raw downloaded skill files are never
+cached.
 
 ## Context Budget Flow
 
 ```text
-global scan rows + local provider settings/diagnostics
+global scan rows + local provider settings
   -> contextbudget.Analyzer (Claude and Codex in parallel)
   -> applied Reports + managed CellKey contributions
   -> gui.Service snapshot
@@ -122,10 +121,12 @@ global scan rows + local provider settings/diagnostics
   -> React current bars and After Apply marker
 ```
 
-Diagnostics are read-only, fixed-argument subprocesses with output limits,
-timeouts, and an injected home. The analyzer uses a neutral temporary working
-directory for Codex so repository/session skills do not enter the global
-measurement. Provider failure is report data, not a scan error.
+Default analysis is filesystem-only. Only the explicit Dashboard action runs
+read-only, fixed-argument subprocesses with output limits, timeouts, an exact
+argument allowlist, and an injected minimal environment that excludes secrets
+and proxies. The analyzer uses a neutral temporary working directory for Codex
+so repository/session skills do not enter the global measurement. Provider
+failure is report data, not a scan error.
 
 ## Toggle Flow
 

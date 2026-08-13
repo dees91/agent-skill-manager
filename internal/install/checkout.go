@@ -75,8 +75,11 @@ func (s CheckoutService) EnsureCheckout(identity RepoIdentity, checkoutPath stri
 				result.WouldClone = true
 				return result, nil
 			}
-			if err := os.MkdirAll(filepath.Dir(checkoutPath), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(checkoutPath), 0o700); err != nil {
 				return result, fmt.Errorf("create checkout parent %s: %w", filepath.Dir(checkoutPath), err)
+			}
+			if err := os.Chmod(filepath.Dir(checkoutPath), 0o700); err != nil {
+				return result, fmt.Errorf("secure checkout parent %s: %w", filepath.Dir(checkoutPath), err)
 			}
 			if _, err := s.runner.RunGit("clone", identity.OriginalURL, checkoutPath); err != nil {
 				return result, fmt.Errorf("clone repository %s into %s: %w", identity.OriginalURL, checkoutPath, err)

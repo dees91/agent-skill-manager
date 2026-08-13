@@ -9,10 +9,10 @@
 - The frontend uses React 19, TypeScript, Vite, Lucide outline icons, generated
   Wails bindings, and plain CSS tokens. There is no router, external state
   store, Tailwind, or chart library.
-- The dark-only app contains Dashboard, Skills, a managed-only Sources screen,
-  and experimental Discover. Iteration 8 exposes Git/local lifecycle actions;
-  Iteration 9 adds skills.sh browse/search and selected-skill install through
-  the same Go domain services as the CLI.
+- The `v0.4.1` dark-only public preview contains Dashboard, Skills, and a
+  managed-only Sources screen. Iteration 9's experimental skills.sh Go adapter
+  and domain tests remain in the repository, but Discover has no public Wails
+  binding or React navigation in this preview.
 - `implemented`: Iteration 7 adds a read-only global skill-catalog context
   panel to Dashboard without expanding the source-management surface.
 - `implemented`: Iteration 10 replaces the flat Skills table with an
@@ -42,11 +42,10 @@ and emit phase progress. Install revalidates exact matrix selections before
 apply. Update and uninstall resolve opaque IDs against the current manifest;
 uninstall additionally requires an exact group-name confirmation.
 
-Discover reads go through `internal/skillssh` and a versioned normalized cache.
-The Wails adapter accepts catalog session/skill IDs and selected tool names;
-it never accepts catalog-derived paths or repository URLs from React. Install
-requires fresh detail revalidation, resolves a fixed GitHub source in Go, and
-then enters the same exclusive source-operation lane and exact-cell planner.
+Dormant Discover reads go through `internal/skillssh` and a versioned normalized
+cache. Search terms/results are memory-only and legacy cache queries are
+removed on first desktop launch. The public `App` adapter intentionally exposes
+none of the catalog methods.
 
 ## Scan And Apply Behavior
 
@@ -77,13 +76,15 @@ then enters the same exclusive source-operation lane and exact-cell planner.
 
 ## Global Skill Context Budget
 
-- [`internal/contextbudget`](../../../internal/contextbudget/) measures startup
+- [`internal/contextbudget`](../../../internal/contextbudget/) estimates startup
   catalog metadata; it does not count full skill bodies loaded after a skill is
   selected.
-- Codex attempts a timeout-bounded, fixed-argument `debug prompt-input`
-  measurement in a neutral temporary directory and compares it with an
+- Ordinary scan/refresh uses only filesystem and settings evidence. An explicit
+  Dashboard action may run timeout-bounded fixed-argument Codex
+  `debug prompt-input` diagnostics and Claude `plugin list --json`.
+- Codex measurement uses a neutral temporary directory and compares it with an
   expanded-budget catalog to count shortened descriptions and omitted skills.
-  Model window evidence comes from local Codex diagnostics or its model cache.
+  Model window evidence comes only from its local config/model cache.
 - Claude estimates personal skills, legacy commands, and locally enumerable
   enabled plugin skills. It honors local listing overrides where detectable,
   defaults to a 1% listing budget, and labels the 200k unresolved-window
@@ -94,9 +95,10 @@ then enters the same exclusive source-operation lane and exact-cell planner.
 - `gui.Service` caches the applied report at scan boundaries. Staging, undo,
   clear, group, and visible-row actions project managed-cell deltas in memory
   and return an `After Apply` report without rerunning diagnostics.
-- Provider diagnostics inherit the injected home directory and are disabled
-  from ambient `PATH` resolution in temporary-home tests. Failures degrade to
-  labeled filesystem estimates and never fail the main skill scan.
+- Diagnostics inherit the injected home and only PATH/temp/locale/terminal
+  variables. Credentials, provider overrides, tokens, and proxies are omitted.
+  Their argument allowlist is exact. Failures degrade to labeled filesystem
+  estimates and never fail the main skill scan.
 
 ## Visual Contract
 
@@ -139,16 +141,16 @@ make gui-dev
 make gui-bindings
 make gui-test
 make gui-build
-make release-package RELEASE_VERSION=0.4.0
+make release-package RELEASE_VERSION=0.4.1
 ```
 
 `make gui-build` produces a local ad-hoc-signed Apple Silicon app.
 `make release-package` requires a clean Apple Silicon macOS checkout, runs the
-full local verification suite, builds the versioned desktop ZIP and CLI
+full local verification suite, verifies regenerated dependency notices, builds the versioned desktop ZIP and CLI
 tarball, re-extracts them, checks their signatures/metadata/architecture and an
 isolated-home launch, and writes a SHA-256 manifest under ignored
 `dist/release/`. Developer ID signing, notarization, DMG and universal
-packaging, automatic publishing, and update delivery remain deferred. Release
+packaging, SBOM/provenance, automatic publishing, and update delivery remain deferred. Release
 verification must not inspect or publish the developer's actual provider
 directories.
 

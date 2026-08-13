@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible Skill Manager problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private skill contents, or real home-directory listings. Use private vulnerability reporting for security issues.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.4.1 or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: macOS version, architecture, CLI/TUI/Desktop
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Prefer synthetic skill names and a temporary home.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+

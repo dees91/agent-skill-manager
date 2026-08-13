@@ -87,7 +87,8 @@ in public documentation.
 - **Buttons and badges:** orange filled primary actions, bordered secondary
   actions, cyan links, and compact state badges that never rely on color alone.
 - **Context budget:** one row per provider with an approximate token ratio,
-  model metadata, a visible percentage, and an optional post-Apply projection.
+  model metadata, a visible percentage, an optional post-Apply projection, and
+  an explicit action for running local provider diagnostics.
 - **Active-first Skills workspace:** conflicts first, then always-expanded
   active skills, collapsed available-by-source groups, and explicitly opted-in
   read-only groups. Pending changes stay in their applied section until Apply.
@@ -95,9 +96,9 @@ in public documentation.
   update modes, counts, locations, and separately confirmed lifecycle actions.
 - **Install workflow:** inspect, matrix selection, review, and apply. Tool-column
   bulk selectors cover all discovered candidates, including filtered-out rows.
-- **Discover:** ranking/search tabs, compact activity history, per-tool local
-  state, a details drawer, offline-cache labeling, and a separate third-party
-  safety confirmation before install.
+- **Discover (dormant):** its experimental design and implementation history are
+  retained, but the `v0.4.1` public preview has no navigation or bound catalog
+  surface.
 - **Dialogs and progress:** centered panels over a dimmed canvas. Mutating source
   operations announce their phase and prevent overlapping changes.
 

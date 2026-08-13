@@ -20,6 +20,9 @@ type execRunner struct {
 }
 
 func (runner execRunner) Run(ctx context.Context, dir, binary string, args ...string) ([]byte, error) {
+	if !allowedDiagnostic(args) {
+		return nil, fmt.Errorf("unsupported provider diagnostic arguments: %v", args)
+	}
 	command := exec.CommandContext(ctx, binary, args...)
 	command.Dir = dir
 	command.Env = environmentWithHome(os.Environ(), runner.home)
@@ -40,15 +43,31 @@ func (runner execRunner) Run(ctx context.Context, dir, binary string, args ...st
 }
 
 func environmentWithHome(environment []string, home string) []string {
-	result := make([]string, 0, len(environment)+1)
+	result := make([]string, 0, 8)
 	for _, item := range environment {
 		name, _, _ := strings.Cut(item, "=")
-		if name == "HOME" || name == "CODEX_HOME" || name == "CLAUDE_CONFIG_DIR" {
+		if !allowedEnvironmentVariable(name) {
 			continue
 		}
 		result = append(result, item)
 	}
 	return append(result, "HOME="+home)
+}
+
+func allowedEnvironmentVariable(name string) bool {
+	switch name {
+	case "PATH", "TMPDIR", "LANG", "TERM", "NO_COLOR":
+		return true
+	default:
+		return strings.HasPrefix(name, "LC_")
+	}
+}
+
+func allowedDiagnostic(args []string) bool {
+	joined := strings.Join(args, "\x00")
+	return joined == "debug\x00prompt-input" ||
+		joined == "debug\x00prompt-input\x00-c\x00model_context_window=100000000" ||
+		joined == "plugin\x00list\x00--json"
 }
 
 type limitedBuffer struct {

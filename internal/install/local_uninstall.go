@@ -104,7 +104,7 @@ func (s *LocalUninstallService) Apply(source state.LocalSourceEntry) (LocalUnins
 
 	for _, reference := range audit.References {
 		stagedPath := filepath.Join(stagingRoot, "links", reference.State.String(), reference.Tool.String(), reference.SkillName)
-		if err := s.mkdirAll(filepath.Dir(stagedPath), 0o755); err != nil {
+		if err := s.mkdirAll(filepath.Dir(stagedPath), 0o700); err != nil {
 			return rollback(fmt.Errorf("create local uninstall staging parent: %w", err))
 		}
 		if err := s.rename(reference.LinkPath, stagedPath); err != nil {

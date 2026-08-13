@@ -18,20 +18,12 @@ export function ClearPending() {
   return window['go']['main']['App']['ClearPending']();
 }
 
-export function GetDiscoverPage(arg1, arg2, arg3) {
-  return window['go']['main']['App']['GetDiscoverPage'](arg1, arg2, arg3);
-}
-
-export function GetDiscoverSkill(arg1, arg2) {
-  return window['go']['main']['App']['GetDiscoverSkill'](arg1, arg2);
-}
-
 export function GetSnapshot(arg1) {
   return window['go']['main']['App']['GetSnapshot'](arg1);
 }
 
-export function InstallDiscoverSkill(arg1, arg2, arg3) {
-  return window['go']['main']['App']['InstallDiscoverSkill'](arg1, arg2, arg3);
+export function MeasureContextBudgets() {
+  return window['go']['main']['App']['MeasureContextBudgets']();
 }
 
 export function PrepareGitInstall(arg1) {
@@ -44,10 +36,6 @@ export function PreviewUninstall(arg1) {
 
 export function ReviewInstall(arg1, arg2) {
   return window['go']['main']['App']['ReviewInstall'](arg1, arg2);
-}
-
-export function SearchDiscover(arg1) {
-  return window['go']['main']['App']['SearchDiscover'](arg1);
 }
 
 export function ToggleBoth(arg1) {

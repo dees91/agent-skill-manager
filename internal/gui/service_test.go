@@ -41,6 +41,44 @@ func TestSnapshotSummariesAndReadOnly(t *testing.T) {
 	}
 }
 
+func TestFirstSnapshotSecuresStateAndSanitizesLegacyCatalogCache(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(p.SkillsSHCacheFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"version":1,"pages":{},"searches":{"private query":{"view":"search","total":0,"skills":[]}},"details":{}}`
+	if err := os.WriteFile(p.SkillsSHCacheFile, []byte(legacy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := New(p).GetSnapshot(false); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(p.SkillsSHCacheFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(contents), "private query") || !strings.Contains(string(contents), `"version": 2`) {
+		t.Fatalf("catalog privacy migration failed: %s", contents)
+	}
+	for _, path := range []string{p.StateDir, filepath.Dir(p.SkillsSHCacheFile)} {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat directory %s: %v", path, err)
+		}
+		if info.Mode().Perm() != 0o700 {
+			t.Fatalf("directory %s mode = %v", path, info.Mode().Perm())
+		}
+	}
+	info, err := os.Stat(p.SkillsSHCacheFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("catalog cache mode = %v", info.Mode().Perm())
+	}
+}
+
 func TestSnapshotProjectsOnlyManifestOwnedSourcesWithOpaqueIDs(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	repository := state.RepositoryEntry{

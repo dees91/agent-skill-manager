@@ -16,17 +16,26 @@ import (
 
 const manifestVersion = 2
 
+const (
+	privateDirMode    = 0o700
+	privateFileMode   = 0o600
+	maxStateBackups   = 10
+	maxStateBackupAge = 30 * 24 * time.Hour
+)
+
 // Store persists Skill Manager state under ~/.skill-manager.
 type Store struct {
-	paths paths.Paths
-	now   func() time.Time
+	paths  paths.Paths
+	now    func() time.Time
+	remove func(string) error
 }
 
 // New creates a state store for the provided paths.
 func New(p paths.Paths) Store {
 	return Store{
-		paths: p,
-		now:   time.Now,
+		paths:  p,
+		now:    time.Now,
+		remove: os.Remove,
 	}
 }
 
@@ -112,8 +121,8 @@ func (s Store) Save(manifest Manifest) error {
 		return fmt.Errorf("unsupported state manifest version %d; this binary supports up to version %d", manifest.Version, manifestVersion)
 	}
 	manifest = normalizeManifest(manifest)
-	if err := os.MkdirAll(s.paths.StateDir, 0o755); err != nil {
-		return fmt.Errorf("create state directory %s: %w", s.paths.StateDir, err)
+	if err := s.Secure(); err != nil {
+		return err
 	}
 
 	tmp, err := os.CreateTemp(s.paths.StateDir, "state-*.json")
@@ -127,6 +136,10 @@ func (s Store) Save(manifest Manifest) error {
 			_ = os.Remove(tmpPath)
 		}
 	}()
+	if err := tmp.Chmod(privateFileMode); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("secure temporary state manifest: %w", err)
+	}
 
 	encoder := json.NewEncoder(tmp)
 	encoder.SetIndent("", "  ")
@@ -140,12 +153,70 @@ func (s Store) Save(manifest Manifest) error {
 	if err := os.Rename(tmpPath, s.paths.StateFile); err != nil {
 		return fmt.Errorf("replace state manifest %s: %w", s.paths.StateFile, err)
 	}
+	if err := os.Chmod(s.paths.StateFile, privateFileMode); err != nil {
+		return fmt.Errorf("secure state manifest %s: %w", s.paths.StateFile, err)
+	}
 	removeTemp = false
+	return nil
+}
+
+// Secure creates the state root when needed and narrows permissions on the
+// existing Skill Manager-owned tree without following symlinks. Repository
+// file modes are preserved; directory traversal and metadata files are private.
+func (s Store) Secure() error {
+	info, err := os.Lstat(s.paths.StateDir)
+	if errors.Is(err, os.ErrNotExist) {
+		if err := os.MkdirAll(s.paths.StateDir, privateDirMode); err != nil {
+			return fmt.Errorf("create state directory %s: %w", s.paths.StateDir, err)
+		}
+		info, err = os.Lstat(s.paths.StateDir)
+	}
+	if err != nil {
+		return fmt.Errorf("inspect state directory %s: %w", s.paths.StateDir, err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fmt.Errorf("unsafe state path %s: expected a real directory", s.paths.StateDir)
+	}
+
+	if err := filepath.WalkDir(s.paths.StateDir, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			if err := os.Chmod(path, privateDirMode); err != nil {
+				return fmt.Errorf("secure state directory %s: %w", path, err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	metadataFiles := []string{s.paths.StateFile, s.paths.SkillsSHCacheFile}
+	for _, path := range metadataFiles {
+		if err := secureRegularFile(path); err != nil {
+			return err
+		}
+	}
+	backups, err := os.ReadDir(s.paths.BackupDir)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect state backups %s: %w", s.paths.BackupDir, err)
+	}
+	for _, entry := range backups {
+		if entry.Type().IsRegular() && isStateBackupName(entry.Name()) {
+			if err := secureRegularFile(filepath.Join(s.paths.BackupDir, entry.Name())); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
 // BackupExisting copies the current state manifest into backups if it exists.
 func (s Store) BackupExisting() (string, error) {
+	if err := s.Secure(); err != nil {
+		return "", err
+	}
 	source, err := os.Open(s.paths.StateFile)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -155,12 +226,15 @@ func (s Store) BackupExisting() (string, error) {
 	}
 	defer source.Close()
 
-	if err := os.MkdirAll(s.paths.BackupDir, 0o755); err != nil {
+	if err := os.MkdirAll(s.paths.BackupDir, privateDirMode); err != nil {
 		return "", fmt.Errorf("create backup directory %s: %w", s.paths.BackupDir, err)
+	}
+	if err := os.Chmod(s.paths.BackupDir, privateDirMode); err != nil {
+		return "", fmt.Errorf("secure backup directory %s: %w", s.paths.BackupDir, err)
 	}
 
 	backupPath := filepath.Join(s.paths.BackupDir, "state-"+s.now().UTC().Format("20060102T150405.000000000Z")+".json")
-	destination, err := os.OpenFile(backupPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	destination, err := os.OpenFile(backupPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, privateFileMode)
 	if err != nil {
 		return "", fmt.Errorf("create state backup %s: %w", backupPath, err)
 	}
@@ -173,7 +247,71 @@ func (s Store) BackupExisting() (string, error) {
 		return "", fmt.Errorf("close state backup %s: %w", backupPath, err)
 	}
 
+	if err := s.rotateBackups(backupPath); err != nil {
+		return backupPath, err
+	}
 	return backupPath, nil
+}
+
+type stateBackup struct {
+	path string
+	when time.Time
+}
+
+func (s Store) rotateBackups(newestPath string) error {
+	entries, err := os.ReadDir(s.paths.BackupDir)
+	if err != nil {
+		return fmt.Errorf("inspect state backups for rotation: %w", err)
+	}
+	backups := make([]stateBackup, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() || !isStateBackupName(entry.Name()) {
+			continue
+		}
+		when, err := time.Parse("20060102T150405.000000000Z", entry.Name()[len("state-"):len(entry.Name())-len(".json")])
+		if err != nil {
+			continue
+		}
+		backups = append(backups, stateBackup{path: filepath.Join(s.paths.BackupDir, entry.Name()), when: when})
+	}
+	sort.SliceStable(backups, func(i, j int) bool { return backups[i].when.After(backups[j].when) })
+	cutoff := s.now().UTC().Add(-maxStateBackupAge)
+	kept := 1 // The backup created by this operation is always retained.
+	for _, backup := range backups {
+		if backup.path == newestPath {
+			continue
+		}
+		if kept >= maxStateBackups || backup.when.Before(cutoff) {
+			if err := s.remove(backup.path); err != nil {
+				return fmt.Errorf("remove expired state backup %s: %w", backup.path, err)
+			}
+			continue
+		}
+		kept++
+	}
+	return nil
+}
+
+func isStateBackupName(name string) bool {
+	return len(name) > len("state-.json") && len(name) <= 64 &&
+		name[:len("state-")] == "state-" && filepath.Ext(name) == ".json"
+}
+
+func secureRegularFile(path string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect private metadata file %s: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("unsafe private metadata path %s: expected a regular file", path)
+	}
+	if err := os.Chmod(path, privateFileMode); err != nil {
+		return fmt.Errorf("secure private metadata file %s: %w", path, err)
+	}
+	return nil
 }
 
 // DisabledPath returns the disabled layout path for a tool-specific skill.

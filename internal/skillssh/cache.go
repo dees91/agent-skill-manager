@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
-const cacheVersion = 1
+const cacheVersion = 2
 const maxCacheBytes = 32 << 20
 
 type cacheDocument struct {
@@ -41,9 +40,10 @@ func (s cacheStore) load() (cacheDocument, error) {
 	if err := json.Unmarshal(data, &document); err != nil {
 		return emptyCache(), fmt.Errorf("decode skills.sh cache: %w", err)
 	}
-	if document.Version != cacheVersion {
+	if document.Version != 1 && document.Version != cacheVersion {
 		return emptyCache(), fmt.Errorf("unsupported skills.sh cache version %d", document.Version)
 	}
+	document.Version = cacheVersion
 	if document.Pages == nil {
 		document.Pages = map[string]Page{}
 	}
@@ -61,8 +61,11 @@ func (s cacheStore) load() (cacheDocument, error) {
 
 func (s cacheStore) save(document cacheDocument) error {
 	document.Version = cacheVersion
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
 		return fmt.Errorf("create skills.sh cache directory: %w", err)
+	}
+	if err := os.Chmod(filepath.Dir(s.path), 0o700); err != nil {
+		return fmt.Errorf("secure skills.sh cache directory: %w", err)
 	}
 	data, err := json.MarshalIndent(document, "", "  ")
 	if err != nil {
@@ -103,8 +106,24 @@ func emptyCache() cacheDocument {
 	return cacheDocument{Version: cacheVersion, Pages: map[string]Page{}, Searches: map[string]Page{}, Details: map[string]Detail{}}
 }
 
+// SanitizeCache upgrades a legacy catalog cache and removes persisted search
+// terms. Missing caches are left untouched.
+func SanitizeCache(path string) error {
+	store := cacheStore{path: path}
+	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("inspect skills.sh cache for privacy migration: %w", err)
+	}
+	document, err := store.load()
+	if err != nil {
+		return err
+	}
+	document.Searches = map[string]Page{}
+	return store.save(document)
+}
+
 func pageCacheKey(view View, page int) string { return fmt.Sprintf("%s:%d", view, page) }
-func searchCacheKey(query string) string      { return strings.ToLower(strings.TrimSpace(query)) }
 
 func validateCachedDocument(document *cacheDocument) error {
 	for key, page := range document.Pages {

@@ -71,14 +71,14 @@ checkout. The packaging command does not create tags, push commits, or change
 GitHub releases:
 
 ```bash
-make release-package RELEASE_VERSION=0.4.0
+make release-package RELEASE_VERSION=0.4.1
 ```
 
 It verifies version metadata, root/desktop/frontend tests and vet, frontend
 type checking/build, the npm high-severity audit, Wails packaging, ad-hoc
 signatures, thin ARM64 binaries, bundle metadata, isolated-home launch,
-re-extracted archives, and SHA-256 sums. Successful output is ignored under
-`dist/release/`.
+re-extracted archives, third-party notices, and SHA-256 sums. Successful output
+is ignored under `dist/release/`.
 
 For an approved version, commit first and run the command from that clean
 commit. Push `main` without force, create and push an annotated `v<version>`

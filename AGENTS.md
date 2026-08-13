@@ -738,6 +738,39 @@ runtime skill-management semantics.
 - Never restore or commit `scripts/public-check.sh`; release packaging uses the
   dedicated `scripts/package-release.sh` workflow.
 
+### Public Preview Hardening (Iteration 13)
+
+Iteration 13 replaces the private `v0.4.0` prerelease with a public `v0.4.1`
+preview and tightens local privacy, distribution notices, and repository
+operations without changing skill ownership semantics.
+
+- The public desktop build exposes Dashboard, Skills, and Sources. Keep the
+  experimental skills.sh adapter/domain code tested in the repository, but do
+  not bind or render Discover in `v0.4.1`.
+- Startup and ordinary refresh use filesystem context estimates only. Provider
+  diagnostics run only from an explicit user action and only through the fixed
+  read-only allowlist: two `codex debug prompt-input` variants and
+  `claude plugin list --json`.
+- Diagnostic subprocesses receive the current home plus only a minimal
+  path/temp/locale/terminal environment. Do not forward credentials, provider
+  config overrides, tokens, or proxy variables.
+- Use owner-only permissions for Skill Manager state directories (`0700`) and
+  state/cache JSON files (`0600`) without rewriting managed checkout file
+  modes. Retain at most 10 state backups and at most 30 days.
+- Do not persist skills.sh search terms or results. On the next desktop launch,
+  sanitize legacy cache version 1 into version 2 while retaining non-query
+  ranking/detail metadata.
+- Generate `THIRD_PARTY_NOTICES.txt` from exact locked Go/runtime/frontend
+  production dependencies. Package it with both binary artifacts and include
+  the project license plus notices inside the desktop app resources.
+- Build and publish `v0.4.1` manually from a clean local Apple Silicon macOS
+  checkout. CI, Dependabot, issue/PR templates, private vulnerability
+  reporting, and branch rules are repository operations completed after the
+  source becomes public; release automation remains deferred.
+- Treat `v0.4.1` as a preview. Developer ID signing, notarization, universal
+  binaries, SBOM/provenance, auto-update, and commercialization review remain
+  required follow-up before a stable or commercial release.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -838,6 +871,8 @@ Keep [planning/phase-10-skills-workspace-tasks.md](./planning/phase-10-skills-wo
 Keep [planning/phase-11-publication-readiness-tasks.md](./planning/phase-11-publication-readiness-tasks.md) as the source of truth for Iteration 11 public-source preparation task status.
 
 Keep [planning/phase-12-github-release-tasks.md](./planning/phase-12-github-release-tasks.md) as the source of truth for Iteration 12 GitHub binary release task status.
+
+Keep [planning/phase-13-public-preview-hardening-tasks.md](./planning/phase-13-public-preview-hardening-tasks.md) as the source of truth for Iteration 13 public-preview hardening and publication task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

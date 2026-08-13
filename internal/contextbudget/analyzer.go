@@ -48,9 +48,19 @@ func New(p paths.Paths) *Analyzer {
 	return &Analyzer{paths: p, runner: execRunner{home: p.Home}, timeout: defaultDiagnosticTimeout, lookPath: lookPath}
 }
 
-// Analyze measures the applied global catalogs and records managed-cell costs.
-// Provider failures are represented in the report and never returned as scan errors.
-func (a *Analyzer) Analyze(rows []model.SkillRow) Result {
+// Estimate builds the applied global catalogs from local files and settings
+// without launching provider executables.
+func (a *Analyzer) Estimate(rows []model.SkillRow) Result {
+	return a.analyze(rows, false)
+}
+
+// Measure explicitly runs the supported read-only provider diagnostics and
+// falls back to the filesystem estimate when a provider is unavailable.
+func (a *Analyzer) Measure(rows []model.SkillRow) Result {
+	return a.analyze(rows, true)
+}
+
+func (a *Analyzer) analyze(rows []model.SkillRow, measure bool) Result {
 	result := Result{contributions: make(map[CellKey]contribution)}
 	type providerResult struct {
 		report        ToolReport
@@ -61,11 +71,11 @@ func (a *Analyzer) Analyze(rows []model.SkillRow) Result {
 	wait.Add(2)
 	go func() {
 		defer wait.Done()
-		claude.report, claude.contributions = a.analyzeClaude(rows)
+		claude.report, claude.contributions = a.analyzeClaude(rows, measure)
 	}()
 	go func() {
 		defer wait.Done()
-		codex.report, codex.contributions = a.analyzeCodex(rows)
+		codex.report, codex.contributions = a.analyzeCodex(rows, measure)
 	}()
 	wait.Wait()
 	result.Reports = Reports{Claude: claude.report, Codex: codex.report}
@@ -100,7 +110,7 @@ func catalogCharacters(entries []catalogEntry) int {
 	return total
 }
 
-func (a *Analyzer) analyzeCodex(rows []model.SkillRow) (ToolReport, map[CellKey]contribution) {
+func (a *Analyzer) analyzeCodex(rows []model.SkillRow, measure bool) (ToolReport, map[CellKey]contribution) {
 	modelName, contextWindow, contextAssumed := a.codexModel()
 	report := ToolReport{
 		Tool:                 model.ToolCodex.String(),
@@ -130,7 +140,7 @@ func (a *Analyzer) analyzeCodex(rows []model.SkillRow) (ToolReport, map[CellKey]
 	}
 
 	binary, err := a.resolveBinary("codex")
-	if err == nil {
+	if measure && err == nil {
 		actual, raw, diagnosticErr := a.codexCatalogs(binary)
 		if diagnosticErr == nil && len(raw) > 0 {
 			rawCharacters := catalogCharacters(raw)
@@ -150,6 +160,10 @@ func (a *Analyzer) analyzeCodex(rows []model.SkillRow) (ToolReport, map[CellKey]
 		} else if diagnosticErr != nil {
 			report.Message = "Codex diagnostics failed; showing a filesystem estimate: " + compactError(diagnosticErr)
 		}
+	} else if measure && err != nil {
+		report.Message = "Codex diagnostics are unavailable; showing a filesystem estimate: " + compactError(err)
+	} else {
+		report.Message = "Filesystem estimate. Run provider diagnostics for a model-visible measurement."
 	}
 	finalizeUsage(&report.Current, report.BudgetCharacters)
 	report.Projected = report.Current
@@ -351,21 +365,10 @@ func codexLine(cell *model.ToolSkill) string {
 
 func (a *Analyzer) codexModel() (string, int, bool) {
 	configured := readCodexConfiguredModel(filepath.Join(a.paths.Home, ".codex", "config.toml"))
-	binary, binaryErr := a.resolveBinary("codex")
 	models := []codexModel{}
-	if binaryErr == nil {
-		ctx, cancel := context.WithTimeout(context.Background(), a.timeout)
-		data, err := a.runner.Run(ctx, a.paths.Home, binary, "debug", "models")
-		cancel()
-		if err == nil {
-			models = parseCodexModels(data)
-		}
-	}
-	if len(models) == 0 {
-		data, err := os.ReadFile(filepath.Join(a.paths.Home, ".codex", "models_cache.json"))
-		if err == nil {
-			models = parseCodexModels(data)
-		}
+	data, err := os.ReadFile(filepath.Join(a.paths.Home, ".codex", "models_cache.json"))
+	if err == nil {
+		models = parseCodexModels(data)
 	}
 	if configured != "" {
 		for _, item := range models {
@@ -422,7 +425,7 @@ func readCodexConfiguredModel(path string) string {
 	return ""
 }
 
-func (a *Analyzer) analyzeClaude(rows []model.SkillRow) (ToolReport, map[CellKey]contribution) {
+func (a *Analyzer) analyzeClaude(rows []model.SkillRow, measure bool) (ToolReport, map[CellKey]contribution) {
 	settings := readClaudeSettings(filepath.Join(a.paths.Home, ".claude", "settings.json"))
 	modelName, contextWindow, contextAssumed := claudeModelAndWindow(settings)
 	budgetCharacters, fraction, label := claudeBudget(settings, contextWindow)
@@ -462,10 +465,16 @@ func (a *Analyzer) analyzeClaude(rows []model.SkillRow) (ToolReport, map[CellKey
 	}
 
 	entries = append(entries, a.claudeLegacyCommands(settings)...)
-	pluginEntries, pluginErr := a.claudePluginEntries(settings)
-	entries = append(entries, pluginEntries...)
-	if pluginErr != nil {
-		report.Message += " Enabled plugin discovery failed: " + compactError(pluginErr)
+	if measure {
+		pluginEntries, pluginErr := a.claudePluginEntries(settings)
+		entries = append(entries, pluginEntries...)
+		if pluginErr != nil {
+			report.Message += " Enabled plugin discovery failed: " + compactError(pluginErr)
+		} else {
+			report.Message = "Measured with the local Claude plugin inventory; bundled and account-only catalogs may remain unavailable."
+		}
+	} else {
+		report.Message = "Filesystem estimate. Run provider diagnostics to include Claude's enabled plugin inventory."
 	}
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
 	requested := catalogCharacters(entries)

@@ -2,7 +2,7 @@ BIN ?= $(HOME)/.local/bin/skill-manager
 WAILS_VERSION ?= v2.13.0
 WAILS = go run github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)
 
-.PHONY: dev install build test test-all gui-dev gui-bindings gui-test gui-build release-package clean
+.PHONY: dev install build test test-all gui-dev gui-bindings gui-test gui-build notices notices-check release-package clean
 
 dev: install
 
@@ -36,6 +36,15 @@ gui-test:
 gui-build:
 	cd desktop && $(WAILS) build -platform darwin/arm64 -clean -nocolour -skipbindings
 	@echo "Built desktop/build/bin/Skill Manager.app (local ad-hoc signed darwin/arm64)"
+
+notices:
+	@scripts/generate-third-party-notices.sh > THIRD_PARTY_NOTICES.txt
+
+notices-check:
+	@temporary="$$(mktemp)"; \
+	trap 'rm -f "$$temporary"' EXIT; \
+	scripts/generate-third-party-notices.sh > "$$temporary"; \
+	diff -u THIRD_PARTY_NOTICES.txt "$$temporary"
 
 release-package:
 	@RELEASE_VERSION="$(RELEASE_VERSION)" ./scripts/package-release.sh

@@ -26,33 +26,44 @@ directories involved in an explicit operation. State can include original and
 disabled paths, symlink targets, repository URLs, canonical local source paths,
 installed skill names, timestamps, and commits.
 
-Normalized skills.sh catalog metadata is cached at
-`~/.skill-manager/cache/skills-sh/catalog-v1.json`. Raw downloaded skill files
-are not retained in that cache. Managed Git repositories are cloned beneath
-`~/.skill-manager/repos`.
+State directories are restricted to the current user (`0700`). State, backup,
+and catalog-cache JSON files use mode `0600`. When a new state backup is made,
+rotation retains at most ten copies and removes copies older than 30 days.
+Managed Git repositories are cloned
+beneath `~/.skill-manager/repos`; their repository file modes are preserved.
+
+The public preview does not expose Discover or make skills.sh requests. If a
+cache from an earlier development build exists at
+`~/.skill-manager/cache/skills-sh/catalog-v1.json`, the next desktop launch
+removes cached search terms/results and upgrades the cache format. Ranking and
+detail metadata may remain until the user deletes the cache or state directory.
 
 ## Network Access
 
-Network access occurs in these user-visible flows:
+Network access occurs in this user-visible flow:
 
 - Git install and update invoke the local `git` executable for a repository URL
   selected by the user.
-- Discover sends anonymous JSON `GET` requests to `https://www.skills.sh` for
-  rankings, search terms, and skill detail. A fresh detail response is required
-  before a Discover installation.
-- Opening an external catalog link asks the operating system to open the
-  corresponding skills.sh page.
 
 Skill Manager does not send the local skill inventory, home path, state
 manifest, or provider configuration to a Skill Manager-operated service.
 
 ## Local Provider Diagnostics
 
-The context-budget panel may run an installed `codex` executable with fixed,
-read-only diagnostic arguments from a neutral temporary directory. The process
-uses the current user's home while explicit `CODEX_HOME` and
-`CLAUDE_CONFIG_DIR` overrides are removed. Diagnostic failure is non-fatal and
-falls back to local filesystem estimates.
+The context-budget panel uses local filesystem estimates by default. Only the
+explicit **Run provider diagnostics** action may run these installed commands:
+
+- `codex debug prompt-input`
+- `codex debug prompt-input -c model_context_window=100000000`
+- `claude plugin list --json`
+
+They run from a neutral temporary directory with the current user's home and a
+minimal environment containing only path, temporary-directory, locale,
+terminal, and no-color variables. Provider config overrides, credentials,
+tokens, and proxy variables are not forwarded. Output is bounded, processed in
+memory, and not retained or sent by Skill Manager. The provider executables are
+third-party software, so their own behavior and privacy terms still apply.
+Failure is non-fatal and falls back to the filesystem estimate.
 
 ## Retention And Removal
 
@@ -60,3 +71,5 @@ Uninstalling a source removes the state and links owned by that source under the
 documented safety checks. It does not remove link-in-place local source folders.
 To remove all remaining Skill Manager metadata after restoring or uninstalling
 managed entries, the user may manually archive and delete `~/.skill-manager`.
+Deleting `~/.skill-manager/cache/skills-sh/` removes only dormant catalog cache
+data and does not uninstall skills.

@@ -10,21 +10,15 @@ export function ChooseLocalInstall():Promise<gui.InstallDraft>;
 
 export function ClearPending():Promise<gui.ActionResult>;
 
-export function GetDiscoverPage(arg1:string,arg2:number,arg3:boolean):Promise<gui.DiscoverPage>;
-
-export function GetDiscoverSkill(arg1:string,arg2:boolean):Promise<gui.DiscoverDetail>;
-
 export function GetSnapshot(arg1:boolean):Promise<gui.Snapshot>;
 
-export function InstallDiscoverSkill(arg1:string,arg2:Array<string>,arg3:boolean):Promise<gui.SourceMutationResult>;
+export function MeasureContextBudgets():Promise<gui.Snapshot>;
 
 export function PrepareGitInstall(arg1:string):Promise<gui.InstallDraft>;
 
 export function PreviewUninstall(arg1:string):Promise<gui.UninstallPreview>;
 
 export function ReviewInstall(arg1:string,arg2:Array<gui.InstallCellRequest>):Promise<gui.InstallReview>;
-
-export function SearchDiscover(arg1:string):Promise<gui.DiscoverPage>;
 
 export function ToggleBoth(arg1:string):Promise<gui.ActionResult>;
 

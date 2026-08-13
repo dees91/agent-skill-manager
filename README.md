@@ -14,7 +14,8 @@ original target.
 
 ## Status And Compatibility
 
-The current source version is `0.4.0`.
+The current source version is `0.4.1` and is a public preview, not a stable
+release.
 
 - The supported desktop target is Apple Silicon macOS 13 or newer.
 - The CLI and TUI are written in Go and can compile on other platforms, but
@@ -48,19 +49,19 @@ as a replacement for live discovery.
 
 ### GitHub Release Preview
 
-The private [`v0.4.0` prerelease](https://github.com/dees91/agent-skill-manager/releases/tag/v0.4.0)
+The [`v0.4.1` prerelease](https://github.com/dees91/agent-skill-manager/releases/tag/v0.4.1)
 provides two Apple Silicon downloads:
 
-- `skill-manager-desktop-0.4.0-macos-arm64.zip` contains `Skill Manager.app`;
-- `skill-manager-cli-0.4.0-macos-arm64.tar.gz` contains the terminal binary,
-  README, and license.
+- `skill-manager-desktop-0.4.1-macos-arm64.zip` contains `Skill Manager.app`;
+- `skill-manager-cli-0.4.1-macos-arm64.tar.gz` contains the terminal binary,
+  README, license, and third-party notices.
 
 Download the matching archive together with `SHA256SUMS.txt`, then compare its
 SHA-256 digest with the corresponding manifest line. For example:
 
 ```bash
-shasum -a 256 skill-manager-desktop-0.4.0-macos-arm64.zip
-grep 'skill-manager-desktop-0.4.0-macos-arm64.zip' SHA256SUMS.txt
+shasum -a 256 skill-manager-desktop-0.4.1-macos-arm64.zip
+grep 'skill-manager-desktop-0.4.1-macos-arm64.zip' SHA256SUMS.txt
 ```
 
 The two hashes must be identical. The checksum detects an incomplete or
@@ -75,9 +76,9 @@ Privacy & Security → Open Anyway** only after verifying the checksum and sourc
 For the CLI, extract the archive and install the executable on `PATH`:
 
 ```bash
-tar -xzf skill-manager-cli-0.4.0-macos-arm64.tar.gz
+tar -xzf skill-manager-cli-0.4.1-macos-arm64.tar.gz
 install -m 0755 \
-  skill-manager-cli-0.4.0-macos-arm64/skill-manager \
+  skill-manager-cli-0.4.1-macos-arm64/skill-manager \
   "$HOME/.local/bin/skill-manager"
 skill-manager --version
 ```
@@ -199,7 +200,7 @@ skill uninstall is not supported.
 
 ## Desktop Interface
 
-The macOS application exposes four views over the same Go domain services as
+The macOS public preview exposes three views over the same Go domain services as
 the CLI and TUI:
 
 - **Dashboard** summarizes managed visibility, groups, conflicts, and an
@@ -208,10 +209,9 @@ the CLI and TUI:
   and stages reversible toggles for explicit review and Apply.
 - **Sources** installs exact Claude/Codex skill cells and safely updates or
   uninstalls complete Git and local sources recorded in the manifest.
-- **Discover** browses the experimental anonymous skills.sh catalog and can
-  install one freshly revalidated GitHub-hosted skill for selected tools.
 
-![Skill Manager Discover view](docs/images/discover.png)
+The experimental skills.sh Discover implementation remains under development
+and is not exposed by the `v0.4.1` public preview build.
 
 Pending skill toggles remain process-local until Apply. Source lifecycle
 operations are separately confirmed and cannot overlap a pending toggle batch.
@@ -238,6 +238,8 @@ Important invariants:
 - Disable and enable move the original entry; symlinks are never dereferenced.
 - Restore and install never overwrite, merge, rename, or delete a blocker.
 - Existing state is backed up before the first mutation in a process.
+- State directories are restricted to the current user. State/cache JSON files
+  use mode `0600`; state backups retain at most 10 files and 30 days.
 - Failed batch apply stops at the first error and preserves the completed
   prefix in state.
 - Git uninstall validates owned links and checkout safety before staging and
@@ -255,14 +257,13 @@ installing it.
 ## Network And Privacy
 
 There is no telemetry, account system, analytics SDK, or background polling.
-Network access occurs only for explicit source operations and Discover:
+Network access occurs only for an explicit Git source operation:
 
 - Git invokes the local `git` executable to clone, fetch, and fast-forward
   user-selected repositories.
-- Discover sends anonymous JSON `GET` requests to `https://www.skills.sh` and
-  stores normalized catalog metadata in the local cache.
-- Context-budget diagnostics may invoke an installed local `codex` binary with
-  fixed read-only arguments. Failure degrades to a filesystem estimate.
+- The Dashboard uses filesystem estimates by default. Its explicit **Run
+  provider diagnostics** action may invoke installed `claude` and `codex`
+  binaries with fixed read-only arguments. Failure degrades to an estimate.
 
 See [PRIVACY.md](PRIVACY.md) for the complete data-flow description and
 [SECURITY.md](SECURITY.md) for vulnerability reporting.
@@ -290,4 +291,5 @@ while [AGENTS.md](AGENTS.md) remains the product and safety contract.
 
 ## License
 
-Skill Manager is available under the [MIT License](LICENSE).
+Skill Manager is available under the [MIT License](LICENSE). Binary
+distributions include [third-party license notices](THIRD_PARTY_NOTICES.txt).

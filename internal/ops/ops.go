@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/dees91/agent-skill-manager/internal/model"
@@ -235,7 +236,11 @@ func (s *Service) Apply(operations []model.PlannedOperation) ApplyResult {
 			return result
 		}
 
-		if err := os.MkdirAll(filepath.Dir(op.ToPath), 0o755); err != nil {
+		destinationMode := os.FileMode(0o755)
+		if pathInsideState(s.paths.StateDir, filepath.Dir(op.ToPath)) {
+			destinationMode = 0o700
+		}
+		if err := os.MkdirAll(filepath.Dir(op.ToPath), destinationMode); err != nil {
 			if saveErr := s.saveCompletedProgress(result.Completed, manifest); saveErr != nil {
 				err = fmt.Errorf("%w; additionally failed to persist completed state: %v", err, saveErr)
 			}
@@ -275,6 +280,11 @@ func (s *Service) Apply(operations []model.PlannedOperation) ApplyResult {
 		return result
 	}
 	return result
+}
+
+func pathInsideState(stateDir, candidate string) bool {
+	relative, err := filepath.Rel(filepath.Clean(stateDir), filepath.Clean(candidate))
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
 func (s *Service) saveCompletedProgress(completed []model.PlannedOperation, manifest state.Manifest) error {

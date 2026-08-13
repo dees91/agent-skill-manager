@@ -95,23 +95,12 @@ func (c *Client) Search(ctx context.Context, query string) (Page, error) {
 		return Page{}, fmt.Errorf("search query must contain at most 200 characters")
 	}
 	document, cacheErr := c.loadCache()
-	key := searchCacheKey(query)
 	result, err := c.fetchSearch(ctx, query)
 	if err == nil {
-		if saveErr := c.persistSearch(key, result); saveErr != nil {
-			result.Warning = saveErr.Error()
-		}
 		return result, nil
 	}
 	if cacheErr != nil {
 		return Page{}, fmt.Errorf("skills.sh search failed: %w; cached catalog unavailable: %v", err, cacheErr)
-	}
-	if cached, found := document.Searches[key]; found {
-		cached.Offline = true
-		cached.FromCache = true
-		cached.SearchType = "cached-search"
-		cached.Warning = "skills.sh is unavailable; showing cached search results"
-		return cached, nil
 	}
 	normalized := strings.ToLower(query)
 	byID := map[string]Skill{}
@@ -284,18 +273,6 @@ func (c *Client) persistPage(key string, page Page) error {
 	}
 	document.Pages[key] = page
 	pruneOldestPages(document.Pages, 100)
-	return c.cache.save(document)
-}
-
-func (c *Client) persistSearch(key string, page Page) error {
-	c.cacheMu.Lock()
-	defer c.cacheMu.Unlock()
-	document, err := c.cache.load()
-	if err != nil {
-		document = emptyCache()
-	}
-	document.Searches[key] = page
-	pruneOldestPages(document.Searches, 50)
 	return c.cache.save(document)
 }
 

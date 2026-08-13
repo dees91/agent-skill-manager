@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/dees91/agent-skill-manager/security/advisories/new
+    about: Report security issues privately; do not open a public issue.
+

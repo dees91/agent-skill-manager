@@ -35,6 +35,11 @@ func (a *App) GetSnapshot(includeReadOnly bool) (gui.Snapshot, error) {
 	return a.service.GetSnapshot(includeReadOnly)
 }
 
+// MeasureContextBudgets runs the explicitly requested local provider diagnostics.
+func (a *App) MeasureContextBudgets() (gui.Snapshot, error) {
+	return a.service.MeasureContextBudgets()
+}
+
 // ToggleCell stages or unstages the natural operation for one tool cell.
 func (a *App) ToggleCell(skillName, tool string) (gui.ActionResult, error) {
 	return a.service.ToggleCell(skillName, tool)
@@ -108,26 +113,6 @@ func (a *App) ReviewInstall(draftID string, selections []gui.InstallCellRequest)
 // ApplyInstall applies one immutable reviewed selection.
 func (a *App) ApplyInstall(reviewID string, includeReadOnly bool) gui.SourceMutationResult {
 	return a.service.ApplyInstall(reviewID, includeReadOnly)
-}
-
-// GetDiscoverPage loads one experimental skills.sh leaderboard page.
-func (a *App) GetDiscoverPage(view string, page int, forceRefresh bool) (gui.DiscoverPage, error) {
-	return a.service.GetDiscoverPage(view, page, forceRefresh)
-}
-
-// SearchDiscover searches the experimental skills.sh catalog.
-func (a *App) SearchDiscover(query string) (gui.DiscoverPage, error) {
-	return a.service.SearchDiscover(query)
-}
-
-// GetDiscoverSkill loads display-only metadata for a listed catalog skill.
-func (a *App) GetDiscoverSkill(skillID string, forceRefresh bool) (gui.DiscoverDetail, error) {
-	return a.service.GetDiscoverSkill(skillID, forceRefresh)
-}
-
-// InstallDiscoverSkill installs exactly one listed GitHub skill for selected agents.
-func (a *App) InstallDiscoverSkill(skillID string, tools []string, includeReadOnly bool) gui.SourceMutationResult {
-	return a.service.InstallDiscoverSkill(skillID, tools, includeReadOnly)
 }
 
 // UpdateSource fetches and fast-forwards one managed Git source.

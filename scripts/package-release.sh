@@ -11,6 +11,7 @@ readonly CLI_ARCHIVE="skill-manager-cli-${RELEASE_VERSION}-macos-arm64.tar.gz"
 readonly CHECKSUM_FILE="SHA256SUMS.txt"
 readonly APP_PATH="$REPO_ROOT/desktop/build/bin/Skill Manager.app"
 readonly CLI_PACKAGE_DIR="skill-manager-cli-${RELEASE_VERSION}-macos-arm64"
+readonly NOTICE_FILE="THIRD_PARTY_NOTICES.txt"
 
 fail() {
   printf 'release-package: %s\n' "$*" >&2
@@ -52,7 +53,7 @@ for (const [source, actual] of versions) {
 }
 NODE
 
-  grep -Fq "The current source version is \`$RELEASE_VERSION\`." "$REPO_ROOT/README.md" ||
+  grep -Fq "The current source version is \`$RELEASE_VERSION\`" "$REPO_ROOT/README.md" ||
     fail "README source version does not match $RELEASE_VERSION"
   [[ -f "$REPO_ROOT/docs/releases/v${RELEASE_VERSION}.md" ]] ||
     fail "missing docs/releases/v${RELEASE_VERSION}.md"
@@ -131,7 +132,7 @@ for command in git go node npm make tar ditto shasum codesign plutil file mktemp
 done
 
 [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] ||
-  fail "set RELEASE_VERSION to a semantic version, for example 0.4.0"
+  fail "set RELEASE_VERSION to a semantic version, for example 0.4.1"
 [[ "$(/usr/bin/uname -s)" == "Darwin" ]] || fail "release packaging requires macOS"
 [[ "$(/usr/bin/uname -m)" == "arm64" ]] || fail "release packaging requires Apple Silicon"
 
@@ -146,6 +147,7 @@ fi
   fail "scripts/public-check.sh is present in Git history"
 
 printf '==> Verifying Go and frontend sources\n'
+make notices-check
 go test ./...
 go vet ./...
 (
@@ -164,6 +166,9 @@ go vet ./...
 
 printf '==> Building desktop application\n'
 make gui-build
+mkdir -p "$APP_PATH/Contents/Resources"
+cp LICENSE "$NOTICE_FILE" "$APP_PATH/Contents/Resources/"
+/usr/bin/codesign --force --deep --sign - "$APP_PATH"
 assert_app "$APP_PATH"
 
 mkdir -p "$REPO_ROOT/dist"
@@ -182,7 +187,7 @@ go build -trimpath \
   -ldflags="-s -w -X github.com/dees91/agent-skill-manager/internal/cli.Version=$RELEASE_VERSION" \
   -o "$WORK_DIR/$CLI_PACKAGE_DIR/skill-manager" .
 /usr/bin/codesign --force --sign - "$WORK_DIR/$CLI_PACKAGE_DIR/skill-manager"
-cp README.md LICENSE "$WORK_DIR/$CLI_PACKAGE_DIR/"
+cp README.md LICENSE "$NOTICE_FILE" "$WORK_DIR/$CLI_PACKAGE_DIR/"
 assert_cli "$WORK_DIR/$CLI_PACKAGE_DIR/skill-manager"
 
 printf '==> Creating release archives\n'
@@ -199,6 +204,9 @@ assert_app "$WORK_DIR/unpacked-desktop/Skill Manager.app"
 assert_cli "$WORK_DIR/unpacked-cli/$CLI_PACKAGE_DIR/skill-manager"
 [[ -f "$WORK_DIR/unpacked-cli/$CLI_PACKAGE_DIR/README.md" ]] || fail "CLI archive is missing README.md"
 [[ -f "$WORK_DIR/unpacked-cli/$CLI_PACKAGE_DIR/LICENSE" ]] || fail "CLI archive is missing LICENSE"
+[[ -f "$WORK_DIR/unpacked-cli/$CLI_PACKAGE_DIR/$NOTICE_FILE" ]] || fail "CLI archive is missing $NOTICE_FILE"
+[[ -f "$WORK_DIR/unpacked-desktop/Skill Manager.app/Contents/Resources/LICENSE" ]] || fail "desktop app is missing LICENSE"
+[[ -f "$WORK_DIR/unpacked-desktop/Skill Manager.app/Contents/Resources/$NOTICE_FILE" ]] || fail "desktop app is missing $NOTICE_FILE"
 launch_app_with_isolated_home "$WORK_DIR/unpacked-desktop/Skill Manager.app" "$WORK_DIR/launch"
 
 (

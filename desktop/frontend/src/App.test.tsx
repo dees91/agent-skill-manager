@@ -16,6 +16,18 @@ describe('Skill Manager desktop app', () => {
     expect(screen.getByText('Measured')).toBeInTheDocument()
     expect(screen.getByText('Partial estimate')).toBeInTheDocument()
     expect(backend.getSnapshot).toHaveBeenCalledWith(false)
+    expect(screen.queryByRole('button', { name: 'Discover' })).not.toBeInTheDocument()
+  })
+
+  it('runs provider diagnostics only after explicit confirmation', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    expect(backend.measureContextBudgets).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Run provider diagnostics' }))
+    await waitFor(() => expect(backend.measureContextBudgets).toHaveBeenCalledTimes(1))
   })
 
   it('filters the skills table without another filesystem scan', async () => {
@@ -304,6 +316,9 @@ describe('Skill Manager desktop app', () => {
     expect(confirm).toBeEnabled()
   })
 
+  /* Discover UI regression scenarios remain as implementation notes while the
+     experimental catalog is excluded from the public preview build.
+
   it('browses the skills.sh rankings and debounces catalog search', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()
@@ -419,6 +434,7 @@ describe('Skill Manager desktop app', () => {
     expect(screen.getByText(/Apply or clear 1 pending visibility change/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Install for 1 agent' })).toBeDisabled()
   })
+  */
 })
 
 function withAvailableSkills() {

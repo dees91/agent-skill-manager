@@ -19,7 +19,8 @@
   Phase 10 active-first source-grouped Skills workspace, and Phase 11 public
   namespace, documentation, synthetic assets, clean-checkout verification, and
   history hygiene. Phase 12 adds locally verified Apple Silicon desktop and CLI
-  archives for a manually published GitHub prerelease.
+  archives; Phase 13 hardens privacy/licensing and prepares `v0.4.1` as the
+  first public binary preview.
 
 ## Product Shape
 
@@ -28,12 +29,12 @@
 - Minimal CLI for listing/status, direct enable/disable, group/repository
   summaries, managed Git repository lifecycle, and local path
   install/uninstall.
-- Dark-only Wails desktop app with Dashboard, Skills, managed-only Sources, and
-  experimental Discover screens over the same scan, staging,
-  install/update/uninstall, and state boundaries as the terminal interfaces.
-  The Dashboard shows approximate Claude and Codex startup catalog cost;
-  Discover browses cached/live skills.sh metadata and installs exact selected
-  GitHub skill/tool cells through the existing ownership machinery. Skills
+- Dark-only Wails public preview with Dashboard, Skills, and managed-only
+  Sources over the same scan, staging, install/update/uninstall, and state
+  boundaries as the terminal interfaces. The experimental Discover domain is
+  dormant and has no public binding/navigation in `v0.4.1`. The Dashboard shows
+  approximate Claude and Codex startup catalog cost and runs provider
+  diagnostics only after an explicit action. Skills
   keeps applied ON rows prominent and collapses the much larger OFF catalog by
   source while preserving pending Apply semantics.
 - Fixed macOS-oriented paths derived directly from `$HOME`; no configuration

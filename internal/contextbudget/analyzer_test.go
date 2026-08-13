@@ -26,7 +26,7 @@ func TestAnalyzeFilesystemFallbackAndClaudeVisibilityRules(t *testing.T) {
 		{Name: "alpha", Claude: testCell(model.ToolClaude, "alpha", claudePath, model.SkillStateOn), Codex: testCell(model.ToolCodex, "alpha", codexPath, model.SkillStateOn)},
 		{Name: "manual-only", Claude: testCell(model.ToolClaude, "manual-only", hiddenPath, model.SkillStateOn)},
 	}
-	reports := New(p).Analyze(rows).Reports
+	reports := New(p).Estimate(rows).Reports
 
 	if reports.Claude.Current.SkillCount != 1 {
 		t.Fatalf("Claude skill count = %d, want 1", reports.Claude.Current.SkillCount)
@@ -47,6 +47,12 @@ func TestAnalyzeFilesystemFallbackAndClaudeVisibilityRules(t *testing.T) {
 
 func TestAnalyzeCodexMeasuresShorteningAndOmission(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
+	if err := os.MkdirAll(filepath.Join(p.Home, ".codex"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p.Home, ".codex", "models_cache.json"), []byte(`{"models":[{"slug":"gpt-test","context_window":1000,"priority":1}]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	skillPath := writeTestSkill(t, filepath.Join(p.CodexUserSkills, "alpha"), "A long description", "")
 	row := model.SkillRow{Name: "alpha", Codex: testCell(model.ToolCodex, "alpha", skillPath, model.SkillStateOn)}
 	raw := skillsPrompt(
@@ -57,7 +63,6 @@ func TestAnalyzeCodexMeasuresShorteningAndOmission(t *testing.T) {
 	analyzer := &Analyzer{
 		paths: p,
 		runner: staticRunner{
-			models: `{"models":[{"slug":"gpt-test","context_window":1000,"priority":1}]}`,
 			actual: promptDocument(t, actual),
 			raw:    promptDocument(t, raw),
 		},
@@ -65,7 +70,7 @@ func TestAnalyzeCodexMeasuresShorteningAndOmission(t *testing.T) {
 		lookPath: func(string) (string, error) { return "/fake/codex", nil },
 	}
 
-	result := analyzer.Analyze([]model.SkillRow{row})
+	result := analyzer.Measure([]model.SkillRow{row})
 	report := result.Reports.Codex
 	if report.Accuracy != AccuracyMeasured || report.Model != "gpt-test" || report.ContextWindowTokens != 1000 {
 		t.Fatalf("report identity = %#v", report)
@@ -120,28 +125,62 @@ func TestClaudeBudgetHonorsSettingsAndFixedEnvironment(t *testing.T) {
 }
 
 func TestEnvironmentWithHomeReplacesInheritedHome(t *testing.T) {
-	got := environmentWithHome([]string{"PATH=/bin", "HOME=/real", "CODEX_HOME=/real/codex", "CLAUDE_CONFIG_DIR=/real/claude", "OTHER=value"}, "/isolated")
+	got := environmentWithHome([]string{"PATH=/bin", "HOME=/real", "CODEX_HOME=/real/codex", "CLAUDE_CONFIG_DIR=/real/claude", "ANTHROPIC_API_KEY=secret", "HTTPS_PROXY=https://proxy.invalid", "OTHER=value"}, "/isolated")
 	joined := strings.Join(got, "\n")
-	if strings.Contains(joined, "HOME=/real") || strings.Contains(joined, "CODEX_HOME=") || strings.Contains(joined, "CLAUDE_CONFIG_DIR=") || !strings.Contains(joined, "HOME=/isolated") {
+	if strings.Contains(joined, "HOME=/real") || strings.Contains(joined, "CODEX_HOME=") || strings.Contains(joined, "CLAUDE_CONFIG_DIR=") || strings.Contains(joined, "ANTHROPIC_API_KEY=") || strings.Contains(joined, "HTTPS_PROXY=") || !strings.Contains(joined, "HOME=/isolated") {
 		t.Fatalf("environment = %#v", got)
 	}
 }
 
+func TestEstimateNeverRunsProviderCommands(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	runner := &countingRunner{}
+	analyzer := &Analyzer{paths: p, runner: runner, timeout: defaultDiagnosticTimeout, lookPath: func(string) (string, error) { return "/fake/provider", nil }}
+
+	analyzer.Estimate(nil)
+	if runner.calls != 0 {
+		t.Fatalf("provider calls = %d, want 0", runner.calls)
+	}
+}
+
+func TestAllowedDiagnosticsAreAnExplicitReadOnlyAllowlist(t *testing.T) {
+	allowed := [][]string{
+		{"debug", "prompt-input"},
+		{"debug", "prompt-input", "-c", "model_context_window=100000000"},
+		{"plugin", "list", "--json"},
+	}
+	for _, args := range allowed {
+		if !allowedDiagnostic(args) {
+			t.Fatalf("expected diagnostic to be allowed: %v", args)
+		}
+	}
+	for _, args := range [][]string{{"debug", "models"}, {"plugin", "install", "demo"}, {"exec", "echo"}} {
+		if allowedDiagnostic(args) {
+			t.Fatalf("unexpected diagnostic allowed: %v", args)
+		}
+	}
+}
+
 type staticRunner struct {
-	models string
 	actual []byte
 	raw    []byte
 }
 
 func (runner staticRunner) Run(_ context.Context, _ string, _ string, args ...string) ([]byte, error) {
 	joined := strings.Join(args, " ")
-	if joined == "debug models" {
-		return []byte(runner.models), nil
-	}
 	if strings.Contains(joined, "model_context_window=") {
 		return runner.raw, nil
 	}
 	return runner.actual, nil
+}
+
+type countingRunner struct {
+	calls int
+}
+
+func (runner *countingRunner) Run(_ context.Context, _ string, _ string, _ ...string) ([]byte, error) {
+	runner.calls++
+	return nil, nil
 }
 
 func skillsPrompt(entries ...string) string {

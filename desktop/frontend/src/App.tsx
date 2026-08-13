@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CircleAlert,
-  Compass,
   Gauge,
   GitFork,
   Layers3,
@@ -11,7 +10,6 @@ import {
   Sparkles,
 } from 'lucide-react'
 import Dashboard from './components/Dashboard'
-import DiscoverView from './components/DiscoverView'
 import PendingBar from './components/PendingBar'
 import SkillsView from './components/SkillsView'
 import SourcesView from './components/SourcesView'
@@ -19,7 +17,7 @@ import type { ActionResult, Backend, SkillRow, Snapshot, SourceMutationResult, S
 import { projectPending, wailsBackend } from './api'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 
-type View = 'dashboard' | 'skills' | 'discover' | 'sources'
+type View = 'dashboard' | 'skills' | 'sources'
 
 interface AppProps {
   backend?: Backend
@@ -107,6 +105,19 @@ export default function App({ backend = wailsBackend }: AppProps) {
     setReviewOpen(false)
   }, [backend, runAction])
 
+  const measureContextBudgets = useCallback(async () => {
+	if (!snapshot || busy) return
+	setBusy(true)
+	try {
+		setSnapshot(await backend.measureContextBudgets())
+		announce('Provider diagnostics completed.')
+	} catch (reason) {
+		announce(errorMessage(reason))
+	} finally {
+		setBusy(false)
+	}
+  }, [announce, backend, busy, snapshot])
+
   const showReadOnly = useCallback(async (show: boolean) => {
     setIncludeReadOnly(show)
     await loadSnapshot(show)
@@ -181,9 +192,6 @@ export default function App({ backend = wailsBackend }: AppProps) {
             <Layers3 size={17} /><span>Skills</span>
             {snapshot && <span className="nav-count">{snapshot.stats.managedSkills}</span>}
           </button>
-          <button aria-label="Discover" className={view === 'discover' ? 'nav-item active' : 'nav-item'} onClick={() => setView('discover')}>
-            <Compass size={17} /><span>Discover</span><span className="nav-experimental">EXP</span>
-          </button>
           <button aria-label="Sources" className={view === 'sources' ? 'nav-item active' : 'nav-item'} onClick={() => setView('sources')}>
             <GitFork size={17} /><span>Sources</span>
             {snapshot && <span className="nav-count">{snapshot.managedSources.length}</span>}
@@ -203,7 +211,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
 
       <main className="main-region">
         <header className="utility-bar">
-          <div className="breadcrumbs"><span>Skill Manager</span><b>/</b><strong>{view === 'dashboard' ? 'Dashboard' : view === 'skills' ? 'Skills' : view === 'discover' ? 'Discover' : 'Sources'}</strong></div>
+          <div className="breadcrumbs"><span>Skill Manager</span><b>/</b><strong>{view === 'dashboard' ? 'Dashboard' : view === 'skills' ? 'Skills' : 'Sources'}</strong></div>
           <div className="utility-actions">
             {snapshot && snapshot.stats.conflictCells > 0 && (
               <button className="conflict-chip" onClick={() => setView('skills')}>
@@ -220,7 +228,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
           {loading && !snapshot && <LoadingState />}
           {error && !snapshot && <ErrorState message={error} retry={() => void loadSnapshot(includeReadOnly)} />}
           {snapshot && view === 'dashboard' && (
-            <Dashboard snapshot={snapshot} onBrowseSkills={() => setView('skills')} />
+            <Dashboard snapshot={snapshot} busy={busy} onBrowseSkills={() => setView('skills')} onMeasureContext={() => void measureContextBudgets()} />
           )}
           {snapshot && view === 'skills' && (
             <SkillsView
@@ -249,19 +257,6 @@ export default function App({ backend = wailsBackend }: AppProps) {
               onBusy={setBusy}
               onResult={acceptSourceResult}
               onAnnounce={announce}
-            />
-          )}
-          {snapshot && view === 'discover' && (
-            <DiscoverView
-              backend={backend}
-              pendingCount={snapshot.pending.length}
-              busy={busy}
-              progress={sourceProgress}
-              includeReadOnly={includeReadOnly}
-              onBusy={setBusy}
-              onResult={acceptSourceResult}
-              onAnnounce={announce}
-              onViewInstalled={viewInstalledSkill}
             />
           )}
         </div>

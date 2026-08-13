@@ -10,14 +10,15 @@ make build
 make dev
 make gui-test
 make gui-build
-make release-package RELEASE_VERSION=0.4.0
+make release-package RELEASE_VERSION=0.4.1
 ```
 
 - `go run .` is suitable for repository-local checks.
 - `make dev` rebuilds the persistent command at
   `~/.local/bin/skill-manager`; run it after user-visible code changes.
 - Documentation-only changes do not require rebuilding the binary.
-- Release verification is local; the repository does not include CI yet.
+- Release verification and publication remain local/manual. Public CI is added
+  as a non-publishing source-validation layer.
 - Release packaging requires a clean Apple Silicon macOS checkout and leaves
   only ignored archives and checksums under `dist/release/`.
 
@@ -50,15 +51,16 @@ make release-package RELEASE_VERSION=0.4.0
 - Context-budget suites use temporary homes and fake provider diagnostics to
   cover fallback discovery, Claude visibility/budget rules, Codex
   shortening/omission measurement, token math, pending deltas, and subprocess
-  home isolation.
+  home isolation, argument allowlisting, secret/proxy omission, and the
+  no-subprocess default estimate.
 - Vitest and Testing Library cover dashboard loading, local filtering, staging
   versus explicit Apply, read-only scan opt-in, effective-state projection,
   context accuracy labels, `After Apply` rendering, managed source actions,
   exact install matrix review, filter-independent column selection, mixed and
   unavailable column states, busy-state blocking, typed uninstall confirmation,
-  Discover browse/search race handling, unsupported sources, safety
-  confirmation, selected agents, successful install, and pending-toggle
-  blocking. Skills coverage additionally checks active-first placement,
+  explicit diagnostics, and absence of public Discover navigation. Dormant
+  catalog adapter/domain behavior remains covered by Go tests. Skills coverage
+  additionally checks active-first placement,
   collapsed source groups, session navigation memory, search expansion,
   scoped tool/result/group actions, pending placement, and conflict exposure.
 - Wails production packaging is checked as a local ad-hoc-signed
@@ -114,9 +116,13 @@ make release-package RELEASE_VERSION=0.4.0
 - Phase 12: CLI version reporting, locally verified Apple Silicon desktop/CLI
   archives, SHA-256 manifest, download/Gatekeeper documentation, and manual
   private GitHub prerelease publication.
+- Phase 13: public-preview state/cache permission repair, bounded backup
+  retention, query-free catalog cache migration, manual provider diagnostics,
+  hidden Discover binding/UI, dependency notices, and public `v0.4.1`
+  repository/release hardening.
 
-All tasks in the twelve current planning summary tables are `done` after final
-verification.
+Phase 13's local implementation is complete; clean-commit packaging and GitHub
+repository/release operations remain the final publication steps.
 
 ## Explicitly Deferred Work
 
@@ -128,8 +134,8 @@ verification.
   ratings/comments, telemetry, and individual-skill uninstall from Discover.
 - Plugin enable/disable and disabled-state disaster recovery without a
   manifest.
-- Developer ID signing, notarization, DMG and universal macOS builds, automated
-  publishing, auto-update, and a light theme.
+- Developer ID signing, notarization, DMG and universal macOS builds, SBOM and
+  provenance, automated publishing, auto-update, and a light theme.
 
 These are roadmap candidates, not implied commitments. A future iteration must
 define their semantics and safety model before implementation.

@@ -14,7 +14,7 @@ page is added, removed, renamed, or materially repurposed.
     uninstall flows.
 - [topics/desktop-gui.md](topics/desktop-gui.md) - Wails/React architecture,
   security boundary, scan/apply and source-lifecycle session models,
-  context-budget and Discover catalog flows, visual contract, and packaging.
+  explicit context diagnostics, dormant Discover domain, visual contract, and packaging.
 - [log.md](log.md) - append-only maintenance timeline.
 
 ## Topics
@@ -42,7 +42,7 @@ page is added, removed, renamed, or materially repurposed.
     semantics.
 - [topics/desktop-gui.md](topics/desktop-gui.md)
   - native app scope/stack, identifier-only bindings, pending and source
-    operation sessions, global context-budget metrics, skills.sh Discover,
+    operation sessions, global context-budget metrics, dormant skills.sh domain,
     implementation-derived design, responsive behavior, and build commands.
 - [topics/state-safety-and-recovery.md](topics/state-safety-and-recovery.md)
   - manifest shape, backups, atomic writes, mutation boundaries, and recovery

@@ -18,6 +18,7 @@ const seedRows: SkillRow[] = [
 class DemoBackend implements Backend {
   private rows = seedRows
   private pending: PendingChange[] = []
+  private diagnosticsMeasured = false
   private sources = [
     { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
     { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
@@ -107,7 +108,7 @@ class DemoBackend implements Backend {
   }
 
   private action(message: string, changed: number, removed = 0) {
-    return { message, counts: { changed, removed, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 }, pending: [...this.pending], contextBudgets: demoBudgets(this.pending) } as unknown as ActionResult
+    return { message, counts: { changed, removed, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 }, pending: [...this.pending], contextBudgets: demoBudgets(this.pending, this.diagnosticsMeasured) } as unknown as ActionResult
   }
 
   private snapshot(includeReadOnly: boolean) {
@@ -130,7 +131,7 @@ class DemoBackend implements Backend {
         conflictCells: 0,
       },
       conflicts: [],
-      contextBudgets: demoBudgets(this.pending),
+      contextBudgets: demoBudgets(this.pending, this.diagnosticsMeasured),
       pending: [...this.pending],
       includeReadOnly,
       scannedAt: new Date().toISOString(),
@@ -147,10 +148,10 @@ class DemoBackend implements Backend {
     return { reviewId: 'review:demo', draftId: draftID, group: 'example-labs/new-skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true } as never
   }
   async applyInstall() { return this.sourceResult('Installed demo source.') }
-  async getDiscoverPage(view: string) { return demoDiscoverPage(view) as never }
-  async searchDiscover() { return demoDiscoverPage('search') as never }
-  async getDiscoverSkill(skillID: string) { const skill = demoDiscoverSkills().find((item) => item.id === skillID)!; return { skill, description: 'A catalog skill used to demonstrate safe skills.sh discovery.', fetchedAt: new Date().toISOString(), offline: false, fromCache: false, auditStatus: 'external-only' } as never }
-  async installDiscoverSkill() { return this.sourceResult('Installed catalog skill.') }
+  async measureContextBudgets() {
+    this.diagnosticsMeasured = true
+    return this.snapshot(false)
+  }
   async updateSource() { return this.sourceResult('Updated 1 source; 0 already up to date.') }
   async updateAllSources() { return this.sourceResult('Updated 1 source; 0 already up to date.') }
   async previewUninstall(sourceID: string) {
@@ -215,24 +216,14 @@ function demoCandidates() {
   }))
 }
 
-function demoDiscoverSkills() {
-  return [
-    { id: 'example-labs/skills/release-notes', skillId: 'release-notes', name: 'release-notes', source: 'example-labs/skills', installs: 2919799, weeklyInstalls: [120, 140, 135, 170, 210, 230, 260, 290], sourceType: 'github', url: 'https://skills.sh/example-labs/skills/release-notes', installable: true, claude: { tool: 'claude', status: 'available' }, codex: { tool: 'codex', status: 'conflict', message: 'Installed by another manager.' } },
-    { id: 'sample-org/skills/test-strategy', skillId: 'test-strategy', name: 'test-strategy', source: 'sample-org/skills', installs: 834100, weeklyInstalls: [80, 95, 105, 130, 150, 160, 190, 230], sourceType: 'github', url: 'https://skills.sh/sample-org/skills/test-strategy', installable: true, claude: { tool: 'claude', status: 'available' }, codex: { tool: 'codex', status: 'installed-off', message: '' } },
-    { id: 'catalog.example/docs-review', skillId: 'docs-review', name: 'docs-review', source: 'catalog.example', installs: 562800, sourceType: 'well-known', url: 'https://catalog.example/skills/docs-review', installable: false, claude: { tool: 'claude', status: 'available' }, codex: { tool: 'codex', status: 'available' } },
-  ]
-}
-
-function demoDiscoverPage(view: string) { return { view, page: 0, total: demoDiscoverSkills().length, hasMore: false, skills: demoDiscoverSkills(), fetchedAt: new Date().toISOString(), offline: false, fromCache: false } }
-
-function demoBudgets(pending: PendingChange[]) {
+function demoBudgets(pending: PendingChange[], measured: boolean) {
   return {
-    claude: demoBudget('claude', 'Claude default', 1680, 2000, pending.filter((change) => change.tool === 'claude').length),
-    codex: demoBudget('codex', 'gpt-5.6-sol', 1951, 5440, pending.filter((change) => change.tool === 'codex').length),
+    claude: demoBudget('claude', 'Claude default', 1680, 2000, pending.filter((change) => change.tool === 'claude').length, measured),
+    codex: demoBudget('codex', 'gpt-5.6-sol', 1951, 5440, pending.filter((change) => change.tool === 'codex').length, measured),
   }
 }
 
-function demoBudget(tool: string, model: string, tokens: number, budgetTokens: number, pendingCount: number) {
+function demoBudget(tool: string, model: string, tokens: number, budgetTokens: number, pendingCount: number, measured: boolean) {
   const projectedTokens = Math.max(0, tokens - pendingCount * 42)
   const usage = (value: number) => ({ skillCount: 9, requestedCharacters: value * 4, renderedCharacters: Math.min(value, budgetTokens) * 4, estimatedTokens: value, renderedTokens: Math.min(value, budgetTokens), usedPercent: Math.round(value / budgetTokens * 1000) / 10, shortenedDescriptions: 0, omittedSkills: 0, health: value > budgetTokens ? 'over-budget' : value / budgetTokens >= .8 ? 'near-limit' : 'ok' })
   return {
@@ -244,9 +235,9 @@ function demoBudget(tool: string, model: string, tokens: number, budgetTokens: n
     budgetCharacters: budgetTokens * 4,
     budgetTokens,
     budgetLabel: tool === 'codex' ? '2% of model context' : '1.0% of model context',
-    accuracy: tool === 'codex' ? 'measured' : 'partial',
+    accuracy: tool === 'codex' && measured ? 'measured' : 'partial',
     coverage: 'Global personal and provider catalogs.',
-    message: tool === 'codex' ? "Measured from Codex's model-visible global catalog." : 'Claude local catalog estimate; provider-only skills may be unavailable.',
+    message: tool === 'codex' && measured ? "Measured from Codex's model-visible global catalog." : 'Filesystem estimate. Run provider diagnostics for model-visible evidence.',
     current: usage(tokens),
     projected: usage(projectedTokens),
     projectionChanged: pendingCount > 0,

@@ -119,7 +119,7 @@ func (s *UninstallService) Apply(repository state.RepositoryEntry) (UninstallRes
 
 	for _, reference := range audit.References {
 		stagedPath := filepath.Join(stagingRoot, "links", reference.State.String(), reference.Tool.String(), reference.SkillName)
-		if err := s.mkdirAll(filepath.Dir(stagedPath), 0o755); err != nil {
+		if err := s.mkdirAll(filepath.Dir(stagedPath), 0o700); err != nil {
 			return rollback(fmt.Errorf("create uninstall staging parent: %w", err))
 		}
 		if err := s.rename(reference.LinkPath, stagedPath); err != nil {
@@ -196,7 +196,7 @@ func ensureTrashRoot(trashDir string, mkdirAll func(string, os.FileMode) error) 
 	if !os.IsNotExist(err) {
 		return fmt.Errorf("inspect trash path %s: %w", trashDir, err)
 	}
-	if err := mkdirAll(trashDir, 0o755); err != nil {
+	if err := mkdirAll(trashDir, 0o700); err != nil {
 		return fmt.Errorf("create trash directory %s: %w", trashDir, err)
 	}
 	return nil

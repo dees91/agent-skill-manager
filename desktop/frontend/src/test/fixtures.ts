@@ -78,6 +78,7 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
   })
   return {
     getSnapshot: vi.fn(async () => snapshot),
+    measureContextBudgets: vi.fn(async () => snapshot),
     toggleCell: vi.fn(async (name, tool) => action([{ skillName: name, tool, operation: 'disable' }] as never)),
     toggleBoth: vi.fn(async () => action()),
     toggleGroup: vi.fn(async () => action()),
@@ -91,26 +92,11 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     chooseLocalInstall: vi.fn(async () => new gui.InstallDraft({ draftId: 'draft:2', kind: 'local', group: 'local-skills', location: '/Users/example/Projects/local-skills', candidates: [candidate('local-alpha')], cloned: false, reused: false, retainedClone: false, cancelled: false })),
     reviewInstall: vi.fn(async (draftId, selections) => new gui.InstallReview({ reviewId: 'review:1', draftId, group: 'demo/skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true })),
     applyInstall: vi.fn(async () => new gui.SourceMutationResult({ message: 'Installed 2 links.', completed: [], createdLinks: 2, alreadyInstalled: 0, snapshot })),
-    getDiscoverPage: vi.fn(async (view) => discoverPage(view)),
-    searchDiscover: vi.fn(async () => discoverPage('search')),
-    getDiscoverSkill: vi.fn(async (skillId) => new gui.DiscoverDetail({ skill: discoverSkills().find((skill) => skill.id === skillId)!, description: 'A catalog skill description.', fetchedAt: '2026-08-12T10:00:00Z', offline: false, fromCache: false, auditStatus: 'external-only' })),
-    installDiscoverSkill: vi.fn(async () => new gui.SourceMutationResult({ message: 'Installed catalog skill.', completed: [], createdLinks: 1, alreadyInstalled: 0, snapshot })),
     updateSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
     updateAllSources: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
     previewUninstall: vi.fn(async (sourceId) => new gui.UninstallPreview({ sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0, removesCheckout: true, preservesSource: false })),
     uninstallSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Uninstalled source.', completed: [], removedActive: 2, removedDisabled: 0, snapshot })),
   }
-}
-
-export function discoverSkills() {
-  return [
-    new gui.DiscoverSkill({ id: 'demo/skills/alpha', skillId: 'alpha', name: 'alpha', source: 'demo/skills', installs: 42000, weeklyInstalls: [2, 3, 4, 5, 7, 8, 9, 11], sourceType: 'github', url: 'https://www.skills.sh/demo/skills/alpha', installable: true, claude: { tool: 'claude', status: 'available' }, codex: { tool: 'codex', status: 'installed-on' } }),
-    new gui.DiscoverSkill({ id: 'example.com/provider-skill', skillId: 'provider-skill', name: 'provider-skill', source: 'example.com', installs: 3000, sourceType: 'well-known', url: 'https://www.skills.sh/site/example.com/provider-skill', installable: false, claude: { tool: 'claude', status: 'available' }, codex: { tool: 'codex', status: 'available' } }),
-  ]
-}
-
-function discoverPage(view: string) {
-  return new gui.DiscoverPage({ view, page: 0, total: 2, hasMore: false, skills: discoverSkills(), fetchedAt: '2026-08-12T10:00:00Z', offline: false, fromCache: false })
 }
 
 function candidate(name: string) {

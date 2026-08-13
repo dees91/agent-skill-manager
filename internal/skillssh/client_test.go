@@ -67,7 +67,7 @@ func TestGetPageUsesFreshCacheAndFallsBackOffline(t *testing.T) {
 	}
 }
 
-func TestSearchAndCachedOfflineSearch(t *testing.T) {
+func TestSearchDoesNotPersistTermsAndFallsBackToLeaderboardCache(t *testing.T) {
 	fixed := time.Date(2026, 8, 12, 10, 0, 0, 0, time.UTC)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/api/search" {
@@ -84,17 +84,50 @@ func TestSearchAndCachedOfflineSearch(t *testing.T) {
 	if err != nil || page.SearchType != "semantic" || page.Skills[0].ID != "expo/skills/react-native" {
 		t.Fatalf("search = %#v err=%v", page, err)
 	}
+	if _, err := os.Stat(client.cache.path); !os.IsNotExist(err) {
+		contents, _ := os.ReadFile(client.cache.path)
+		t.Fatalf("search unexpectedly created cache %q: %s", client.cache.path, contents)
+	}
 	if _, err := client.GetPage(context.Background(), ViewAllTime, 0, true); err != nil {
 		t.Fatal(err)
 	}
 	server.Close()
-	cachedSearch, err := client.Search(context.Background(), "react native")
-	if err != nil || !cachedSearch.Offline || cachedSearch.SearchType != "cached-search" || len(cachedSearch.Skills) != 1 {
-		t.Fatalf("cached search = %#v err=%v", cachedSearch, err)
+	offlineMiss, err := client.Search(context.Background(), "react native")
+	if err != nil || !offlineMiss.Offline || offlineMiss.SearchType != "local-cache" || len(offlineMiss.Skills) != 0 {
+		t.Fatalf("offline miss = %#v err=%v", offlineMiss, err)
 	}
 	offline, err := client.Search(context.Background(), "cached")
 	if err != nil || !offline.Offline || offline.SearchType != "local-cache" || len(offline.Skills) != 1 {
 		t.Fatalf("offline search = %#v err=%v", offline, err)
+	}
+}
+
+func TestSanitizeCacheRemovesLegacySearchTerms(t *testing.T) {
+	cachePath := filepath.Join(t.TempDir(), "cache", "catalog-v1.json")
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"version":1,"pages":{},"searches":{"private query":{"view":"search","total":0,"skills":[]}},"details":{}}`
+	if err := os.WriteFile(cachePath, []byte(legacy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SanitizeCache(cachePath); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(contents), "private query") {
+		t.Fatalf("sanitized cache still contains search term: %s", contents)
+	}
+	document, err := (cacheStore{path: cachePath}).load()
+	if err != nil || document.Version != cacheVersion || len(document.Searches) != 0 {
+		t.Fatalf("sanitized cache = %#v err=%v", document, err)
+	}
+	info, err := os.Stat(cachePath)
+	if err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("cache mode = %v err=%v", info.Mode().Perm(), err)
 	}
 }
 

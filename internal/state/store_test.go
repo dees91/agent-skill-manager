@@ -2,8 +2,10 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -310,6 +312,110 @@ func TestBackupExistingMissingManifestIsNoop(t *testing.T) {
 	}
 	if backupPath != "" {
 		t.Fatalf("BackupExisting() path = %q, want empty", backupPath)
+	}
+}
+
+func TestSecureNarrowsStatePermissionsWithoutChangingRepositoryFiles(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	checkoutFile := filepath.Join(p.ReposDir, "github.com", "example", "repo", "SKILL.md")
+	for _, directory := range []string{p.BackupDir, filepath.Dir(p.SkillsSHCacheFile), filepath.Dir(checkoutFile)} {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	backupPath := filepath.Join(p.BackupDir, "state-20260508T123045.000000123Z.json")
+	for _, file := range []string{p.StateFile, p.SkillsSHCacheFile, backupPath, checkoutFile} {
+		if err := os.WriteFile(file, []byte("{}"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(file, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := New(p).Secure(); err != nil {
+		t.Fatal(err)
+	}
+	for _, directory := range []string{p.StateDir, p.BackupDir, filepath.Dir(p.SkillsSHCacheFile), filepath.Dir(checkoutFile)} {
+		info, err := os.Stat(directory)
+		if err != nil || info.Mode().Perm() != 0o700 {
+			t.Fatalf("directory %s mode = %v err=%v", directory, info.Mode().Perm(), err)
+		}
+	}
+	for _, file := range []string{p.StateFile, p.SkillsSHCacheFile, backupPath} {
+		info, err := os.Stat(file)
+		if err != nil || info.Mode().Perm() != 0o600 {
+			t.Fatalf("metadata %s mode = %v err=%v", file, info.Mode().Perm(), err)
+		}
+	}
+	info, err := os.Stat(checkoutFile)
+	if err != nil || info.Mode().Perm() != 0o644 {
+		t.Fatalf("checkout file mode = %v err=%v", info.Mode().Perm(), err)
+	}
+}
+
+func TestBackupRotationKeepsTenRecentAndDeletesOldBackups(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	store := New(p)
+	base := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	current := base
+	store.now = func() time.Time { return current }
+	if err := store.Save(Manifest{}); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 12; index++ {
+		current = base.Add(time.Duration(index-11) * time.Hour)
+		if _, err := store.BackupExisting(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := os.ReadDir(p.BackupDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 10 {
+		t.Fatalf("backup count = %d, want 10", len(entries))
+	}
+
+	oldPath := filepath.Join(p.BackupDir, "state-20260101T000000.000000000Z.json")
+	if err := os.WriteFile(oldPath, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	current = base.Add(time.Hour)
+	if _, err := store.BackupExisting(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+		t.Fatalf("old backup still exists: %v", err)
+	}
+}
+
+func TestBackupRotationFailureIsReportedAfterNewestBackupIsSafe(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	store := New(p)
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	store.now = func() time.Time { return now }
+	if err := store.Save(Manifest{}); err != nil {
+		t.Fatal(err)
+	}
+	oldPath := filepath.Join(p.BackupDir, "state-20260101T000000.000000000Z.json")
+	if err := os.MkdirAll(p.BackupDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(oldPath, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store.remove = func(path string) error { return fmt.Errorf("blocked removal of %s", path) }
+	newest, err := store.BackupExisting()
+	if err == nil || !strings.Contains(err.Error(), "blocked removal") {
+		t.Fatalf("rotation error = %v", err)
+	}
+	info, statErr := os.Stat(newest)
+	if statErr != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("newest backup missing or insecure: mode=%v err=%v", info.Mode().Perm(), statErr)
 	}
 }
 

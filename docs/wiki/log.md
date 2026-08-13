@@ -4,6 +4,27 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-13] implementation | Hardened the public preview boundary
+
+- Version `0.4.1` uses owner-only state/cache metadata, bounded state backups,
+  query-free catalog caching, and a legacy-cache privacy migration.
+- Default scans are filesystem-only; provider diagnostics require an explicit
+  action, fixed arguments, and a minimal environment without secrets/proxies.
+- The public desktop binding and navigation exclude experimental Discover.
+
+## [2026-08-13] implementation | Added binary dependency notices
+
+- Added a reproducible notice generator for the Go runtime, exact linked Go
+  modules, and locked production frontend packages.
+- Release packaging now embeds the project license and notices in the desktop
+  bundle and includes notices in the CLI archive.
+
+## [2026-08-13] decision | Prepared v0.4.1 as the first public preview
+
+- The private `v0.4.0` prerelease is superseded by public preview `v0.4.1`.
+- Signing/notarization, universal builds, SBOM/provenance, auto-update,
+  automation, and commercialization review remain pre-stable follow-ups.
+
 ## [2026-08-13] decision | Approved private GitHub preview binaries
 
 - Version `0.4.0` gains locally built Apple Silicon desktop and CLI archives,

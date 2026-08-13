@@ -3,14 +3,11 @@ import {
   ApplyPending,
   ChooseLocalInstall,
   ClearPending,
-  GetDiscoverPage,
-  GetDiscoverSkill,
   GetSnapshot,
-  InstallDiscoverSkill,
+  MeasureContextBudgets,
   PrepareGitInstall,
   PreviewUninstall,
   ReviewInstall,
-  SearchDiscover,
   ToggleBoth,
   ToggleCell,
   ToggleGroup,
@@ -38,9 +35,6 @@ export type InstallReview = gui.InstallReview
 export type InstallCellRequest = gui.InstallCellRequest
 export type SourceMutationResult = gui.SourceMutationResult
 export type UninstallPreview = gui.UninstallPreview
-export type DiscoverPage = gui.DiscoverPage
-export type DiscoverSkill = gui.DiscoverSkill
-export type DiscoverDetail = gui.DiscoverDetail
 export interface SourceProgress {
   operation: string
   phase: string
@@ -52,6 +46,7 @@ export interface SourceProgress {
 
 export interface Backend {
   getSnapshot(includeReadOnly: boolean): Promise<Snapshot>
+  measureContextBudgets(): Promise<Snapshot>
   toggleCell(skillName: string, tool: string): Promise<ActionResult>
   toggleBoth(skillName: string): Promise<ActionResult>
   toggleGroup(group: string): Promise<ActionResult>
@@ -65,10 +60,6 @@ export interface Backend {
   chooseLocalInstall(): Promise<InstallDraft>
   reviewInstall(draftID: string, selections: InstallCellRequest[]): Promise<InstallReview>
   applyInstall(reviewID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
-  getDiscoverPage(view: string, page: number, forceRefresh: boolean): Promise<DiscoverPage>
-  searchDiscover(query: string): Promise<DiscoverPage>
-  getDiscoverSkill(skillID: string, forceRefresh: boolean): Promise<DiscoverDetail>
-  installDiscoverSkill(skillID: string, tools: string[], includeReadOnly: boolean): Promise<SourceMutationResult>
   updateSource(sourceID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   updateAllSources(includeReadOnly: boolean): Promise<SourceMutationResult>
   previewUninstall(sourceID: string): Promise<UninstallPreview>
@@ -77,6 +68,7 @@ export interface Backend {
 
 const generatedBackend: Backend = {
   getSnapshot: GetSnapshot,
+  measureContextBudgets: MeasureContextBudgets,
   toggleCell: ToggleCell,
   toggleBoth: ToggleBoth,
   toggleGroup: ToggleGroup,
@@ -90,10 +82,6 @@ const generatedBackend: Backend = {
   chooseLocalInstall: ChooseLocalInstall,
   reviewInstall: ReviewInstall,
   applyInstall: ApplyInstall,
-  getDiscoverPage: GetDiscoverPage,
-  searchDiscover: SearchDiscover,
-  getDiscoverSkill: GetDiscoverSkill,
-  installDiscoverSkill: InstallDiscoverSkill,
   updateSource: UpdateSource,
   updateAllSources: UpdateAllSources,
   previewUninstall: PreviewUninstall,
@@ -109,6 +97,7 @@ async function activeBackend(): Promise<Backend> {
 
 export const wailsBackend: Backend = {
   getSnapshot: async (...args) => (await activeBackend()).getSnapshot(...args),
+  measureContextBudgets: async (...args) => (await activeBackend()).measureContextBudgets(...args),
   toggleCell: async (...args) => (await activeBackend()).toggleCell(...args),
   toggleBoth: async (...args) => (await activeBackend()).toggleBoth(...args),
   toggleGroup: async (...args) => (await activeBackend()).toggleGroup(...args),
@@ -122,10 +111,6 @@ export const wailsBackend: Backend = {
   chooseLocalInstall: async (...args) => (await activeBackend()).chooseLocalInstall(...args),
   reviewInstall: async (...args) => (await activeBackend()).reviewInstall(...args),
   applyInstall: async (...args) => (await activeBackend()).applyInstall(...args),
-  getDiscoverPage: async (...args) => (await activeBackend()).getDiscoverPage(...args),
-  searchDiscover: async (...args) => (await activeBackend()).searchDiscover(...args),
-  getDiscoverSkill: async (...args) => (await activeBackend()).getDiscoverSkill(...args),
-  installDiscoverSkill: async (...args) => (await activeBackend()).installDiscoverSkill(...args),
   updateSource: async (...args) => (await activeBackend()).updateSource(...args),
   updateAllSources: async (...args) => (await activeBackend()).updateAllSources(...args),
   previewUninstall: async (...args) => (await activeBackend()).previewUninstall(...args),

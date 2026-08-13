@@ -52,6 +52,7 @@ type Service struct {
 	sourceBusy      atomic.Bool
 	progressMu      sync.Mutex
 	progress        func(SourceProgress)
+	privacyReady    bool
 }
 
 // New creates a desktop session for the provided filesystem paths.
@@ -80,6 +81,15 @@ func (s *Service) GetSnapshot(includeReadOnly bool) (Snapshot, error) {
 	defer s.mu.Unlock()
 	if s.SourceBusy() {
 		return Snapshot{}, fmt.Errorf("wait for the source operation to finish before refreshing")
+	}
+	if !s.privacyReady {
+		if err := s.store.Secure(); err != nil {
+			return Snapshot{}, err
+		}
+		if err := skillssh.SanitizeCache(s.paths.SkillsSHCacheFile); err != nil {
+			return Snapshot{}, err
+		}
+		s.privacyReady = true
 	}
 	if err := s.reloadLocked(includeReadOnly); err != nil {
 		return Snapshot{}, err
@@ -397,10 +407,27 @@ func (s *Service) reloadLocked(includeReadOnly bool) error {
 		return manifestErr
 	}
 	s.managedSources = projectManagedSources(manifest)
-	s.contextResult = s.contextAnalyzer.Analyze(s.rows)
+	s.contextResult = s.contextAnalyzer.Estimate(s.rows)
 	s.includeReadOnly = includeReadOnly
 	s.scannedAt = s.now().UTC()
 	return nil
+}
+
+// MeasureContextBudgets explicitly runs the supported provider diagnostics and
+// returns a fresh projection while preserving process-local pending changes.
+func (s *Service) MeasureContextBudgets() (Snapshot, error) {
+	if s.SourceBusy() {
+		return Snapshot{}, fmt.Errorf("wait for the source operation to finish before running diagnostics")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.scannedAt.IsZero() {
+		if err := s.reloadLocked(false); err != nil {
+			return Snapshot{}, err
+		}
+	}
+	s.contextResult = s.contextAnalyzer.Measure(s.rows)
+	return s.snapshotLocked(), nil
 }
 
 func (s *Service) rowLocked(name string) (model.SkillRow, error) {

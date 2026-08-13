@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  root:
+    name: Root Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build ./...
+
+  desktop:
+    name: Desktop and frontend
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: |
+            go.sum
+            desktop/go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+      - run: npm ci
+        working-directory: desktop/frontend
+      - run: npm run typecheck
+        working-directory: desktop/frontend
+      - run: npm test
+        working-directory: desktop/frontend
+      - run: npm run build
+        working-directory: desktop/frontend
+      - run: npm audit --audit-level=high
+        working-directory: desktop/frontend
+      - run: go test ./...
+        working-directory: desktop
+      - run: go vet ./...
+        working-directory: desktop
+      - run: make notices-check

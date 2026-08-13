@@ -1,12 +1,14 @@
-import { ArrowRight, Bot, Check, CircleAlert, Gauge, Info, Layers3, ShieldCheck, TerminalSquare } from 'lucide-react'
+import { ArrowRight, Bot, Check, CircleAlert, Gauge, Info, Layers3, Play, ShieldCheck, TerminalSquare } from 'lucide-react'
 import type { ContextBudgetToolReport, SkillCell, Snapshot } from '../api'
 
 interface DashboardProps {
   snapshot: Snapshot
+  busy: boolean
   onBrowseSkills: () => void
+  onMeasureContext: () => void
 }
 
-export default function Dashboard({ snapshot, onBrowseSkills }: DashboardProps) {
+export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureContext }: DashboardProps) {
   const claude = effectiveCounts(snapshot, 'claude')
   const codex = effectiveCounts(snapshot, 'codex')
   const all = {
@@ -34,13 +36,13 @@ export default function Dashboard({ snapshot, onBrowseSkills }: DashboardProps) 
       <article className="panel context-budget-panel">
         <div className="panel-header">
           <div><p className="eyebrow">Prompt budget</p><h2>Global skill catalog cost</h2></div>
-          <span className="panel-badge context-token-badge">≈ 1 token / 4 chars</span>
+          <div className="context-header-actions"><span className="panel-badge context-token-badge">≈ 1 token / 4 chars</span><button className="secondary-button" onClick={onMeasureContext} disabled={busy}><Play size={13} /> Run provider diagnostics</button></div>
         </div>
         <div className="context-budget-list">
           <ContextBudgetRow report={snapshot.contextBudgets.claude} icon={<Bot size={17} />} name="Claude Code" />
           <ContextBudgetRow report={snapshot.contextBudgets.codex} icon={<TerminalSquare size={17} />} name="Codex" />
         </div>
-        <div className="context-budget-note"><Info size={13} /><span>Global discovery only. Project and session skills are excluded; provider-only catalogs may be reported as partial.</span></div>
+        <div className="context-budget-note"><Info size={13} /><span>Filesystem estimate by default. Diagnostics run local read-only Codex and Claude commands only when requested.</span></div>
       </article>
 
       <div className="dashboard-grid">
@@ -154,7 +156,7 @@ function ToolBar({ name, counts }: { name: string; counts: Counts }) {
   return (
     <div className="tool-bar-row">
       <div><strong>{name}</strong><small>{counts.on} on · {counts.off} off</small></div>
-      <div className="stacked-bar" aria-label={`${name}: ${counts.on} enabled, ${counts.off} disabled`}>
+      <div className="stacked-bar" role="img" aria-label={`${name}: ${counts.on} enabled, ${counts.off} disabled`}>
         <span className="bar-on" style={{ width: `${percent(counts.on, total)}%` }} />
         <span className="bar-off" style={{ width: `${percent(counts.off, total)}%` }} />
         <span className="bar-conflict" style={{ width: `${percent(counts.conflict, total)}%` }} />
