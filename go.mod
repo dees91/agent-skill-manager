@@ -1,6 +1,6 @@
 module github.com/dees91/agent-skill-manager
 
-go 1.25.12
+go 1.26.6
 
 require (
 	github.com/charmbracelet/bubbletea v0.27.1

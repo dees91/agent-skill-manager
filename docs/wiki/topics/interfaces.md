@@ -26,7 +26,7 @@ Git repositories only.
 
 ## macOS Desktop Interface
 
-- `implemented`: a Wails 2.13 `darwin/arm64` app under `desktop/`, with React,
+- `implemented`: a Wails 2.14 `darwin/arm64` app under `desktop/`, with React,
   TypeScript, Vite, generated bindings, native dark appearance, inset macOS
   titlebar, standard app/edit menus, and pending-close confirmation.
 - Dashboard shows effective per-tool counts, source groups, visibility

@@ -4,6 +4,13 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-14] maintenance | Updated the desktop runtime
+
+- Upgraded the Wails library and pinned build CLI from 2.13.0 to 2.14.0.
+- Raised both Go module requirements from 1.25.12 to 1.26.6 after new standard
+  library advisories were published, including one without a 1.25 backport.
+- Regenerated third-party notices and revalidated the native Apple Silicon app.
+
 ## [2026-08-13] publication | Published the v0.4.1 public preview
 
 - Replaced the private `v0.4.0` prerelease/tag with verified Apple Silicon

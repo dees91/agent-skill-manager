@@ -28,7 +28,7 @@
 - [`internal/cli`](../../../internal/cli/cli.go) and
   [`internal/tui`](../../../internal/tui/) are interfaces over those backend
   services.
-- [`desktop/`](../../../desktop/) is a nested Go 1.25.12 Wails 2.13 module. Its
+- [`desktop/`](../../../desktop/) is a nested Go 1.26.6 Wails 2.14 module. Its
   root `App` is only a generated-binding adapter over `internal/gui`; React and
   TypeScript live under `desktop/frontend/`.
 

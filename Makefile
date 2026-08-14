@@ -1,5 +1,5 @@
 BIN ?= $(HOME)/.local/bin/skill-manager
-WAILS_VERSION ?= v2.13.0
+WAILS_VERSION ?= v2.14.0
 WAILS = go run github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)
 VULNCHECK_VERSION ?= v1.7.0
 VULNCHECK = go run golang.org/x/vuln/cmd/govulncheck@$(VULNCHECK_VERSION)

@@ -85,7 +85,7 @@ skill-manager --version
 
 ### Installation From Source
 
-The terminal application requires Go 1.25.12 or newer:
+The terminal application requires Go 1.26.6 or newer:
 
 ```bash
 go install github.com/dees91/agent-skill-manager@latest
@@ -109,7 +109,7 @@ make dev BIN="$HOME/bin/skill-manager"
 
 ### Building The Desktop Application
 
-The desktop build requires Go 1.25.12 or newer, Node.js/npm, Xcode command-line
+The desktop build requires Go 1.26.6 or newer, Node.js/npm, Xcode command-line
 tools, and network access for dependency installation:
 
 ```bash
