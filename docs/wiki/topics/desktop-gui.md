@@ -4,8 +4,8 @@
 
 - `implemented`: Phase 6 adds a local macOS interface without changing CLI/TUI
   source-lifecycle semantics.
-- `desktop/` is a nested Go 1.25.12 module using Wails 2.13. The root CLI module
-  also requires Go 1.25.12 so patched standard-library and runtime support
+- `desktop/` is a nested Go 1.26.6 module using Wails 2.14. The root CLI module
+  also requires Go 1.26.6 so patched standard-library and runtime support
   modules can be used
   consistently across release artifacts.
 - The frontend uses React 19, TypeScript, Vite, Lucide outline icons, generated

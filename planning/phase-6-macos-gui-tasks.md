@@ -12,7 +12,7 @@
 
 ## Product Decisions
 
-- Use Wails 2.13 in a nested desktop Go module so the root CLI module can retain
+- Use Wails 2.14 in a nested desktop Go module so the root CLI module can retain
   its existing Go directive and command behavior.
 - Use React, TypeScript, Vite, npm, generated Wails bindings, plain CSS tokens,
   and no router, external state store, Tailwind, or chart library.

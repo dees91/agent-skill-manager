@@ -1,6 +1,6 @@
 module github.com/dees91/agent-skill-manager/desktop
 
-go 1.25.12
+go 1.26.6
 
 require (
 	github.com/dees91/agent-skill-manager v0.0.0
