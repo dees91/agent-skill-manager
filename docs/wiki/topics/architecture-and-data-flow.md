@@ -103,7 +103,7 @@ ranking tab/search
   -> existing checkout, discovery, preflight, install apply, and rescan
 ```
 
-The Go adapter and domain tests preserve this experimental flow, but `v0.4.1`
+The Go adapter and domain tests preserve this experimental flow, but `v0.4.2`
 does not expose it through Wails or React and therefore makes no skills.sh
 request. Search queries remain in memory only; legacy persisted queries are
 removed on the first desktop snapshot. Raw downloaded skill files are never

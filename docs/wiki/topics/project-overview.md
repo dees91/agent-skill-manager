@@ -19,8 +19,9 @@
   Phase 10 active-first source-grouped Skills workspace, and Phase 11 public
   namespace, documentation, synthetic assets, clean-checkout verification, and
   history hygiene. Phase 12 adds locally verified Apple Silicon desktop and CLI
-  archives; Phase 13 hardens privacy/licensing and prepares `v0.4.1` as the
-  first public binary preview.
+  archives; Phase 13 hardens privacy/licensing and publishes `v0.4.1` as the
+  first public binary preview. The `v0.4.2` maintenance preview supersedes it
+  with security and dependency updates plus an empty-profile GUI fix.
 
 ## Product Shape
 
@@ -32,7 +33,7 @@
 - Dark-only Wails public preview with Dashboard, Skills, and managed-only
   Sources over the same scan, staging, install/update/uninstall, and state
   boundaries as the terminal interfaces. The experimental Discover domain is
-  dormant and has no public binding/navigation in `v0.4.1`. The Dashboard shows
+  dormant and has no public binding/navigation in `v0.4.2`. The Dashboard shows
   approximate Claude and Codex startup catalog cost and runs provider
   diagnostics only after an explicit action. Skills
   keeps applied ON rows prominent and collapses the much larger OFF catalog by

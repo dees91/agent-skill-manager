@@ -10,7 +10,7 @@ body:
     id: version
     attributes:
       label: Version or commit
-      placeholder: v0.4.1 or commit SHA
+      placeholder: v0.4.2 or commit SHA
     validations:
       required: true
   - type: input
@@ -39,4 +39,3 @@ body:
       label: Actual behavior
     validations:
       required: true
-

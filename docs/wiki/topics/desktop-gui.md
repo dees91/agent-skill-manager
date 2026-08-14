@@ -12,7 +12,7 @@
   Wails bindings, and plain CSS tokens. There is no router, external state
   store, Tailwind, or chart library. Frontend development requires Node.js
   22.12 or newer and npm 10 or newer.
-- The `v0.4.1` dark-only public preview contains Dashboard, Skills, and a
+- The `v0.4.2` dark-only public preview contains Dashboard, Skills, and a
   managed-only Sources screen. Iteration 9's experimental skills.sh Go adapter
   and domain tests remain in the repository, but Discover has no public Wails
   binding or React navigation in this preview.
@@ -144,7 +144,7 @@ make gui-dev
 make gui-bindings
 make gui-test
 make gui-build
-make release-package RELEASE_VERSION=0.4.1
+make release-package RELEASE_VERSION=0.4.2
 ```
 
 `make gui-build` produces a local ad-hoc-signed Apple Silicon app.

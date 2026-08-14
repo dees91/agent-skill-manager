@@ -14,7 +14,7 @@ original target.
 
 ## Status And Compatibility
 
-The current source version is `0.4.1` and is a public preview, not a stable
+The current source version is `0.4.2` and is a public preview, not a stable
 release.
 
 - The supported desktop target is Apple Silicon macOS 13 or newer.
@@ -49,19 +49,19 @@ as a replacement for live discovery.
 
 ### GitHub Release Preview
 
-The [`v0.4.1` prerelease](https://github.com/dees91/agent-skill-manager/releases/tag/v0.4.1)
+The [`v0.4.2` prerelease](https://github.com/dees91/agent-skill-manager/releases/tag/v0.4.2)
 provides two Apple Silicon downloads:
 
-- `skill-manager-desktop-0.4.1-macos-arm64.zip` contains `Skill Manager.app`;
-- `skill-manager-cli-0.4.1-macos-arm64.tar.gz` contains the terminal binary,
+- `skill-manager-desktop-0.4.2-macos-arm64.zip` contains `Skill Manager.app`;
+- `skill-manager-cli-0.4.2-macos-arm64.tar.gz` contains the terminal binary,
   README, license, and third-party notices.
 
 Download the matching archive together with `SHA256SUMS.txt`, then compare its
 SHA-256 digest with the corresponding manifest line. For example:
 
 ```bash
-shasum -a 256 skill-manager-desktop-0.4.1-macos-arm64.zip
-grep 'skill-manager-desktop-0.4.1-macos-arm64.zip' SHA256SUMS.txt
+shasum -a 256 skill-manager-desktop-0.4.2-macos-arm64.zip
+grep 'skill-manager-desktop-0.4.2-macos-arm64.zip' SHA256SUMS.txt
 ```
 
 The two hashes must be identical. The checksum detects an incomplete or
@@ -76,9 +76,9 @@ Privacy & Security → Open Anyway** only after verifying the checksum and sourc
 For the CLI, extract the archive and install the executable on `PATH`:
 
 ```bash
-tar -xzf skill-manager-cli-0.4.1-macos-arm64.tar.gz
+tar -xzf skill-manager-cli-0.4.2-macos-arm64.tar.gz
 install -m 0755 \
-  skill-manager-cli-0.4.1-macos-arm64/skill-manager \
+  skill-manager-cli-0.4.2-macos-arm64/skill-manager \
   "$HOME/.local/bin/skill-manager"
 skill-manager --version
 ```
@@ -212,7 +212,7 @@ the CLI and TUI:
   uninstalls complete Git and local sources recorded in the manifest.
 
 The experimental skills.sh Discover implementation remains under development
-and is not exposed by the `v0.4.1` public preview build.
+and is not exposed by the `v0.4.2` public preview build.
 
 Pending skill toggles remain process-local until Apply. Source lifecycle
 operations are separately confirmed and cannot overlap a pending toggle batch.

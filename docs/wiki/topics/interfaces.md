@@ -45,7 +45,7 @@ Git repositories only.
   it exposes `ON`, `OFF`, `MIXED`, or `N/A`. Git repositories expose Update
   and Update all; both source kinds expose typed-confirmed whole-source
   Uninstall.
-- Discover is excluded from the `v0.4.1` public preview navigation and public
+- Discover is excluded from the `v0.4.2` public preview navigation and public
   Wails binding. Its experimental Go adapter/domain remains in the repository.
 - Dashboard context metrics are filesystem estimates by default; **Run provider
   diagnostics** is the only UI action that executes local Claude/Codex

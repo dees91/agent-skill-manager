@@ -4,6 +4,14 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-14] publication | Prepared the v0.4.2 maintenance preview
+
+- Superseded `v0.4.1` with a patched Go 1.26.6 baseline and current Wails,
+  Bubble Tea, Lip Gloss, React, TypeScript, and Vite dependencies.
+- Included the empty-profile GUI projection fix and regenerated binary
+  dependency notices without expanding the public Dashboard, Skills, and
+  Sources product surface.
+
 ## [2026-08-14] maintenance | Updated the frontend toolchain
 
 - Upgraded React to 19.2.8, TypeScript to 7.0.2, Vite to 8.2.1, and the related
