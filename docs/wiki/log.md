@@ -4,6 +4,12 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-14] maintenance | Updated terminal UI dependencies
+
+- Upgraded Bubble Tea from 0.27.1 to 1.3.10 and Lip Gloss from 0.13.0 to 1.1.0.
+- Regenerated dependency notices and verified the TUI test suite plus an
+  isolated interactive PTY launch and clean quit.
+
 ## [2026-08-14] maintenance | Updated the desktop runtime
 
 - Upgraded the Wails library and pinned build CLI from 2.13.0 to 2.14.0.
