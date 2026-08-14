@@ -4,6 +4,15 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-14] documentation | Improved repository discovery assets
+
+- Tightened the README value proposition, added direct download, source
+  installation, and compatibility links, and summarized the local reversible
+  safety model without adding star prompts.
+- Added a reproducible 1280×640 GitHub social preview composition to the
+  existing Remotion project, with synthetic data and automated format, size,
+  and media verification.
+
 ## [2026-08-14] publication | Published the v0.4.2 maintenance preview
 
 - Published verified Apple Silicon desktop and CLI artifacts plus checksums;

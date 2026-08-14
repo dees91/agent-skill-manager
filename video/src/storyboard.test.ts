@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import test from 'node:test'
-import { STORYBOARD, VIDEO } from './storyboard'
+import { SOCIAL_PREVIEW, STORYBOARD, VIDEO } from './storyboard'
 
 test('storyboard covers one continuous overlapping 20 second composition', () => {
   assert.equal(VIDEO.durationInFrames, VIDEO.fps * 20)
@@ -35,4 +35,23 @@ test('all storyboard copy is populated', () => {
       assert.ok(typeof value === 'string' ? value.trim().length > 0 : value.length > 0, `${scene.id}.${key} is empty`)
     }
   }
+})
+
+test('social preview has stable GitHub dimensions, copy, and tracked assets', () => {
+  assert.equal(SOCIAL_PREVIEW.width, 1280)
+  assert.equal(SOCIAL_PREVIEW.height, 640)
+  assert.equal(SOCIAL_PREVIEW.copy.headline, 'Agent Skills, under control.')
+
+  for (const value of Object.values(SOCIAL_PREVIEW.copy)) {
+    assert.ok(value.trim().length > 0)
+  }
+
+  assert.equal(SOCIAL_PREVIEW.rows.length, 3)
+  for (const row of SOCIAL_PREVIEW.rows) {
+    assert.ok(row.name.trim().length > 0)
+    assert.ok(['ON', 'OFF'].includes(row.claude))
+    assert.ok(['ON', 'OFF'].includes(row.codex))
+  }
+
+  assert.ok(existsSync(resolve(process.cwd(), 'public', SOCIAL_PREVIEW.asset)))
 })

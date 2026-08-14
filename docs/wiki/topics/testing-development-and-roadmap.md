@@ -23,12 +23,14 @@ make release-package RELEASE_VERSION=0.4.2
 - Release packaging requires a clean Apple Silicon macOS checkout and leaves
   only ignored archives and checksums under `dist/release/`.
 
-### README Demo Animation
+### Repository Marketing Media
 
 The tracked `.github/assets/demo.gif` is generated from the isolated Remotion
 project under `video/`. `video/STORYBOARD.md` is the human-readable story and
 review contract; `video/src/storyboard.ts` is the executable projection of its
-timings, copy, and assets. Update both before changing individual scenes.
+timings, copy, and assets. The same project generates the tracked
+`.github/assets/social-preview.png` as a 1280×640 static Remotion composition.
+Update the human and executable story sources before changing either asset.
 
 The master is a silent 1920×1080, 30 fps, 600-frame MP4 written to the ignored
 `video/out/` directory. `video/scripts/render-gif.sh` derives the README asset,
@@ -43,11 +45,15 @@ npm ci
 npm run check
 npm run render
 npm run gif
+npm run social-preview
 npm run verify
 ```
 
 The capture refresh procedure is documented in `video/README.md`; rendering
-from committed assets needs only Node/npm and FFmpeg.
+from committed assets needs only Node/npm and FFmpeg. The verifier enforces a
+10 MiB infinite-loop contract for the GIF and a 1 MiB PNG contract for the
+social preview. GitHub's repository-card image must still be uploaded manually
+from the tracked PNG under repository settings.
 
 ## Test Strategy
 

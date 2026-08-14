@@ -1,18 +1,29 @@
 # Skill Manager
 
-Skill Manager is a local macOS and terminal application for inspecting and
-reversibly controlling globally installed agent skills for Claude Code and
-Codex.
+Skill Manager gives Claude Code and Codex users one local place to see, install,
+and reversibly control Agent Skills across both tools. Turning a skill off
+removes it from discovery without deleting or rewriting it; turning it on
+restores the exact original directory or symlink.
 
-It scans the current user's filesystem on demand, shows which tool can see each
-skill, and disables a skill by moving its original directory entry out of the
-provider's discovery path. Enabling the skill restores that exact entry,
-including whether it was a directory or a symlink and, for symlinks, its
-original target.
+<p align="center">
+  <a href="https://github.com/dees91/agent-skill-manager/releases/tag/v0.4.2">Download macOS app</a>
+  ·
+  <a href="#installation-from-source">Install CLI</a>
+  ·
+  <a href="#status-and-compatibility">Compatibility</a>
+</p>
 
 <p align="center">
   <img src=".github/assets/demo.gif" width="960" alt="Skill Manager demo showing local skill inventory, reversible visibility toggles, and managed sources for Claude Code and Codex">
 </p>
+
+## Why Skill Manager
+
+- See one live inventory across Claude Code and Codex.
+- Hide and restore the exact original skill entry with reversible toggles.
+- Preserve Git repositories, linked folders, lockfiles, and skill contents.
+- Use the same safety model from the macOS app, TUI, or CLI.
+- Stay local-first, with no telemetry or background polling.
 
 ## Status And Compatibility
 

@@ -1,6 +1,7 @@
 # Demo Video Agent Brief
 
-This directory contains the reproducible source for the README demo animation.
+This directory contains the reproducible source for the README demo animation
+and GitHub social preview.
 
 ## Source Precedence
 
@@ -28,6 +29,8 @@ timings belong in the storyboard projection, not scattered through scene code.
 - Composition: 1920x1080, 30 fps, 600 frames (20 seconds), no audio.
 - Master: `out/demo-master.mp4` (generated and ignored by Git).
 - README asset: `../.github/assets/demo.gif`, infinite loop, at most 10 MiB.
+- Social preview: `../.github/assets/social-preview.png`, 1280x640 PNG, at most
+  1 MiB.
 - The GIF conversion script may reduce frame rate, palette size, or resolution
   in that order, but must not shorten the story without user approval.
 
@@ -36,5 +39,6 @@ timings belong in the storyboard projection, not scattered through scene code.
 1. Update `STORYBOARD.md` and increment its revision.
 2. Update `src/storyboard.ts` and any synthetic UI captures.
 3. Run `npm ci`, `npm run check`, and `npm run render`.
-4. Run `npm run gif`, `npm run verify`, and inspect the output.
-5. Update the README or wiki when the public product story changes.
+4. Run `npm run gif`, `npm run social-preview`, and `npm run verify`.
+5. Inspect the animation and social preview at full and reduced size.
+6. Update the README or wiki when the public product story changes.

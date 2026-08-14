@@ -6,12 +6,15 @@ video_dir="$(cd "${script_dir}/.." && pwd)"
 repo_root="$(cd "${video_dir}/.." && pwd)"
 master="${video_dir}/out/demo-master.mp4"
 gif="${repo_root}/.github/assets/demo.gif"
-limit_bytes=$((10 * 1024 * 1024))
+social_preview="${repo_root}/.github/assets/social-preview.png"
+gif_limit_bytes=$((10 * 1024 * 1024))
+social_preview_limit_bytes=$((1 * 1024 * 1024))
 
 command -v ffprobe >/dev/null || { echo "ffprobe is required" >&2; exit 1; }
 command -v xxd >/dev/null || { echo "xxd is required" >&2; exit 1; }
 test -f "${master}" || { echo "Missing ${master}" >&2; exit 1; }
 test -f "${gif}" || { echo "Missing ${gif}" >&2; exit 1; }
+test -f "${social_preview}" || { echo "Missing ${social_preview}" >&2; exit 1; }
 
 master_meta="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate,nb_frames -of csv=p=0:s=x "${master}")"
 master_meta="${master_meta%x}"
@@ -31,9 +34,16 @@ esac
 gif_duration="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "${gif}")"
 gif_size="$(stat -f%z "${gif}")"
 test "${gif_duration}" = "20.000000" || { echo "Unexpected GIF duration: ${gif_duration}" >&2; exit 1; }
-(( gif_size <= limit_bytes )) || { echo "GIF exceeds 10 MiB: ${gif_size}" >&2; exit 1; }
+(( gif_size <= gif_limit_bytes )) || { echo "GIF exceeds 10 MiB: ${gif_size}" >&2; exit 1; }
 
 loop_extension="$(xxd -p "${gif}" | tr -d '\n' | grep -Eo '21ff0b4e45545343415045322e300301[0-9a-f]{4}00' | head -1)"
 test "${loop_extension}" = "21ff0b4e45545343415045322e300301000000" || { echo "GIF does not declare an infinite loop" >&2; exit 1; }
 
-echo "Verified master (${master_meta}, silent) and GIF (${gif_meta}, ${gif_size} bytes, infinite loop)."
+social_preview_codec="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "${social_preview}")"
+social_preview_dimensions="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "${social_preview}")"
+social_preview_size="$(stat -f%z "${social_preview}")"
+test "${social_preview_codec}" = "png" || { echo "Social preview must be PNG: ${social_preview_codec}" >&2; exit 1; }
+test "${social_preview_dimensions}" = "1280x640" || { echo "Unexpected social preview dimensions: ${social_preview_dimensions}" >&2; exit 1; }
+(( social_preview_size <= social_preview_limit_bytes )) || { echo "Social preview exceeds 1 MiB: ${social_preview_size}" >&2; exit 1; }
+
+echo "Verified master (${master_meta}, silent), GIF (${gif_meta}, ${gif_size} bytes, infinite loop), and social preview (${social_preview_dimensions}, ${social_preview_size} bytes)."

@@ -1,8 +1,8 @@
-# README Demo Video
+# Repository Marketing Media
 
-This is the reproducible Remotion source for `.github/assets/demo.gif`. The
-editable story is in `STORYBOARD.md`; `src/storyboard.ts` is its executable
-projection.
+This is the reproducible Remotion source for `.github/assets/demo.gif` and
+`.github/assets/social-preview.png`. The editable story is in `STORYBOARD.md`;
+`src/storyboard.ts` is its executable projection.
 
 ## Build
 
@@ -14,11 +14,18 @@ npm ci
 npm run check
 npm run render
 npm run gif
+npm run social-preview
 npm run verify
 ```
 
 Generated intermediates are written to `video/out/` and ignored by Git. The
-optimized GIF is written to `.github/assets/demo.gif` and is tracked.
+optimized GIF and 1280x640 social preview are written to `.github/assets/` and
+are tracked. `npm run verify` checks the video, GIF loop and size contract, and
+the social preview's format, dimensions, and 1 MiB size limit.
+
+After changing the social preview, upload `.github/assets/social-preview.png`
+manually under the repository's **Settings → General → Social preview**. GitHub
+does not use the tracked file automatically for repository cards.
 
 To inspect the composition interactively:
 
@@ -48,5 +55,5 @@ the public desktop UI changes.
 4. Confirm that every path, skill, group, URL, and count comes from the
    synthetic demo backend before committing the assets.
 
-The optional capture step uses `agent-browser`, but rendering itself depends
+The optional capture step uses browser automation, but rendering itself depends
 only on the files in this repository plus Node/npm and FFmpeg.

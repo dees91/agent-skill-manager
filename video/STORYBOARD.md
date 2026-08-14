@@ -1,6 +1,6 @@
 # Skill Manager README Demo Storyboard
 
-Revision: 1
+Revision: 2
 
 Format: 20 seconds, 1920x1080, 30 fps, silent, seamless dark loop
 
@@ -16,6 +16,27 @@ change without deleting the skill or changing its source.
 The animation uses the product's own dark visual system and synthetic data.
 It must remain understandable with no sound and when embedded at 960x540 in a
 GitHub README.
+
+The same source also owns a static GitHub social preview so the repository card
+and README demo present one consistent product story.
+
+## GitHub Social Preview
+
+Format: static PNG, 1280x640, at most 1 MiB
+
+- Product label: **Skill Manager**
+- Headline: **Agent Skills, under control.**
+- Supporting line: **Claude Code + Codex · local · reversible**
+- Surface label: **macOS app · TUI · CLI**
+- Visual: the repository-owned app icon beside a compact synthetic skill
+  inventory using the same dark canvas, source colors, and state language as
+  the desktop interface.
+  - `release-checklist`: Claude ON, Codex ON
+  - `ui-accessibility`: Claude ON, Codex OFF
+  - `dependency-review`: Claude OFF, Codex ON
+- Intent: make the repository purpose readable at normal GitHub card size and
+  at a 640x320 reduced preview without suggesting cloud sync, telemetry, or
+  unsupported functionality.
 
 ## Timeline
 
@@ -108,6 +129,7 @@ When public functionality changes:
 2. Mirror the accepted timing, copy, and asset names in `src/storyboard.ts`.
 3. Refresh only captures whose UI state changed.
 4. Update scene implementation if the story needs a new visual treatment.
-5. Render the master, regenerate the GIF, and review a contact sheet at minimum.
+5. Render the master, regenerate the GIF and social preview, and review a
+   contact sheet plus the social preview at full and reduced size.
 6. Re-run privacy scans and verify the README still describes the released
    public surface accurately.

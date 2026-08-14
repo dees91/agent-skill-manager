@@ -13,6 +13,7 @@
     "test": "tsx --test src/storyboard.test.ts",
     "check": "npm run typecheck && npm test",
     "render": "remotion render SkillManagerOverview out/demo-master.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --muted",
+    "social-preview": "remotion still SkillManagerSocialPreview ../.github/assets/social-preview.png",
     "stills": "remotion still SkillManagerOverview out/still-problem.png --frame=45 && remotion still SkillManagerOverview out/still-terminal.png --frame=120 && remotion still SkillManagerOverview out/still-dashboard.png --frame=210 && remotion still SkillManagerOverview out/still-toggle.png --frame=338 && remotion still SkillManagerOverview out/still-sources.png --frame=465 && remotion still SkillManagerOverview out/still-close.png --frame=555",
     "gif": "./scripts/render-gif.sh",
     "verify": "./scripts/verify-output.sh"

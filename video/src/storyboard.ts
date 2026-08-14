@@ -1,9 +1,27 @@
 export const VIDEO = {
-  revision: 1,
+  revision: 2,
   fps: 30,
   width: 1920,
   height: 1080,
   durationInFrames: 600,
+} as const
+
+export const SOCIAL_PREVIEW = {
+  width: 1280,
+  height: 640,
+  copy: {
+    product: 'Skill Manager',
+    inventory: 'local skill inventory',
+    headline: 'Agent Skills, under control.',
+    supporting: 'Claude Code + Codex · local · reversible',
+    surfaces: 'macOS app · TUI · CLI',
+  },
+  rows: [
+    { name: 'release-checklist', accent: 'cyan', claude: 'ON', codex: 'ON' },
+    { name: 'ui-accessibility', accent: 'blue', claude: 'ON', codex: 'OFF' },
+    { name: 'dependency-review', accent: 'orange', claude: 'OFF', codex: 'ON' },
+  ],
+  asset: 'appicon.svg',
 } as const
 
 export type SceneID = 'problem' | 'terminal' | 'dashboard' | 'skills' | 'sources' | 'closing'
