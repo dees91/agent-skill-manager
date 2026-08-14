@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,27 @@ import (
 	"github.com/dees91/agent-skill-manager/internal/paths"
 	"github.com/dees91/agent-skill-manager/internal/state"
 )
+
+func TestEmptySnapshotSerializesCollectionsAsArrays(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	snapshot, err := New(p).GetSnapshot(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contents, err := json.Marshal(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var projection map[string]json.RawMessage
+	if err := json.Unmarshal(contents, &projection); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"rows", "groups", "sources", "managedSources", "conflicts", "pending"} {
+		if string(projection[field]) != "[]" {
+			t.Fatalf("empty snapshot field %s = %s, want []", field, projection[field])
+		}
+	}
+}
 
 func TestSnapshotSummariesAndReadOnly(t *testing.T) {
 	p := paths.ForHome(t.TempDir())

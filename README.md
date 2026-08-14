@@ -109,8 +109,9 @@ make dev BIN="$HOME/bin/skill-manager"
 
 ### Building The Desktop Application
 
-The desktop build requires Go 1.26.6 or newer, Node.js/npm, Xcode command-line
-tools, and network access for dependency installation:
+The desktop build requires Go 1.26.6 or newer, Node.js 22.12 or newer with npm
+10 or newer, Xcode command-line tools, and network access for dependency
+installation:
 
 ```bash
 make gui-test

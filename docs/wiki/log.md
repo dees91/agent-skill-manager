@@ -4,6 +4,15 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-14] maintenance | Updated the frontend toolchain
+
+- Upgraded React to 19.2.8, TypeScript to 7.0.2, Vite to 8.2.1, and the related
+  testing and React plugin packages; documented the Node.js 22.12/npm 10 floor.
+- Made empty managed-source snapshots serialize as arrays and added a backend
+  contract test after live browser QA exposed the prior null projection.
+- Revalidated Dashboard, Skills staging, Sources dialogs, console health, and
+  WCAG A/AA automation with no accessibility violations.
+
 ## [2026-08-14] maintenance | Updated terminal UI dependencies
 
 - Upgraded Bubble Tea from 0.27.1 to 1.3.10 and Lip Gloss from 0.13.0 to 1.1.0.
