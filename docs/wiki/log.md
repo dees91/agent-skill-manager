@@ -111,6 +111,19 @@ intentionally excluded.
   identifier, version, isolated-home launch, synthetic screenshot dimensions,
   and screenshot privacy checks.
 
+## [2026-08-14] query | Clarified Skills CLI installation boundaries
+
+- Verified the upstream global canonical-copy, agent-link, lock metadata, npm
+  execution-cache, dependency, and default install-telemetry behavior relevant
+  to Skill Manager interoperability.
+
+## [2026-08-14] implementation | Added a reproducible README demo animation
+
+- Added a versioned human and executable storyboard, a self-contained Remotion
+  project, synthetic desktop captures, and an FFmpeg size-bounded GIF pipeline.
+- Embedded the 20-second local/reversible workflow demo in the README while
+  retaining the static Dashboard documentation image.
+
 ## [2026-08-13] implementation | Prepared the public source release
 
 - Moved the Go modules to `github.com/dees91/agent-skill-manager` and the macOS bundle

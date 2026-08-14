@@ -60,3 +60,18 @@ group.
   valid managed entry or disabled manifest record.
 - Scanner code is observational. Filesystem changes belong to the toggle or
   install apply services.
+
+## Skills CLI Interoperability
+
+`observed (2026-08-14)`: the upstream `skills add -g` workflow copies the
+selected skill into the canonical `~/.agents/skills/<name>` directory and, for
+non-universal agents, normally links an agent-specific skill path to that copy.
+It records source/update metadata in `~/.agents/.skill-lock.json` (or the XDG
+state equivalent). Skill Manager reads that lock only for source labeling.
+
+The upstream installer copies the files contained in the selected skill, but
+does not install runtimes or project dependencies described by its
+instructions. `npx` separately downloads the `skills` CLI and its own Node
+dependencies into the npm execution cache when they are not already available.
+The upstream CLI also sends install telemetry for eligible public sources by
+default; `DISABLE_TELEMETRY=1` disables it.

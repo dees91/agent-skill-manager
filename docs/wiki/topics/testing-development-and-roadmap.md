@@ -23,6 +23,32 @@ make release-package RELEASE_VERSION=0.4.2
 - Release packaging requires a clean Apple Silicon macOS checkout and leaves
   only ignored archives and checksums under `dist/release/`.
 
+### README Demo Animation
+
+The tracked `.github/assets/demo.gif` is generated from the isolated Remotion
+project under `video/`. `video/STORYBOARD.md` is the human-readable story and
+review contract; `video/src/storyboard.ts` is the executable projection of its
+timings, copy, and assets. Update both before changing individual scenes.
+
+The master is a silent 1920×1080, 30 fps, 600-frame MP4 written to the ignored
+`video/out/` directory. `video/scripts/render-gif.sh` derives the README asset,
+first attempting 960×540 at 15 fps and reducing frame rate, palette, then
+resolution only as needed to remain below 10 MiB. The committed UI captures
+come from the frontend demo backend and use only synthetic identities, paths,
+skills, repositories, and counts.
+
+```bash
+cd video
+npm ci
+npm run check
+npm run render
+npm run gif
+npm run verify
+```
+
+The capture refresh procedure is documented in `video/README.md`; rendering
+from committed assets needs only Node/npm and FFmpeg.
+
 ## Test Strategy
 
 - Inject `paths.Paths` derived from a temporary home.

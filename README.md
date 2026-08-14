@@ -10,7 +10,9 @@ provider's discovery path. Enabling the skill restores that exact entry,
 including whether it was a directory or a symlink and, for symlinks, its
 original target.
 
-![Skill Manager dashboard](docs/images/dashboard.png)
+<p align="center">
+  <img src=".github/assets/demo.gif" width="960" alt="Skill Manager demo showing local skill inventory, reversible visibility toggles, and managed sources for Claude Code and Codex">
+</p>
 
 ## Status And Compatibility
 
@@ -210,6 +212,8 @@ the CLI and TUI:
   and stages reversible toggles for explicit review and Apply.
 - **Sources** installs exact Claude/Codex skill cells and safely updates or
   uninstalls complete Git and local sources recorded in the manifest.
+
+![Skill Manager dashboard](docs/images/dashboard.png)
 
 The experimental skills.sh Discover implementation remains under development
 and is not exposed by the `v0.4.2` public preview build.
