@@ -57,3 +57,4 @@ jobs:
       - run: go vet ./...
         working-directory: desktop
       - run: make notices-check
+      - run: make vulncheck

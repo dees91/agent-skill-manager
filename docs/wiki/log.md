@@ -4,6 +4,36 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-14] maintenance | Updated terminal UI dependencies
+
+- Upgraded Bubble Tea from 0.27.1 to 1.3.10 and Lip Gloss from 0.13.0 to 1.1.0.
+- Regenerated dependency notices and verified the TUI test suite plus an
+  isolated interactive PTY launch and clean quit.
+
+## [2026-08-14] maintenance | Updated the desktop runtime
+
+- Upgraded the Wails library and pinned build CLI from 2.13.0 to 2.14.0.
+- Raised both Go module requirements from 1.25.12 to 1.26.6 after new standard
+  library advisories were published, including one without a 1.25 backport.
+- Regenerated third-party notices and revalidated the native Apple Silicon app.
+
+## [2026-08-13] publication | Published the v0.4.1 public preview
+
+- Replaced the private `v0.4.0` prerelease/tag with verified Apple Silicon
+  `v0.4.1` desktop and CLI artifacts plus checksums and dependency notices.
+- Made the repository public, added passing pinned-action CI and Dependabot,
+  enabled private vulnerability reporting and GitHub security scanning, and
+  protected `main` from deletion and non-fast-forward pushes.
+
+## [2026-08-13] security | Cleared initial dependency alerts
+
+- Upgraded desktop `golang.org/x/crypto`, `x/net`, and `x/sys` after Dependabot
+  identified patched 2026 advisories before the release tag was created.
+- Raised both module requirements to Go 1.25.12 so their standard libraries and
+  the root CLI's transitive `x/sys` dependency contain the available security
+  fixes.
+- Added pinned `govulncheck` gates to local release verification and public CI.
+
 ## [2026-08-13] implementation | Hardened the public preview boundary
 
 - Version `0.4.1` uses owner-only state/cache metadata, bounded state backups,
