@@ -10,7 +10,8 @@
   consistently across release artifacts.
 - The frontend uses React 19, TypeScript, Vite, Lucide outline icons, generated
   Wails bindings, and plain CSS tokens. There is no router, external state
-  store, Tailwind, or chart library.
+  store, Tailwind, or chart library. Frontend development requires Node.js
+  22.12 or newer and npm 10 or newer.
 - The `v0.4.1` dark-only public preview contains Dashboard, Skills, and a
   managed-only Sources screen. Iteration 9's experimental skills.sh Go adapter
   and domain tests remain in the repository, but Discover has no public Wails

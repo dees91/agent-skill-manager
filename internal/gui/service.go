@@ -459,7 +459,7 @@ func (s *Service) snapshotLocked() Snapshot {
 		Rows:            rows,
 		Groups:          groups,
 		Sources:         collectSources(s.rows),
-		ManagedSources:  append([]ManagedSource(nil), s.managedSources...),
+		ManagedSources:  append([]ManagedSource{}, s.managedSources...),
 		Stats:           stats,
 		Conflicts:       conflicts,
 		ContextBudgets:  s.contextResult.Project(s.contextPendingLocked()),

@@ -9,7 +9,7 @@ The complete project requires:
 
 - macOS 13 or newer on Apple Silicon for supported GUI packaging;
 - Go 1.26.6 or newer;
-- Node.js and npm;
+- Node.js 22.12 or newer and npm 10 or newer;
 - Git;
 - Xcode command-line tools for Wails builds.
 
