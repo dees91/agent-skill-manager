@@ -8,7 +8,7 @@ filesystem and ownership model.
 The complete project requires:
 
 - macOS 13 or newer on Apple Silicon for supported GUI packaging;
-- Go 1.25 or newer;
+- Go 1.25.12 or newer;
 - Node.js and npm;
 - Git;
 - Xcode command-line tools for Wails builds.
