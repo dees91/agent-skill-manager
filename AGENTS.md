@@ -569,7 +569,7 @@ Do not add Homebrew, installer, auto-update, or release packaging in the first i
 Iteration 6 adds a local Apple Silicon desktop app while preserving the CLI and
 TUI contracts above.
 
-- Use Wails 2.13 in a nested `desktop` Go module and call the existing Go
+- Use Wails 2.14 in a nested `desktop` Go module and call the existing Go
   backend in-process. Do not duplicate filesystem mutation logic in JavaScript
   or another backend language.
 - Use React, TypeScript, Vite, npm, generated Wails bindings, and plain CSS
