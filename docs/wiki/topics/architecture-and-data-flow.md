@@ -19,6 +19,10 @@
 - [`internal/skillsets`](../../../internal/skillsets/) owns the independent
   versioned saved-recipe file, validation, atomic persistence, and bounded
   backups. It stores skill basenames but no paths or tool selections.
+- [`internal/advisor`](../../../internal/advisor/) owns the versioned
+  receipt/lease file, cross-process lock, exact activation/cleanup preflight,
+  and path-free public result types. It reuses `scan` and `ops` rather than
+  moving entries directly.
 - [`internal/gui`](../../../internal/gui/) owns the concurrency-safe desktop
   session, identifier-only action API, source drafts/reviews, snapshots,
   summaries, apply results, and pending state. It has no Wails dependency.
@@ -50,6 +54,25 @@ fixed Paths
 
 The manifest augments scanning for disabled entries and managed repository
 or local-source metadata; it does not replace filesystem observation.
+
+## Runtime Skill Advisor Flow
+
+```text
+first-party skill reads list --json
+  -> model selects <=5 relevant OFF cells for current host
+  -> advisor activate fully preflights names and receipt state under lock
+  -> receipt/lease claims are atomically persisted
+  -> ops enables each OFF cell through existing state/backup semantics
+  -> skill reads the activated SKILL.md files directly
+  -> explicit cleanup validates restore fingerprints
+  -> shared claims are released; final claims are disabled through ops
+```
+
+Cells that were already ON never enter a lease. Persisting claims before an
+enable makes interrupted activations discoverable; cleanup can safely finalize
+a claim whose cell is already back OFF. The advisor lock serializes advisor
+processes, while `ops` still revalidates the live filesystem immediately before
+every move.
 
 ## Desktop Session Flow
 

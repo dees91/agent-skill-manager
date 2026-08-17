@@ -81,6 +81,10 @@ from the tracked PNG under repository settings.
   bounded independent backups, CRUD, corruption isolation, missing-member
   retention/reconnection, overlapping projections, scoped preview/staging,
   Pending preservation, and source-uninstall impact.
+- Advisor suites use temporary homes to cover path-free JSON, argument/version
+  boundaries, baseline-ON preservation, receipt/lease sharing, concurrent
+  activation locking, strict dry-run, exact cleanup, manual early disable, and
+  symlink drift rejection. A repository contract test covers the public skill.
 - Discover backend coverage projects ON/OFF/conflict state and verifies that a
   selected catalog entry installs exactly one skill into only the selected
   agent cells while rejecting unknown, well-known, offline, pending, and busy
@@ -165,13 +169,16 @@ from the tracked PNG under repository settings.
   path-free CRUD and scoped smart-toggle preview/staging, contextual desktop
   creation, missing-member reconnection, uninstall impact warnings,
   responsive/accessibility validation, and local builds.
+- Phase 15: public first-party Skill Advisor, versioned path-free inventory,
+  opaque receipt/reference-counted lease persistence, cross-process locking,
+  drift-safe explicit cleanup, and same-turn instruction loading.
 
 All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.
 The `v0.4.2` maintenance prerelease supersedes that first preview with patched
 Go, Wails, terminal UI, and frontend dependencies plus the empty-profile GUI
-projection fix. Phase 14 is complete in the source tree but has not been tagged
-or published as a release.
+projection fix. Phases 14 and 15 are complete in the source tree but have not
+been tagged or published as a release.
 
 ## Explicitly Deferred Work
 

@@ -801,6 +801,41 @@ changing CLI, TUI, source ownership, or filesystem toggle semantics.
   sets, import/export, per-skill notes, workflow steps, and CLI/TUI surfaces
   remain out of scope.
 
+### First-Party Skill Advisor (Iteration 15)
+
+Iteration 15 adds a public first-party Agent Skill and a CLI-only temporary
+activation API without changing TUI, desktop, source ownership, or core toggle
+semantics.
+
+- Keep the standard skill at `skills/skill-advisor` in this repository. It is
+  optional and is installed through the existing Git/local `install` command;
+  do not embed or auto-install it and do not depend on a private skill source.
+- `list --json` exposes path-free `apiVersion: 1` inventory data: skill name,
+  description, group, source, and explicit Claude/Codex state plus toggleable
+  status. `--available-for claude|codex` and repeated case-insensitive
+  `--query` filters provide a bounded candidate view without external JSON
+  tooling. Human `list` output remains unchanged.
+- Add `advisor activate --tool claude|codex --skill <name>...`, `advisor
+  cleanup --receipt <id>`, and `advisor status`. Mutating advisor commands
+  support strict dry-run and all advisor commands support structured JSON.
+- One activation accepts 1-5 unique skill names for exactly one tool and fully
+  preflights the requested cells. The binary never selects skills itself; the
+  first-party skill chooses the smallest clearly relevant set.
+- Persist opaque receipts and reference-counted leases separately in
+  `~/.skill-manager/advisor-activations.json`. Keep `state.json` at version 2,
+  serialize advisor access through `~/.skill-manager/advisor.lock`, use atomic
+  owner-only writes and bounded backups, and never store prompt/task content.
+- A cell that was ON before advisor activation is never owned or disabled by a
+  receipt. Multiple receipts may share a lease; only cleanup of the final claim
+  restores the original OFF state.
+- Cleanup must validate the exact tool/name, active/disabled paths, entry type,
+  and symlink target before mutation. Drift or conflict preserves the receipt
+  and blocks cleanup rather than touching an unexpected entry.
+- The skill directly reads each newly activated `SKILL.md` before continuing,
+  so same-turn use does not depend on provider catalog-refresh timing. Cleanup
+  is explicit; do not add automatic expiry, task-end cleanup, hooks, plugins,
+  or a GUI surface in this iteration.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -872,6 +907,9 @@ Backend tests should cover:
 - Skill Set persistence, validation, corruption isolation, missing-member
   retention, scoped smart-toggle preview/staging, overlapping-set projection,
   contextual creation, and non-blocking uninstall impact
+- Path-free JSON inventory, advisor argument/version contracts, receipt/lease
+  reference counting, concurrency locking, dry-run, baseline-ON preservation,
+  drift-safe cleanup, and first-party skill validation
 
 TUI can be tested at the model/update layer. Full terminal rendering tests are optional for MVP.
 
@@ -908,6 +946,8 @@ Keep [planning/phase-12-github-release-tasks.md](./planning/phase-12-github-rele
 Keep [planning/phase-13-public-preview-hardening-tasks.md](./planning/phase-13-public-preview-hardening-tasks.md) as the source of truth for Iteration 13 public-preview hardening and publication task status.
 
 Keep [planning/phase-14-skill-sets-tasks.md](./planning/phase-14-skill-sets-tasks.md) as the source of truth for Iteration 14 saved Skill Set task status.
+
+Keep [planning/phase-15-skill-advisor-tasks.md](./planning/phase-15-skill-advisor-tasks.md) as the source of truth for Iteration 15 first-party Skill Advisor task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

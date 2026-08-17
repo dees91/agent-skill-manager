@@ -3,6 +3,7 @@ package cli
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -93,7 +94,7 @@ func TestRunHelpListsCommands(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run(help) code = %d, want 0", code)
 	}
-	for _, command := range []string{"tui", "version", "list", "status", "groups", "repos", "install", "update", "uninstall", "enable", "disable"} {
+	for _, command := range []string{"tui", "version", "list", "status", "groups", "repos", "install", "update", "uninstall", "enable", "disable", "advisor"} {
 		if !strings.Contains(stdout.String(), command) {
 			t.Fatalf("stdout = %q, want command %q", stdout.String(), command)
 		}
@@ -1080,6 +1081,187 @@ func TestRunListPrintsSkillRows(t *testing.T) {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestRunListJSONReturnsVersionedPathFreeInventory(t *testing.T) {
+	p := setupListStatusFixture(t)
+	var stdout, stderr strings.Builder
+
+	code := RunWithPaths([]string{"list", "--json"}, &stdout, &stderr, p)
+
+	if code != 0 || stderr.Len() != 0 {
+		t.Fatalf("RunWithPaths(list --json) code=%d stderr=%q", code, stderr.String())
+	}
+	var output struct {
+		APIVersion int `json:"apiVersion"`
+		Skills     []struct {
+			Name  string `json:"name"`
+			Tools struct {
+				Claude struct {
+					State      string `json:"state"`
+					Toggleable bool   `json:"toggleable"`
+				} `json:"claude"`
+				Codex struct {
+					State      string `json:"state"`
+					Toggleable bool   `json:"toggleable"`
+				} `json:"codex"`
+			} `json:"tools"`
+		} `json:"skills"`
+	}
+	if err := json.Unmarshal([]byte(stdout.String()), &output); err != nil {
+		t.Fatalf("decode list JSON: %v\n%s", err, stdout.String())
+	}
+	if output.APIVersion != 1 || len(output.Skills) != 4 {
+		t.Fatalf("list JSON = %#v", output)
+	}
+	byName := map[string]struct {
+		ClaudeState      string
+		ClaudeToggleable bool
+		CodexState       string
+		CodexToggleable  bool
+	}{}
+	for _, skill := range output.Skills {
+		byName[skill.Name] = struct {
+			ClaudeState      string
+			ClaudeToggleable bool
+			CodexState       string
+			CodexToggleable  bool
+		}{skill.Tools.Claude.State, skill.Tools.Claude.Toggleable, skill.Tools.Codex.State, skill.Tools.Codex.Toggleable}
+	}
+	if got := byName["off-skill"]; got.ClaudeState != "off" || !got.ClaudeToggleable || got.CodexState != "missing" {
+		t.Fatalf("off-skill JSON = %#v", got)
+	}
+	if got := byName["imagegen"]; got.CodexState != "read_only" || got.CodexToggleable {
+		t.Fatalf("imagegen JSON = %#v", got)
+	}
+	if strings.Contains(stdout.String(), p.Home) {
+		t.Fatalf("list JSON leaked a filesystem path: %s", stdout.String())
+	}
+}
+
+func TestRunListJSONFiltersAvailableSkillsByToolAndMetadata(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	for _, name := range []string{"ffmpeg", "unrelated"} {
+		disabledPath := filepath.Join(p.CodexDisabledDir, name)
+		mkdirSkill(t, disabledPath)
+	}
+	saveState(t, p, state.Manifest{Disabled: []state.DisabledEntry{
+		{
+			Tool: model.ToolCodex, SkillName: "ffmpeg",
+			OriginalPath: filepath.Join(p.CodexUserSkills, "ffmpeg"),
+			DisabledPath: filepath.Join(p.CodexDisabledDir, "ffmpeg"),
+			EntryType:    model.EntryTypeDir, Source: model.SourceLocal,
+		},
+		{
+			Tool: model.ToolCodex, SkillName: "unrelated",
+			OriginalPath: filepath.Join(p.CodexUserSkills, "unrelated"),
+			DisabledPath: filepath.Join(p.CodexDisabledDir, "unrelated"),
+			EntryType:    model.EntryTypeDir, Source: model.SourceLocal,
+		},
+	}})
+	var stdout, stderr strings.Builder
+
+	code := RunWithPaths([]string{"list", "--json", "--available-for", "codex", "--query", "FFMPEG", "--query", "remotion"}, &stdout, &stderr, p)
+
+	if code != 0 || stderr.Len() != 0 {
+		t.Fatalf("filtered list code=%d stderr=%q", code, stderr.String())
+	}
+	var output listJSONOutput
+	if err := json.Unmarshal([]byte(stdout.String()), &output); err != nil {
+		t.Fatalf("decode filtered list: %v", err)
+	}
+	if output.APIVersion != 1 || len(output.Skills) != 1 || output.Skills[0].Name != "ffmpeg" {
+		t.Fatalf("filtered list = %#v", output)
+	}
+}
+
+func TestRunListJSONRejectsFiltersWithoutJSON(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	var stdout, stderr strings.Builder
+
+	code := RunWithPaths([]string{"list", "--available-for", "codex"}, &stdout, &stderr, p)
+
+	if code == 0 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "require --json") {
+		t.Fatalf("filtered list code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+}
+
+func TestRunAdvisorJSONActivationStatusAndCleanup(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	disabledPath := filepath.Join(p.CodexDisabledDir, "ffmpeg")
+	mkdirSkill(t, disabledPath)
+	saveState(t, p, state.Manifest{Disabled: []state.DisabledEntry{{
+		Tool:         model.ToolCodex,
+		SkillName:    "ffmpeg",
+		OriginalPath: filepath.Join(p.CodexUserSkills, "ffmpeg"),
+		DisabledPath: disabledPath,
+		EntryType:    model.EntryTypeDir,
+		Source:       model.SourceLocal,
+		Group:        model.GroupLocal,
+	}}})
+	var stdout, stderr strings.Builder
+	code := RunWithPaths([]string{"advisor", "activate", "--tool", "codex", "--skill", "ffmpeg", "--json"}, &stdout, &stderr, p)
+	if code != 0 || stderr.Len() != 0 {
+		t.Fatalf("advisor activate code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	var activation struct {
+		APIVersion int    `json:"apiVersion"`
+		ReceiptID  string `json:"receiptId"`
+		Actions    []struct {
+			Skill  string `json:"skill"`
+			Action string `json:"action"`
+		} `json:"actions"`
+	}
+	if err := json.Unmarshal([]byte(stdout.String()), &activation); err != nil {
+		t.Fatal(err)
+	}
+	if activation.APIVersion != 1 || len(activation.ReceiptID) != 32 || len(activation.Actions) != 1 || activation.Actions[0].Action != "enable" {
+		t.Fatalf("activation = %#v", activation)
+	}
+	assertExists(t, filepath.Join(p.CodexUserSkills, "ffmpeg", "SKILL.md"))
+
+	stdout.Reset()
+	stderr.Reset()
+	code = RunWithPaths([]string{"advisor", "status", "--tool", "codex", "--json"}, &stdout, &stderr, p)
+	if code != 0 || !strings.Contains(stdout.String(), activation.ReceiptID) || stderr.Len() != 0 {
+		t.Fatalf("advisor status code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = RunWithPaths([]string{"advisor", "cleanup", "--receipt", activation.ReceiptID, "--json"}, &stdout, &stderr, p)
+	if code != 0 || stderr.Len() != 0 {
+		t.Fatalf("advisor cleanup code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"action": "disable"`) {
+		t.Fatalf("cleanup JSON = %s", stdout.String())
+	}
+	assertMissing(t, filepath.Join(p.CodexUserSkills, "ffmpeg"))
+	assertExists(t, filepath.Join(p.CodexDisabledDir, "ffmpeg", "SKILL.md"))
+}
+
+func TestRunAdvisorJSONUsesStructuredErrors(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	var stdout, stderr strings.Builder
+
+	code := RunWithPaths([]string{"advisor", "activate", "--tool", "codex", "--skill", "missing", "--json"}, &stdout, &stderr, p)
+
+	if code == 0 || stdout.Len() != 0 {
+		t.Fatalf("advisor error code=%d stdout=%q", code, stdout.String())
+	}
+	var output struct {
+		APIVersion int `json:"apiVersion"`
+		Error      struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(stderr.String()), &output); err != nil {
+		t.Fatalf("decode advisor error: %v\n%s", err, stderr.String())
+	}
+	if output.APIVersion != 1 || output.Error.Code != "ACTIVATION_FAILED" || !strings.Contains(output.Error.Message, "not installed") {
+		t.Fatalf("advisor error = %#v", output)
 	}
 }
 

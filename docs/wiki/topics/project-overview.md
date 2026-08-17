@@ -23,15 +23,16 @@
   first public binary preview. The `v0.4.2` maintenance preview supersedes it
   with security and dependency updates plus an empty-profile GUI fix. Phase 14
   adds saved task-oriented Skill Sets to the desktop source build without
-  changing CLI/TUI behavior.
+  changing CLI/TUI behavior. Phase 15 adds a public first-party Skill Advisor
+  plus a tool-neutral receipt/lease CLI for temporary task-specific activation.
 
 ## Product Shape
 
 - Interactive Bubble Tea TUI for scanning, filtering, staging, and applying
   enable/disable changes.
 - Minimal CLI for listing/status, direct enable/disable, group/repository
-  summaries, managed Git repository lifecycle, and local path
-  install/uninstall.
+  summaries, managed Git repository lifecycle, local path install/uninstall,
+  path-free JSON inventory, and receipt-scoped advisor activation/cleanup.
 - Dark-only Wails desktop with Dashboard, Skills, saved Skill Sets, and
   managed-only Sources over the same scan, staging,
   install/update/uninstall, and state boundaries as the terminal interfaces.
@@ -45,8 +46,8 @@
 - Fixed macOS-oriented paths derived directly from `$HOME`; no configuration
   file in the current scope.
 - Local state under `~/.skill-manager/`, including disabled entries, manifest
-  backups, separate saved-recipe metadata, managed repository checkouts, and
-  transient uninstall staging.
+  backups, separate saved-recipe and advisor receipt metadata, managed
+  repository checkouts, and transient uninstall staging.
 
 ## Primary Invariants
 
@@ -80,6 +81,7 @@ main
       -> ops  -> scan, state, model
       -> install -> paths, state, model, git/filesystem
       -> tui  -> staging -> model
+      -> advisor -> scan, ops, state, model
       -> gui  -> staging, scan, ops, install, state, model
               -> skillsets -> private versioned recipe file
               -> contextbudget -> metadata, paths, model

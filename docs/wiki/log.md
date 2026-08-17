@@ -230,3 +230,16 @@ intentionally excluded.
 - Added filesystem scanning, source/group classification, reversible toggles,
   CLI/TUI surfaces, conflicts, pending batch Apply, backups, and temporary-home
   test coverage.
+## [2026-08-17] implementation | Added the first-party Skill Advisor
+
+- Added a public standard skill, versioned path-free inventory, and
+  receipt-scoped Claude/Codex activation with reference-counted leases.
+- Kept cleanup explicit and drift-safe, isolated advisor metadata from the
+  core manifest, and documented public Git/local installation.
+
+## [2026-08-17] verification | Verified Skill Advisor activation and cleanup
+
+- Passed focused, race, full backend/frontend, vet, dependency notice,
+  vulnerability, skill contract, and strict wiki checks.
+- Verified the public skill through a fresh Codex process and exercised live
+  Claude/Codex receipt activation and exact cleanup with no receipts left.

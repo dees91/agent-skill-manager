@@ -74,10 +74,14 @@ func (a App) Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return a.runTUICommand(stderr)
 	case "list":
-		if len(args) != 1 {
-			return usageError(stderr, "list does not accept arguments")
+		if len(args) == 1 {
+			return a.runList(stdout, stderr)
 		}
-		return a.runList(stdout, stderr)
+		options, err := parseListJSONArgs(args[1:])
+		if err != nil {
+			return usageError(stderr, err.Error())
+		}
+		return a.runListJSON(stdout, stderr, options)
 	case "status":
 		if len(args) != 1 {
 			return usageError(stderr, "status does not accept arguments")
@@ -103,6 +107,8 @@ func (a App) Run(args []string, stdout, stderr io.Writer) int {
 		return a.runMutation(stdout, stderr, model.OperationEnable, args[1:])
 	case "disable":
 		return a.runMutation(stdout, stderr, model.OperationDisable, args[1:])
+	case "advisor":
+		return a.runAdvisor(stdout, stderr, args[1:])
 	default:
 		fmt.Fprintf(stderr, "unknown command %q\n", args[0])
 		fmt.Fprintln(stderr, `Run "skill-manager help" for usage.`)
@@ -1003,7 +1009,8 @@ func printUsage(stdout io.Writer) {
 Commands:
   tui                          Open the terminal UI
   version                      Print the Skill Manager version
-  list                         List discovered skills
+  list [--json [--available-for <tool>] [--query <text>...]]
+                               List skills or query path-free JSON metadata
   status                       Summarize skill states
   groups                       Summarize detected groups
   repos                        Summarize managed repository installs
@@ -1017,6 +1024,12 @@ Commands:
                                Restore a disabled skill
   disable --tool <tool> <skill> [--dry-run]
                                Disable an active skill
+  advisor activate --tool <tool> --skill <name>... [--dry-run] [--json]
+                               Activate a receipt-scoped skill set
+  advisor cleanup --receipt <id> [--dry-run] [--json]
+                               Release one exact advisor receipt
+  advisor status [--tool <tool>] [--json]
+                               List outstanding advisor receipts
   help                         Show this help text
 
 Tools:

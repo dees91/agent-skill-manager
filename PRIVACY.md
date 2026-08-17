@@ -24,7 +24,9 @@ current user.
 Skill Manager writes only inside its state directory and the provider user-skill
 directories involved in an explicit operation. State can include original and
 disabled paths, symlink targets, repository URLs, canonical local source paths,
-installed skill names, timestamps, and commits.
+installed skill names, timestamps, and commits. Advisor state additionally
+stores opaque receipt IDs, tool/skill claims, and exact restore fingerprints;
+it never stores prompt or task content.
 
 State directories are restricted to the current user (`0700`). State, backup,
 and catalog-cache JSON files use mode `0600`. When a new state backup is made,

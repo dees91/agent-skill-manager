@@ -69,6 +69,10 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   - `documented`: separate saved-recipe persistence, basename-based
     membership, scoped smart-toggle preview/staging, contextual GUI creation,
     unavailable-member retention, and source-uninstall impact warnings.
+- [`planning/phase-15-skill-advisor-tasks.md`](../../../planning/phase-15-skill-advisor-tasks.md)
+  - `documented`: first-party public skill distribution, versioned path-free
+    inventory, opaque receipt/reference-counted lease activation, explicit
+    cleanup, and same-turn instruction loading.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.
@@ -107,6 +111,9 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   tool scope, and all state changes remain in the shared Pending/Apply model.
   Missing members stay recorded, and source uninstall warns without rewriting
   recipes.
+- Skill Advisor owns only cells it moves from OFF to ON. Opaque receipts may
+  share leases, final cleanup restores OFF after exact drift validation, and
+  pre-existing ON cells remain outside advisor ownership.
 
 ## Maintenance Rule
 

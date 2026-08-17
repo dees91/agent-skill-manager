@@ -48,8 +48,11 @@ page is added, removed, renamed, or materially repurposed.
     behavior, and build commands.
 - [topics/saved-skill-sets.md](topics/saved-skill-sets.md)
   - task-oriented recipe semantics, separate private persistence, missing
-    member reconnection, scoped smart-toggle staging, contextual GUI creation,
-    source-uninstall impact, and deferred scope.
+  member reconnection, scoped smart-toggle staging, contextual GUI creation,
+  source-uninstall impact, and deferred scope.
+- [topics/runtime-skill-advisor.md](topics/runtime-skill-advisor.md)
+  - first-party skill distribution, path-free inventory API, receipt/lease
+  activation, same-turn instruction loading, explicit cleanup, and concurrency.
 - [topics/state-safety-and-recovery.md](topics/state-safety-and-recovery.md)
   - manifest shape, backups, atomic writes, mutation boundaries, and recovery
     limits.
@@ -61,7 +64,7 @@ page is added, removed, renamed, or materially repurposed.
 
 - [sources/product-decisions-and-plans.md](sources/product-decisions-and-plans.md)
   - digest and routing map for `AGENTS.md`, `README.md`, `DESIGN.md`, and the
-    fourteen iteration plans.
+    fifteen iteration plans.
 - [sources/implementation-snapshot-2026-08-11.md](sources/implementation-snapshot-2026-08-11.md)
   - dated package-level source inspection and verification status used to seed
     the initial topic pages.

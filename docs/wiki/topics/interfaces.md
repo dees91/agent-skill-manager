@@ -5,7 +5,11 @@
 - `skill-manager tui` and bare `skill-manager` launch the Bubble Tea UI.
 - `version` and `--version` print the release version, tagged Go module version,
   or `dev` for an unversioned repository build.
-- `list` shows discovered skill rows and tool states.
+- `list` shows discovered skill rows and tool states. `list --json` adds the
+  stable path-free `apiVersion: 1` inventory consumed by the first-party Skill
+  Advisor. Optional `--available-for claude|codex` keeps only toggleable OFF
+  cells for one host; repeated case-insensitive `--query` terms OR-match name,
+  description, group, and source without requiring an external JSON tool.
 - `status` summarizes `ON`, `OFF`, `CONFLICT`, and `RO` cells.
 - `groups` summarizes group rows, per-tool state counts, and sources.
 - `repos` summarizes repositories recorded in the Skill Manager manifest.
@@ -19,6 +23,13 @@
 - `uninstall <git-url|local-path> [--dry-run]` removes one complete audited
   installation and always requires an explicit source. Local source data is
   preserved.
+- `advisor activate --tool claude|codex --skill <name>... [--dry-run]
+  [--json]` preflights 1-5 exact names and creates one opaque receipt for cells
+  temporarily enabled or shared.
+- `advisor cleanup --receipt <id> [--dry-run] [--json]` releases one exact
+  receipt and restores cells whose final lease claim is removed.
+- `advisor status [--tool claude|codex] [--json]` lists outstanding receipts
+  without exposing filesystem paths.
 
 There is no CLI uninstall-all, force mode, separate `repo remove`, local-source
 listing command, or TUI source-management screen. `repos` intentionally lists
@@ -84,6 +95,10 @@ Exact command examples and flag placement belong in the user-facing
 
 Skill Set CRUD and use are GUI-only in Phase 14; no CLI commands or TUI keys
 are added.
+
+Skill Advisor is CLI-only in Phase 15. Its standard public skill lives under
+[`../../../skills/skill-advisor`](../../../skills/skill-advisor/) and uses the
+existing install/update/uninstall source lifecycle.
 
 ## TUI Model
 

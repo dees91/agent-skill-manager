@@ -149,6 +149,8 @@ Read-only commands:
 ```bash
 skill-manager version
 skill-manager list
+skill-manager list --json
+skill-manager list --json --available-for codex --query video --query remotion
 skill-manager status
 skill-manager groups
 skill-manager repos
@@ -191,6 +193,56 @@ Git repository update is fast-forward-only and requires a clean, audited
 checkout. Local path sources are live links and therefore do not have an update
 operation. Uninstall always removes a complete recorded source; individual
 skill uninstall is not supported.
+
+### First-Party Skill Advisor
+
+The current source build includes the optional
+[`skill-advisor`](skills/skill-advisor/SKILL.md). It checks locally installed
+but inactive skills before a non-trivial task, activates at most five clearly
+relevant skills for the current Claude Code or Codex host, and returns an opaque
+receipt for exact cleanup. It does not require a plugin or provider hook.
+
+Review the skill instructions, then install it for both tools from the public
+repository:
+
+```bash
+skill-manager install https://github.com/dees91/agent-skill-manager \
+  --tool both --skill skill-advisor
+```
+
+Contributors can link the current checkout instead:
+
+```bash
+skill-manager install . --tool both --skill skill-advisor --dry-run
+skill-manager install . --tool both --skill skill-advisor
+```
+
+The skill uses the versioned, path-free inventory and receipt API:
+
+```bash
+skill-manager list --json \
+  --available-for codex --query video --query remotion
+skill-manager advisor activate --tool codex --skill example-skill --json
+skill-manager advisor status --json
+skill-manager advisor cleanup --receipt <receipt-id> --json
+```
+
+`activate` accepts one tool and 1-5 unique skill names. A skill that was already
+ON remains user-owned; multiple receipts may share an advisor-enabled skill,
+and only cleanup of the final receipt restores it to OFF. Cleanup is explicit,
+never inferred from age or task completion. The advisor reads selected
+`SKILL.md` files directly after activation, so its current task does not depend
+on provider catalog-refresh timing. Start a new provider session if a newly
+installed advisor itself is not discovered in the current one.
+
+`--available-for` limits JSON inventory to toggleable OFF cells for one tool.
+Repeated case-insensitive `--query` values are OR-matched against skill name,
+description, group, and source, keeping large-catalog advisor prompts bounded
+without requiring `jq` or another external JSON processor.
+
+The source skill and CLI API can move at different times on `main`. The skill
+checks `apiVersion: 1` before mutation and fails safely with an upgrade message
+when the installed CLI is incompatible.
 
 ### TUI Controls
 
@@ -250,6 +302,8 @@ Skill Manager keeps its state under `~/.skill-manager/`:
 ```text
 ~/.skill-manager/
   state.json
+  advisor-activations.json
+  advisor.lock
   skill-sets.json
   backups/
   cache/skills-sh/catalog-v1.json
@@ -267,6 +321,10 @@ Important invariants:
 - Skill Set metadata uses a separate atomic, owner-only file and bounded
   `skill-sets-*.json` backups, so malformed recipe data does not block normal
   skill scanning and toggles.
+- Advisor metadata uses a separate atomic, owner-only file, a no-follow process
+  lock, and bounded `advisor-activations-*.json` backups. It stores receipt,
+  tool, skill, timestamp, and restore fingerprints but never task or prompt
+  content.
 - State directories are restricted to the current user. State/cache JSON files
   use mode `0600`; state backups retain at most 10 files and 30 days.
 - Failed batch apply stops at the first error and preserves the completed

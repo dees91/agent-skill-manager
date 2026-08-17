@@ -29,3 +29,9 @@ explicit repository operations. It does not sandbox or attest third-party
 skills. Treat every skill source as executable instruction content and review
 it before installation. The dormant skills.sh adapter is not exposed by the
 public preview desktop binding or interface.
+
+The first-party Skill Advisor treats installed skill catalog metadata as
+untrusted discovery data and never executes it as a command. Advisor
+activations are limited to exact tool/skill cells, serialized through a
+no-follow owner-only lock, and restored only after path, entry-type, and
+symlink-target validation. Receipt metadata contains no prompt or task text.
