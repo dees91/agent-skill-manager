@@ -279,6 +279,11 @@ the CLI and TUI:
 - **Sources** installs exact Claude/Codex skill cells and safely updates or
   uninstalls complete Git and local sources recorded in the manifest.
 
+Use **Skill Manager → About Skill Manager** in the macOS application menu to
+see the app icon, current build version, and short product description. These
+values come from the same desktop build metadata used by the application
+bundle.
+
 ![Skill Manager dashboard](docs/images/dashboard.png)
 
 ![Saved Skill Sets workspace](docs/images/skill-sets.png)

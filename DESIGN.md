@@ -83,7 +83,10 @@ in public documentation.
 ## Components
 
 - **Navigation rail:** persistent product navigation with compact icon/label
-  rows, a deep selected state, connection status, and version metadata.
+  rows, a deep selected state, connection status, and last-scan metadata.
+- **Native About:** the standard macOS application menu exposes the app icon,
+  product name, current build version, and short description without repeating
+  release metadata inside the workspace.
 - **Summary cards:** equal-width dashboard cards with a muted label and one
   prominent value.
 - **Panels and tables:** full-width dark surfaces with compact headers, aligned

@@ -67,7 +67,7 @@ page is added, removed, renamed, or materially repurposed.
 
 - [sources/product-decisions-and-plans.md](sources/product-decisions-and-plans.md)
   - digest and routing map for `AGENTS.md`, `README.md`, `DESIGN.md`, and the
-    sixteen iteration plans.
+    seventeen iteration plans.
 - [sources/implementation-snapshot-2026-08-11.md](sources/implementation-snapshot-2026-08-11.md)
   - dated package-level source inspection and verification status used to seed
     the initial topic pages.

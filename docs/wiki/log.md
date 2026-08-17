@@ -288,3 +288,17 @@ intentionally excluded.
   downloaded them again, verified byte identity, signatures, architecture,
   version metadata, archive contents, checksums, CLI behavior, and an isolated
   desktop launch, then published the draft as a GitHub prerelease.
+
+## [2026-08-17] implementation | Add native desktop About information
+
+- Added `About Skill Manager` through Wails' standard macOS application menu
+  with the existing icon, product name, current version, and short description.
+- Kept `desktop/wails.json` as the shared About and bundle metadata source with
+  no frontend binding, state, terminal-interface, release, or install changes.
+
+## [2026-08-17] verification | Verify native desktop About information
+
+- Passed focused and full desktop tests, root/backend and frontend suites, both
+  Go vet runs, dependency notices, wiki links, and the ad-hoc ARM64 build.
+- Launch-checked the bundle with an isolated home and inspected the live native
+  menu target to confirm the item label, exact version/description, and icon.

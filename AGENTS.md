@@ -862,6 +862,25 @@ ownership, or filesystem toggle semantics.
   project-local favorites, CLI/TUI controls, and advisor recommendations remain
   out of scope.
 
+### Native Desktop About (Iteration 17)
+
+Iteration 17 adds version visibility through the standard macOS application
+menu without changing frontend state, CLI/TUI behavior, or filesystem
+semantics.
+
+- Add `Skill Manager → About Skill Manager` through Wails' native macOS About
+  support. Do not add a custom React dialog or repeat the version in the app
+  workspace.
+- Show the existing application icon, product name, current version, and short
+  product description.
+- Read the displayed product name, version, and description from the embedded
+  `desktop/wails.json` metadata so the About dialog and generated app bundle use
+  the same source of truth.
+- Reject missing or malformed embedded About metadata instead of displaying a
+  stale or fabricated version.
+- Keep Wails bindings, provider APIs, application state, CLI/TUI behavior, and
+  release/install workflows unchanged.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -939,6 +958,8 @@ Backend tests should cover:
 - Favorites persistence, owner-only atomic writes, corruption isolation,
   managed-row eligibility, basename reconnection, GUI filter/sort behavior,
   Pending independence, and non-blocking uninstall impact
+- Native macOS About metadata parsing, required-field validation, and exact
+  version/description projection from the desktop build configuration
 
 TUI can be tested at the model/update layer. Full terminal rendering tests are optional for MVP.
 
@@ -979,6 +1000,8 @@ Keep [planning/phase-14-skill-sets-tasks.md](./planning/phase-14-skill-sets-task
 Keep [planning/phase-15-skill-advisor-tasks.md](./planning/phase-15-skill-advisor-tasks.md) as the source of truth for Iteration 15 first-party Skill Advisor task status.
 
 Keep [planning/phase-16-skill-favorites-tasks.md](./planning/phase-16-skill-favorites-tasks.md) as the source of truth for Iteration 16 skill favorites task status.
+
+Keep [planning/phase-17-desktop-about-tasks.md](./planning/phase-17-desktop-about-tasks.md) as the source of truth for Iteration 17 native desktop About task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

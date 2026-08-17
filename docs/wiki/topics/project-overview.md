@@ -25,7 +25,9 @@
   published `v0.5.0` feature preview packages Phases 14 through 16: saved
   task-oriented Skill Sets, a public first-party Skill Advisor with tool-neutral
   receipt/lease activation, and private managed-skill favorites with a
-  favorite-first macOS Skills filter.
+  favorite-first macOS Skills filter. Current source adds Phase 17's native
+  build-version About dialog; that post-release change is not part of the
+  published `v0.5.0` artifact.
 
 ## Product Shape
 
@@ -45,6 +47,9 @@
   Favorites keep recurring managed basenames easy to find across ON/OFF state.
   Skill Sets remember overlapping task recipes and stage them for an explicitly
   chosen tool scope.
+- The standard macOS application menu exposes the current source build version
+  and product description through native About UI backed by embedded bundle
+  metadata.
 - Fixed macOS-oriented paths derived directly from `$HOME`; no configuration
   file in the current scope.
 - Local state under `~/.skill-manager/`, including disabled entries, manifest

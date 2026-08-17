@@ -77,6 +77,10 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   - `documented`: private basename favorites, isolated persistence, path-free
     desktop mutation, favorite-first Skills filtering, missing-name
     reconnection, and source-uninstall impact.
+- [`planning/phase-17-desktop-about-tasks.md`](../../../planning/phase-17-desktop-about-tasks.md)
+  - `documented`: native macOS About version visibility, embedded build
+    metadata as the single display source, existing app icon reuse, and no
+    frontend or terminal-interface changes.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.
@@ -121,6 +125,9 @@ to seed the wiki. It summarizes their roles; it does not replace them.
 - Favorites store only tool-agnostic basenames, never own skill visibility, and
   survive missing skills or source uninstall. Only managed user rows are
   eligible for the macOS star/filter surface.
+- Desktop About information is derived from the same embedded Wails metadata
+  used to generate the app bundle. It does not add a frontend binding, network
+  access, or another persisted version source.
 
 ## Maintenance Rule
 

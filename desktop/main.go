@@ -17,8 +17,19 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed wails.json
+var desktopBuildMetadata []byte
+
+//go:embed build/appicon.png
+var desktopApplicationIcon []byte
+
 func main() {
 	p, err := paths.Default()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	about, err := newDesktopAboutInfo(desktopBuildMetadata, desktopApplicationIcon)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -45,6 +56,7 @@ func main() {
 			Appearance:                   mac.NSAppearanceNameDarkAqua,
 			TitleBar:                     mac.TitleBarHiddenInset(),
 			DisableEscapeExitsFullscreen: true,
+			About:                        about,
 		},
 	})
 	if err != nil {

@@ -89,6 +89,9 @@ from the tracked PNG under repository settings.
   owner-only atomic storage, bounded backups, managed/conflict eligibility,
   read-only rejection, corruption isolation, basename reconnection, Pending
   independence, source-busy exclusion, and uninstall retention.
+- Desktop About tests cover build-metadata parsing, required fields, icon
+  presence, exact version/description formatting, and the repository's embedded
+  production metadata.
 - Discover backend coverage projects ON/OFF/conflict state and verifies that a
   selected catalog entry installs exactly one skill into only the selected
   agent cells while rejecting unknown, well-known, offline, pending, and busy
@@ -179,6 +182,8 @@ from the tracked PNG under repository settings.
 - Phase 16: private basename-based favorites, path-free desktop mutation,
   favorite-first active workspace filtering, corruption isolation, missing-name
   reconnection, uninstall impact, and responsive/accessibility coverage.
+- Phase 17: native macOS About version visibility backed by validated embedded
+  Wails build metadata and the existing application icon.
 
 All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.

@@ -27,6 +27,9 @@
 - `implemented`: Iteration 16 adds tool-agnostic managed-skill favorites,
   favorite-first ordering, and a Favorites availability filter without
   changing CLI/TUI behavior.
+- `implemented`: Iteration 17 adds a native `About Skill Manager` item that
+  projects the app icon, product name, version, and description from embedded
+  desktop build metadata without adding a frontend binding or state surface.
 
 ## Security And State Boundary
 
@@ -159,6 +162,12 @@ loading/error/empty feedback, status announcements, and review/details drawers.
 The context panel uses two stable tool rows, accessible progressbar semantics,
 accuracy badges, model/window evidence, warm near-limit status, red overflow,
 and a pending projection marker.
+
+The standard macOS application menu owns version visibility. `About Skill
+Manager` displays the existing app icon plus the product name, current version,
+and short description parsed from the embedded `desktop/wails.json`. The
+navigation rail retains connection and last-scan metadata and does not repeat
+the version.
 
 The Sources screen uses a dense manifest-owned source table and centered
 workflow dialogs. Install includes Git/local selection, discovery, a scrollable
