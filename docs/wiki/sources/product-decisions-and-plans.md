@@ -61,6 +61,14 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   - `documented`: locally verified macOS ARM64 desktop/CLI archives, CLI
     version reporting, versioned release notes, checksums, and manual GitHub
     prerelease publication.
+- [`planning/phase-13-public-preview-hardening-tasks.md`](../../../planning/phase-13-public-preview-hardening-tasks.md)
+  - `documented`: owner-only state/cache persistence, bounded backups,
+    diagnostics privacy, dependency notices, hidden experimental Discover
+    surface, and public preview publication.
+- [`planning/phase-14-skill-sets-tasks.md`](../../../planning/phase-14-skill-sets-tasks.md)
+  - `documented`: separate saved-recipe persistence, basename-based
+    membership, scoped smart-toggle preview/staging, contextual GUI creation,
+    unavailable-member retention, and source-uninstall impact warnings.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.
@@ -94,6 +102,11 @@ to seed the wiki. It summarizes their roles; it does not replace them.
 - Desktop Skills classification uses applied state until Apply/rescan. Scoped
   batch calls contain only skill/group and tool identifiers and reuse the
   shared smart-toggle engine.
+- Saved Skill Sets are overlapping task recipes, not source Groups or active
+  profiles. Membership stores only basenames, each use explicitly selects a
+  tool scope, and all state changes remain in the shared Pending/Apply model.
+  Missing members stay recorded, and source uninstall warns without rewriting
+  recipes.
 
 ## Maintenance Rule
 

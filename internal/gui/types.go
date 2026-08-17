@@ -60,16 +60,86 @@ type DiscoverDetail struct {
 
 // Snapshot is the complete serializable projection consumed by the frontend.
 type Snapshot struct {
-	Rows            []SkillRow            `json:"rows"`
-	Groups          []GroupSummary        `json:"groups"`
-	Sources         []string              `json:"sources"`
-	ManagedSources  []ManagedSource       `json:"managedSources"`
-	Stats           DashboardStats        `json:"stats"`
-	Conflicts       []ConflictSummary     `json:"conflicts"`
-	ContextBudgets  contextbudget.Reports `json:"contextBudgets"`
-	Pending         []PendingChange       `json:"pending"`
-	IncludeReadOnly bool                  `json:"includeReadOnly"`
-	ScannedAt       string                `json:"scannedAt"`
+	Rows             []SkillRow            `json:"rows"`
+	SkillSets        []SkillSet            `json:"skillSets"`
+	SkillSetsWarning string                `json:"skillSetsWarning,omitempty"`
+	Groups           []GroupSummary        `json:"groups"`
+	Sources          []string              `json:"sources"`
+	ManagedSources   []ManagedSource       `json:"managedSources"`
+	Stats            DashboardStats        `json:"stats"`
+	Conflicts        []ConflictSummary     `json:"conflicts"`
+	ContextBudgets   contextbudget.Reports `json:"contextBudgets"`
+	Pending          []PendingChange       `json:"pending"`
+	IncludeReadOnly  bool                  `json:"includeReadOnly"`
+	ScannedAt        string                `json:"scannedAt"`
+}
+
+// SkillSet is one reusable task recipe enriched with current tool state.
+type SkillSet struct {
+	SetID       string              `json:"setId"`
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	Members     []SkillSetMember    `json:"members"`
+	Claude      SkillSetToolSummary `json:"claude"`
+	Codex       SkillSetToolSummary `json:"codex"`
+	Unavailable int                 `json:"unavailable"`
+	Pending     int                 `json:"pending"`
+	CreatedAt   string              `json:"createdAt"`
+	UpdatedAt   string              `json:"updatedAt"`
+}
+
+// SkillSetMember projects one saved basename without exposing filesystem paths.
+type SkillSetMember struct {
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Group       string             `json:"group"`
+	Source      string             `json:"source"`
+	Available   bool               `json:"available"`
+	Claude      SkillSetMemberCell `json:"claude"`
+	Codex       SkillSetMemberCell `json:"codex"`
+}
+
+// SkillSetMemberCell is the status of one saved name for one tool.
+type SkillSetMemberCell struct {
+	Tool           string `json:"tool"`
+	State          string `json:"state"`
+	EffectiveState string `json:"effectiveState"`
+	Pending        string `json:"pending,omitempty"`
+	Eligible       bool   `json:"eligible"`
+	Reason         string `json:"reason,omitempty"`
+}
+
+// SkillSetToolSummary describes applied and projected state for one tool.
+type SkillSetToolSummary struct {
+	Tool            string `json:"tool"`
+	AppliedStatus   string `json:"appliedStatus"`
+	EffectiveStatus string `json:"effectiveStatus"`
+	Eligible        int    `json:"eligible"`
+	On              int    `json:"on"`
+	Off             int    `json:"off"`
+	EffectiveOn     int    `json:"effectiveOn"`
+	EffectiveOff    int    `json:"effectiveOff"`
+	Pending         int    `json:"pending"`
+	Missing         int    `json:"missing"`
+	ReadOnly        int    `json:"readOnly"`
+	Conflict        int    `json:"conflict"`
+}
+
+// SkillSetMutationResult returns refreshed recipes after metadata changes.
+type SkillSetMutationResult struct {
+	Message   string     `json:"message"`
+	SkillSets []SkillSet `json:"skillSets"`
+	Warning   string     `json:"warning,omitempty"`
+}
+
+// SkillSetTogglePreview explains one reversible staging action before it runs.
+type SkillSetTogglePreview struct {
+	SetID     string       `json:"setId"`
+	Name      string       `json:"name"`
+	Tools     []string     `json:"tools"`
+	Direction string       `json:"direction"`
+	Eligible  int          `json:"eligible"`
+	Counts    ActionCounts `json:"counts"`
 }
 
 // ManagedSource is one Skill Manager-owned Git or local source. SourceID is
@@ -186,14 +256,23 @@ type SourceMutationResult struct {
 
 // UninstallPreview is the validated impact displayed before typed confirmation.
 type UninstallPreview struct {
-	SourceID        string `json:"sourceId"`
-	Kind            string `json:"kind"`
-	Group           string `json:"group"`
-	Location        string `json:"location"`
-	ActiveLinks     int    `json:"activeLinks"`
-	DisabledLinks   int    `json:"disabledLinks"`
-	RemovesCheckout bool   `json:"removesCheckout"`
-	PreservesSource bool   `json:"preservesSource"`
+	SourceID              string           `json:"sourceId"`
+	Kind                  string           `json:"kind"`
+	Group                 string           `json:"group"`
+	Location              string           `json:"location"`
+	ActiveLinks           int              `json:"activeLinks"`
+	DisabledLinks         int              `json:"disabledLinks"`
+	RemovesCheckout       bool             `json:"removesCheckout"`
+	PreservesSource       bool             `json:"preservesSource"`
+	AffectedSkillSets     []SkillSetImpact `json:"affectedSkillSets"`
+	SkillSetImpactWarning string           `json:"skillSetImpactWarning,omitempty"`
+}
+
+// SkillSetImpact is a non-blocking source-uninstall dependency warning.
+type SkillSetImpact struct {
+	SetID  string   `json:"setId"`
+	Name   string   `json:"name"`
+	Skills []string `json:"skills"`
 }
 
 // SkillRow is one cross-tool row in the Skills table.
@@ -289,10 +368,12 @@ type ActionCounts struct {
 
 // ActionResult is returned by staging and undo operations.
 type ActionResult struct {
-	Message        string                `json:"message"`
-	Counts         ActionCounts          `json:"counts"`
-	Pending        []PendingChange       `json:"pending"`
-	ContextBudgets contextbudget.Reports `json:"contextBudgets"`
+	Message          string                `json:"message"`
+	Counts           ActionCounts          `json:"counts"`
+	Pending          []PendingChange       `json:"pending"`
+	ContextBudgets   contextbudget.Reports `json:"contextBudgets"`
+	SkillSets        []SkillSet            `json:"skillSets"`
+	SkillSetsWarning string                `json:"skillSetsWarning,omitempty"`
 }
 
 // AppliedChange records one completed filesystem operation.

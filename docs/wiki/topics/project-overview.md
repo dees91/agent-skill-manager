@@ -21,7 +21,9 @@
   history hygiene. Phase 12 adds locally verified Apple Silicon desktop and CLI
   archives; Phase 13 hardens privacy/licensing and publishes `v0.4.1` as the
   first public binary preview. The `v0.4.2` maintenance preview supersedes it
-  with security and dependency updates plus an empty-profile GUI fix.
+  with security and dependency updates plus an empty-profile GUI fix. Phase 14
+  adds saved task-oriented Skill Sets to the desktop source build without
+  changing CLI/TUI behavior.
 
 ## Product Shape
 
@@ -30,18 +32,21 @@
 - Minimal CLI for listing/status, direct enable/disable, group/repository
   summaries, managed Git repository lifecycle, and local path
   install/uninstall.
-- Dark-only Wails public preview with Dashboard, Skills, and managed-only
-  Sources over the same scan, staging, install/update/uninstall, and state
-  boundaries as the terminal interfaces. The experimental Discover domain is
-  dormant and has no public binding/navigation in `v0.4.2`. The Dashboard shows
-  approximate Claude and Codex startup catalog cost and runs provider
-  diagnostics only after an explicit action. Skills
-  keeps applied ON rows prominent and collapses the much larger OFF catalog by
-  source while preserving pending Apply semantics.
+- Dark-only Wails desktop with Dashboard, Skills, saved Skill Sets, and
+  managed-only Sources over the same scan, staging,
+  install/update/uninstall, and state boundaries as the terminal interfaces.
+  The experimental Discover domain is dormant and has no public
+  binding/navigation in `v0.4.2`. The Dashboard shows approximate Claude and
+  Codex startup catalog cost and runs provider diagnostics only after an
+  explicit action. Skills keeps applied ON rows prominent and collapses the
+  much larger OFF catalog by source while preserving pending Apply semantics.
+  Skill Sets remember overlapping task recipes and stage them for an explicitly
+  chosen tool scope.
 - Fixed macOS-oriented paths derived directly from `$HOME`; no configuration
   file in the current scope.
 - Local state under `~/.skill-manager/`, including disabled entries, manifest
-  backups, managed repository checkouts, and transient uninstall staging.
+  backups, separate saved-recipe metadata, managed repository checkouts, and
+  transient uninstall staging.
 
 ## Primary Invariants
 
@@ -76,6 +81,7 @@ main
       -> install -> paths, state, model, git/filesystem
       -> tui  -> staging -> model
       -> gui  -> staging, scan, ops, install, state, model
+              -> skillsets -> private versioned recipe file
               -> contextbudget -> metadata, paths, model
               -> skillssh -> anonymous catalog HTTP + normalized disk cache
 

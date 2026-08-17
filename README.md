@@ -214,17 +214,21 @@ skill uninstall is not supported.
 
 ## Desktop Interface
 
-The macOS public preview exposes three views over the same Go domain services as
+The macOS source build exposes four views over the same Go domain services as
 the CLI and TUI:
 
 - **Dashboard** summarizes managed visibility, groups, conflicts, and an
   approximate global skill-catalog context budget for each provider.
 - **Skills** keeps active skills expanded, groups inactive skills by source,
   and stages reversible toggles for explicit review and Apply.
+- **Skill Sets** remembers task-oriented combinations, including an optional
+  **When to use** note, and stages them for Claude, Codex, or both.
 - **Sources** installs exact Claude/Codex skill cells and safely updates or
   uninstalls complete Git and local sources recorded in the manifest.
 
 ![Skill Manager dashboard](docs/images/dashboard.png)
+
+![Saved Skill Sets workspace](docs/images/skill-sets.png)
 
 The experimental skills.sh Discover implementation remains under development
 and is not exposed by the `v0.4.2` public preview build.
@@ -234,6 +238,11 @@ operations are separately confirmed and cannot overlap a pending toggle batch.
 The frontend submits identifiers and tool names; filesystem paths and planned
 operations are resolved and validated in Go.
 
+Skill Sets are overlapping recipes, not active profiles. Each use asks for a
+tool scope and follows the same Pending/Apply boundary as ordinary toggles.
+Missing members remain in the recipe and reconnect when a skill with the same
+basename is installed again. The CLI and TUI do not manage Skill Sets yet.
+
 ## State And Safety Model
 
 Skill Manager keeps its state under `~/.skill-manager/`:
@@ -241,6 +250,7 @@ Skill Manager keeps its state under `~/.skill-manager/`:
 ```text
 ~/.skill-manager/
   state.json
+  skill-sets.json
   backups/
   cache/skills-sh/catalog-v1.json
   disabled/claude/
@@ -254,6 +264,9 @@ Important invariants:
 - Disable and enable move the original entry; symlinks are never dereferenced.
 - Restore and install never overwrite, merge, rename, or delete a blocker.
 - Existing state is backed up before the first mutation in a process.
+- Skill Set metadata uses a separate atomic, owner-only file and bounded
+  `skill-sets-*.json` backups, so malformed recipe data does not block normal
+  skill scanning and toggles.
 - State directories are restricted to the current user. State/cache JSON files
   use mode `0600`; state backups retain at most 10 files and 30 days.
 - Failed batch apply stops at the first error and preserves the completed

@@ -38,6 +38,13 @@ Git repositories only.
   chip scopes classification and bulk staging. Global bulk covers all filtered
   rows including collapsed results; group bulk covers the complete group.
   Pending rows stay in their applied-state section until Apply/rescan.
+- Skill Sets lists task-oriented recipes independently from source Groups.
+  Create/edit stores a name, optional `When to use` description, and
+  tool-agnostic skill names. Every use requires Claude, Codex, or Both, shows a
+  smart-toggle preview, and stages through Pending. Member detail exposes
+  unavailable names and current per-tool state. Pending offers **Save as set**;
+  skill details offers **Add to Skill Set…**. Recipe deletion never changes
+  skill state or clears Pending.
 - Sources lists only manifest-owned Git/local sources. Install supports Git URL
   inspection or native local-folder selection, then an exact per-skill
   Claude/Codex matrix, review, and Apply. One toggle per tool column selects or
@@ -58,6 +65,7 @@ Git repositories only.
   blocked until that operation completes.
 - `Cmd+F` focuses installed-skill search, `Cmd+R` refreshes, `Cmd+Enter` applies, and
   `Escape` closes transient drawers/dialogs when no source operation is active.
+- Skill Set dialogs trap focus and support Escape when no mutation is active.
 - At the 1024×720 minimum size, the sidebar collapses to icons and wide tables
   scroll horizontally. The design is dark-only.
 - Source rows use opaque backend identifiers. Frontend mutations never submit
@@ -73,6 +81,9 @@ The visual contract and evidence confidence live in
 
 Exact command examples and flag placement belong in the user-facing
 [`../../../README.md`](../../../README.md).
+
+Skill Set CRUD and use are GUI-only in Phase 14; no CLI commands or TUI keys
+are added.
 
 ## TUI Model
 

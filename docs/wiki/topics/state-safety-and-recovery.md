@@ -5,6 +5,7 @@
 ```text
 ~/.skill-manager/
   state.json
+  skill-sets.json
   backups/
   disabled/
     claude/<skill-name>
@@ -33,6 +34,12 @@ are written as version 2 on the next mutation. Unknown newer versions are
 rejected. Repository identities, local source paths, skills, and tool lists are
 normalized into deterministic order during load/save operations.
 
+`skill-sets.json` version 1 is an independent recipe store. Each set contains a
+stable opaque ID, unique name, optional description, sorted unique skill
+basenames, and created/updated timestamps. It intentionally contains no tool
+selection, source ownership, or filesystem path, and it does not change the
+`state.json` version 2 schema.
+
 The dormant skills.sh catalog cache is separate from `state.json` at
 `cache/skills-sh/catalog-v1.json`. Its internal format is version 2: ranking
 pages and parsed detail metadata may remain, but search terms/results are never
@@ -52,6 +59,9 @@ installed-state projection still comes from the filesystem and manifest.
   process, an existing manifest is copied to a timestamped backup.
 - Backup rotation preserves the newest valid backup, retains at most 10, and
   removes valid backups older than 30 days while leaving foreign files alone.
+- Skill Set mutations atomically replace their separate file and write an
+  independent `skill-sets-*.json` backup before each replacement with the same
+  owner-only, 10-file, 30-day bounds.
 - Toggle apply persists the successfully completed prefix when a later move
   fails.
 - Install symlink apply updates repository metadata only after link creation
@@ -73,6 +83,7 @@ The tool may:
 - remove a complete audited managed repository installation through staging;
 - remove an audited local installation's links and state through staging;
 - write Skill Manager state and backups.
+- write saved Skill Set metadata and its independent backups.
 
 The tool must not:
 
@@ -99,6 +110,9 @@ The tool must not:
   reported `trash/` path requires manual cleanup.
 - Conflict remediation is manual and should preserve both the disabled entry
   and the unexpected blocker until the user chooses a resolution.
+- Malformed or unsupported Skill Set metadata disables recipe CRUD/toggling
+  but is isolated from core scan, Pending, Apply, and source lifecycle. A valid
+  backup may be restored manually without changing `state.json`.
 
 Use CLI dry-run before a direct mutation and temporary-home tests during
 development. Never validate destructive behavior against the real global skill

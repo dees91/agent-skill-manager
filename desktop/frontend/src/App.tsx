@@ -4,6 +4,7 @@ import {
   Gauge,
   GitFork,
   Layers3,
+  ListChecks,
   RefreshCw,
   Search,
   SlidersHorizontal,
@@ -12,12 +13,13 @@ import {
 import Dashboard from './components/Dashboard'
 import PendingBar from './components/PendingBar'
 import SkillsView from './components/SkillsView'
+import SkillSetsView, { type SkillSetEditorRequest } from './components/SkillSetsView'
 import SourcesView from './components/SourcesView'
-import type { ActionResult, Backend, SkillRow, Snapshot, SourceMutationResult, SourceProgress } from './api'
+import type { ActionResult, Backend, SkillRow, SkillSetMutationResult, Snapshot, SourceMutationResult, SourceProgress } from './api'
 import { projectPending, wailsBackend } from './api'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 
-type View = 'dashboard' | 'skills' | 'sources'
+type View = 'dashboard' | 'skills' | 'skillsets' | 'sources'
 
 interface AppProps {
   backend?: Backend
@@ -30,12 +32,14 @@ export default function App({ backend = wailsBackend }: AppProps) {
   const [expandedSkillGroups, setExpandedSkillGroups] = useState<string[]>([])
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [skillSetEditorRequest, setSkillSetEditorRequest] = useState<SkillSetEditorRequest | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [sourceProgress, setSourceProgress] = useState<SourceProgress | null>(null)
   const announcementRef = useRef<HTMLDivElement>(null)
+  const skillSetRequestID = useRef(0)
 
   const announce = useCallback((message: string) => {
     setToast(message)
@@ -76,7 +80,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
     setBusy(true)
     try {
       const result = await action()
-      setSnapshot((current) => current ? projectPending(current, result.pending, result.contextBudgets) : current)
+      setSnapshot((current) => current ? projectPending(current, result.pending, result.contextBudgets, result.skillSets, result.skillSetsWarning) : current)
       announce(actionMessage(result))
     } catch (reason) {
       announce(errorMessage(reason))
@@ -84,6 +88,20 @@ export default function App({ backend = wailsBackend }: AppProps) {
       setBusy(false)
     }
   }, [announce, busy, snapshot])
+
+  const acceptActionResult = useCallback((result: ActionResult) => {
+    setSnapshot((current) => current ? projectPending(current, result.pending, result.contextBudgets, result.skillSets, result.skillSetsWarning) : current)
+  }, [])
+
+  const acceptSkillSetMutation = useCallback((result: SkillSetMutationResult) => {
+    setSnapshot((current) => current ? { ...current, skillSets: result.skillSets, skillSetsWarning: result.warning } as Snapshot : current)
+  }, [])
+
+  const openSkillSetEditor = useCallback((kind: SkillSetEditorRequest['kind'], skillNames: string[]) => {
+    skillSetRequestID.current += 1
+    setSkillSetEditorRequest({ id: skillSetRequestID.current, kind, skillNames })
+    setView('skillsets')
+  }, [])
 
   const applyPending = useCallback(async () => {
     if (!snapshot?.pending.length || busy) return
@@ -192,6 +210,10 @@ export default function App({ backend = wailsBackend }: AppProps) {
             <Layers3 size={17} /><span>Skills</span>
             {snapshot && <span className="nav-count">{snapshot.stats.managedSkills}</span>}
           </button>
+          <button aria-label="Skill Sets" className={view === 'skillsets' ? 'nav-item active' : 'nav-item'} onClick={() => setView('skillsets')}>
+            <ListChecks size={17} /><span>Skill Sets</span>
+            {snapshot && <span className="nav-count">{snapshot.skillSets.length}</span>}
+          </button>
           <button aria-label="Sources" className={view === 'sources' ? 'nav-item active' : 'nav-item'} onClick={() => setView('sources')}>
             <GitFork size={17} /><span>Sources</span>
             {snapshot && <span className="nav-count">{snapshot.managedSources.length}</span>}
@@ -211,7 +233,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
 
       <main className="main-region">
         <header className="utility-bar">
-          <div className="breadcrumbs"><span>Skill Manager</span><b>/</b><strong>{view === 'dashboard' ? 'Dashboard' : view === 'skills' ? 'Skills' : 'Sources'}</strong></div>
+          <div className="breadcrumbs"><span>Skill Manager</span><b>/</b><strong>{view === 'dashboard' ? 'Dashboard' : view === 'skills' ? 'Skills' : view === 'skillsets' ? 'Skill Sets' : 'Sources'}</strong></div>
           <div className="utility-actions">
             {snapshot && snapshot.stats.conflictCells > 0 && (
               <button className="conflict-chip" onClick={() => setView('skills')}>
@@ -243,7 +265,21 @@ export default function App({ backend = wailsBackend }: AppProps) {
               onToggleCell={(name, tool) => runAction(() => backend.toggleCell(name, tool))}
               onToggleSkillScope={(names, tools) => runAction(() => backend.toggleSkillScope(names, tools))}
               onToggleGroupScope={(group, tools) => runAction(() => backend.toggleGroupScope(group, tools))}
+              onAddToSkillSet={(name) => openSkillSetEditor('skill', [name])}
               onCloseDetails={() => setSelectedSkill(null)}
+            />
+          )}
+          {snapshot && view === 'skillsets' && (
+            <SkillSetsView
+              snapshot={snapshot}
+              busy={busy}
+              backend={backend}
+              editorRequest={skillSetEditorRequest}
+              onEditorRequestHandled={() => setSkillSetEditorRequest(null)}
+              onBusy={setBusy}
+              onMutation={acceptSkillSetMutation}
+              onAction={acceptActionResult}
+              onAnnounce={announce}
             />
           )}
           {snapshot && view === 'sources' && (
@@ -271,6 +307,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
             onUndo={(name, tool) => runAction(() => backend.undoCell(name, tool))}
             onClear={() => void clearPending()}
             onApply={() => void applyPending()}
+            onSaveAsSkillSet={() => openSkillSetEditor('pending', [...new Set(snapshot.pending.map((change) => change.skillName))])}
           />
         )}
       </main>

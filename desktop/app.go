@@ -85,6 +85,31 @@ func (a *App) ApplyPending(includeReadOnly bool) gui.ApplyResult {
 	return a.service.ApplyPending(includeReadOnly)
 }
 
+// CreateSkillSet persists one task recipe from validated skill basenames.
+func (a *App) CreateSkillSet(name, description string, skillNames []string) (gui.SkillSetMutationResult, error) {
+	return a.service.CreateSkillSet(name, description, skillNames)
+}
+
+// UpdateSkillSet edits one recipe resolved by its opaque identifier.
+func (a *App) UpdateSkillSet(setID, name, description string, skillNames []string) (gui.SkillSetMutationResult, error) {
+	return a.service.UpdateSkillSet(setID, name, description, skillNames)
+}
+
+// DeleteSkillSet removes recipe metadata without changing skills or Pending.
+func (a *App) DeleteSkillSet(setID string) (gui.SkillSetMutationResult, error) {
+	return a.service.DeleteSkillSet(setID)
+}
+
+// PreviewSkillSetToggle returns a path-free staging preview for selected tools.
+func (a *App) PreviewSkillSetToggle(setID string, tools []string) (gui.SkillSetTogglePreview, error) {
+	return a.service.PreviewSkillSetToggle(setID, tools)
+}
+
+// ToggleSkillSet stages one scoped smart-toggle through the shared engine.
+func (a *App) ToggleSkillSet(setID string, tools []string) (gui.ActionResult, error) {
+	return a.service.ToggleSkillSet(setID, tools)
+}
+
 // PrepareGitInstall validates, clones/reuses, and discovers a Git source.
 func (a *App) PrepareGitInstall(gitURL string) (gui.InstallDraft, error) {
 	return a.service.PrepareGitInstall(gitURL)

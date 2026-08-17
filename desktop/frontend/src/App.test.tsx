@@ -179,6 +179,60 @@ describe('Skill Manager desktop app', () => {
     expect(screen.getByRole('button', { name: /claude blocked-helper: CONFLICT/ })).toBeDisabled()
   })
 
+  it('shows saved Skill Sets and requires an explicit tool scope before staging', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+
+    await user.click(screen.getByRole('button', { name: 'Skill Sets' }))
+    expect(screen.getByRole('heading', { name: 'Skill Sets' })).toBeInTheDocument()
+    expect(screen.getByText('Review support')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Toggle…' }))
+    const dialog = screen.getByRole('dialog', { name: 'Toggle Review support' })
+    expect(backend.previewSkillSetToggle).not.toHaveBeenCalled()
+    expect(within(dialog).getByRole('button', { name: /Stage changes/ })).toBeDisabled()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Codex' }))
+    await waitFor(() => expect(backend.previewSkillSetToggle).toHaveBeenCalledWith('set:review-support', ['codex']))
+    await user.click(await within(dialog).findByRole('button', { name: 'Stage disable' }))
+    await waitFor(() => expect(backend.toggleSkillSet).toHaveBeenCalledWith('set:review-support', ['codex']))
+  })
+
+  it('creates a Skill Set from unique names in Pending', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Skills/ }))
+    await user.click(screen.getByRole('button', { name: 'claude alpha-skill: ON' }))
+    await user.click(screen.getByRole('button', { name: 'Save as set' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'New Skill Set' })
+    expect(within(dialog).getByRole('checkbox', { name: /alpha-skill/ })).toBeChecked()
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Change review')
+    await user.type(within(dialog).getByRole('textbox', { name: /When to use/ }), 'Use for risky cross-tool changes.')
+    await user.click(within(dialog).getByRole('button', { name: 'Save Skill Set' }))
+    await waitFor(() => expect(backend.createSkillSet).toHaveBeenCalledWith('Change review', 'Use for risky cross-tool changes.', ['alpha-skill']))
+  })
+
+  it('adds a skill to an existing Skill Set through skill details', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Skills/ }))
+    await user.click(screen.getByText('alpha-skill'))
+    await user.click(screen.getByRole('button', { name: 'Add to Skill Set…' }))
+
+    const picker = screen.getByRole('dialog', { name: 'Add alpha-skill to a Skill Set' })
+    await user.click(within(picker).getByRole('button', { name: /Review support/ }))
+    const editor = screen.getByRole('dialog', { name: 'Edit Skill Set' })
+    expect(within(editor).getByRole('checkbox', { name: /alpha-skill/ })).toBeChecked()
+    await user.click(within(editor).getByRole('button', { name: 'Save Skill Set' }))
+    await waitFor(() => expect(backend.updateSkillSet).toHaveBeenCalledWith('set:review-support', 'Review support', 'Use when reviewing a cross-tool change.', ['alpha-skill']))
+  })
+
   it('shows managed sources and confirms a repository update', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()
@@ -314,6 +368,24 @@ describe('Skill Manager desktop app', () => {
     expect(confirm).toBeDisabled()
     await user.type(screen.getByRole('textbox', { name: /Type demo\/skills/ }), 'demo/skills')
     expect(confirm).toBeEnabled()
+  })
+
+  it('warns without blocking when uninstall affects saved Skill Sets', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.previewUninstall = vi.fn(async (sourceId) => new gui.UninstallPreview({
+      sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0,
+      removesCheckout: true, preservesSource: false, skillSetImpactWarning: '',
+      affectedSkillSets: [{ setId: 'set:review-support', name: 'Review support', skills: ['alpha-skill'] }],
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Uninstall demo/skills' }))
+
+    expect(await screen.findByText('1 Skill Set contains skills installed by this source')).toBeInTheDocument()
+    expect(screen.getByText('Review support: alpha-skill')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Uninstall source' })).toBeDisabled()
   })
 
   /* Discover UI regression scenarios remain as implementation notes while the

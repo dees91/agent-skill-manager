@@ -7,6 +7,8 @@ const seedRows: SkillRow[] = [
   row('incident-summary', 'Turn incident notes into a concise report.', 'example-labs/engineering-skills', 'symlink repo', 'ON', 'OFF'),
   row('ui-accessibility', 'Audit interface semantics and keyboard access.', 'sample-org/product-skills', 'symlink repo', 'ON', 'ON'),
   row('performance-profile', 'Plan and interpret application profiling.', 'sample-org/product-skills', 'symlink repo', 'ON', 'ON'),
+  row('media-compose', 'Assemble a short product demo from interface captures.', 'sample-org/media-skills', 'symlink repo', 'OFF', 'OFF'),
+  row('video-encode', 'Encode and optimize video deliverables.', 'sample-org/media-skills', 'symlink repo', undefined, 'OFF'),
   row('local-notes', 'Maintain a private, link-in-place workflow.', 'local', 'local', 'ON', undefined),
   row('catalog-search', 'Find reusable skills in a catalog.', 'Skills CLI', 'Skills CLI', undefined, 'ON'),
   row('decision-review', 'Stress-test a technical decision.', 'Skills CLI', 'Skills CLI', undefined, 'OFF'),
@@ -19,6 +21,10 @@ class DemoBackend implements Backend {
   private rows = seedRows
   private pending: PendingChange[] = []
   private diagnosticsMeasured = false
+  private skillSets = [
+    { setId: 'set:media-demos', name: 'Media demos', description: 'Use when creating an occasional project video.', skills: ['media-compose', 'video-encode'], createdAt: '2026-08-14T09:00:00Z', updatedAt: '2026-08-14T09:00:00Z' },
+    { setId: 'set:release-review', name: 'Release review', description: 'Use before publishing a public build.', skills: ['dependency-review', 'release-checklist'], createdAt: '2026-08-13T09:00:00Z', updatedAt: '2026-08-15T09:00:00Z' },
+  ]
   private sources = [
     { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
     { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
@@ -107,8 +113,55 @@ class DemoBackend implements Backend {
     return { completed, message: `Applied ${completed.length} change(s).`, snapshot: this.snapshot(includeReadOnly) } as unknown as ApplyResult
   }
 
+  async createSkillSet(name: string, description: string, skillNames: string[]) {
+    const now = new Date().toISOString()
+    this.skillSets.push({ setId: `set:demo-${this.skillSets.length + 1}`, name: name.trim(), description: description.trim(), skills: [...new Set(skillNames)].sort(), createdAt: now, updatedAt: now })
+    this.skillSets.sort((left, right) => left.name.localeCompare(right.name))
+    return this.skillSetMutation(`Created Skill Set ${name.trim()}.`)
+  }
+
+  async updateSkillSet(setID: string, name: string, description: string, skillNames: string[]) {
+    const set = this.skillSets.find((candidate) => candidate.setId === setID)
+    if (!set) throw new Error('Skill Set not found')
+    set.name = name.trim()
+    set.description = description.trim()
+    set.skills = [...new Set(skillNames)].sort()
+    set.updatedAt = new Date().toISOString()
+    this.skillSets.sort((left, right) => left.name.localeCompare(right.name))
+    return this.skillSetMutation(`Updated Skill Set ${set.name}.`)
+  }
+
+  async deleteSkillSet(setID: string) {
+    const set = this.skillSets.find((candidate) => candidate.setId === setID)
+    this.skillSets = this.skillSets.filter((candidate) => candidate.setId !== setID)
+    return this.skillSetMutation(`Deleted Skill Set ${set?.name ?? ''}. Pending skill changes were not modified.`)
+  }
+
+  async previewSkillSetToggle(setID: string, tools: string[]) {
+    const set = this.skillSets.find((candidate) => candidate.setId === setID)
+    if (!set) throw new Error('Skill Set not found')
+    const items = set.skills.flatMap((name) => tools.map((tool) => {
+      const skillRow = this.rows.find((candidate) => candidate.name === name)
+      const skillCell = skillRow?.[tool as 'claude' | 'codex']
+      const pending = this.pending.find((change) => change.skillName === name && change.tool === tool)
+      const effective = pending?.operation === 'enable' ? 'ON' : pending?.operation === 'disable' ? 'OFF' : skillCell?.state
+      return { skillCell, pending, effective }
+    }))
+    const eligible = items.filter((item) => item.skillCell && !item.skillCell.readOnly && !item.skillCell.conflict && ['ON', 'OFF'].includes(item.skillCell.state))
+    const direction = eligible.length === 0 ? 'none' : eligible.every((item) => item.effective === 'ON') ? 'disable' : 'enable'
+    const target = direction === 'disable' ? 'ON' : 'OFF'
+    const affected = eligible.filter((item) => item.effective === target)
+    return { setId: set.setId, name: set.name, tools, direction, eligible: eligible.length, counts: { changed: affected.length, removed: 0, skippedReadOnly: 0, skippedMissing: items.length - eligible.length, skippedConflict: 0 } } as never
+  }
+
+  async toggleSkillSet(setID: string, tools: string[]) {
+    const set = this.skillSets.find((candidate) => candidate.setId === setID)
+    if (!set) throw new Error('Skill Set not found')
+    return this.toggleSkillScope(set.skills, tools)
+  }
+
   private action(message: string, changed: number, removed = 0) {
-    return { message, counts: { changed, removed, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 }, pending: [...this.pending], contextBudgets: demoBudgets(this.pending, this.diagnosticsMeasured) } as unknown as ActionResult
+    return { message, counts: { changed, removed, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 }, pending: [...this.pending], contextBudgets: demoBudgets(this.pending, this.diagnosticsMeasured), skillSets: this.projectSkillSets(), skillSetsWarning: '' } as unknown as ActionResult
   }
 
   private snapshot(includeReadOnly: boolean) {
@@ -120,6 +173,8 @@ class DemoBackend implements Backend {
     })
     return {
       rows,
+      skillSets: this.projectSkillSets(),
+      skillSetsWarning: '',
       groups,
       sources: [...new Set(rows.map((row) => row.source))].sort(),
       managedSources: [...this.sources],
@@ -156,7 +211,7 @@ class DemoBackend implements Backend {
   async updateAllSources() { return this.sourceResult('Updated 1 source; 0 already up to date.') }
   async previewUninstall(sourceID: string) {
     const source = this.sources.find((item) => item.sourceId === sourceID)!
-    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: source.claudeCount + source.codexCount, disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local' } as never
+    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: source.claudeCount + source.codexCount, disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local', affectedSkillSets: [], skillSetImpactWarning: '' } as never
   }
   async uninstallSource(sourceID: string) {
     this.sources = this.sources.filter((source) => source.sourceId !== sourceID)
@@ -165,6 +220,25 @@ class DemoBackend implements Backend {
 
   private sourceResult(message: string) {
     return { message, completed: [], snapshot: this.snapshot(false) } as never
+  }
+
+  private skillSetMutation(message: string) {
+    return { message, skillSets: this.projectSkillSets(), warning: '' } as never
+  }
+
+  private projectSkillSets() {
+    return this.skillSets.map((set) => {
+      const members = set.skills.map((name) => {
+        const skillRow = this.rows.find((candidate) => candidate.name === name)
+        const projected = skillRow ? projectRow(skillRow, this.pending) : undefined
+        const claude = demoSetMemberCell('claude', projected?.claude, this.pending)
+        const codex = demoSetMemberCell('codex', projected?.codex, this.pending)
+        return { name, description: projected?.description ?? '', group: projected?.group ?? 'unknown', source: projected?.source ?? 'unknown', available: claude.eligible || codex.eligible, claude, codex }
+      })
+      const claude = demoSetSummary('claude', members.map((member) => member.claude))
+      const codex = demoSetSummary('codex', members.map((member) => member.codex))
+      return { setId: set.setId, name: set.name, description: set.description, members, claude, codex, unavailable: members.filter((member) => !member.available).length, pending: claude.pending + codex.pending, createdAt: set.createdAt, updatedAt: set.updatedAt }
+    })
   }
 }
 
@@ -221,6 +295,22 @@ function demoBudgets(pending: PendingChange[], measured: boolean) {
     claude: demoBudget('claude', 'Claude default', 1680, 2000, pending.filter((change) => change.tool === 'claude').length, measured),
     codex: demoBudget('codex', 'gpt-5.6-sol', 1951, 5440, pending.filter((change) => change.tool === 'codex').length, measured),
   }
+}
+
+function demoSetMemberCell(tool: string, skillCell: SkillCell | undefined, pending: PendingChange[]) {
+  const operation = pending.find((change) => change.skillName === skillCell?.name && change.tool === tool)?.operation ?? ''
+  const state = skillCell?.state ?? '-'
+  return { tool, state, effectiveState: operation === 'enable' ? 'ON' : operation === 'disable' ? 'OFF' : state, pending: operation, eligible: Boolean(skillCell && !skillCell.readOnly && !skillCell.conflict && ['ON', 'OFF'].includes(skillCell.state)), reason: skillCell ? '' : 'Not installed for this tool.' }
+}
+
+function demoSetSummary(tool: string, cells: ReturnType<typeof demoSetMemberCell>[]) {
+  const eligible = cells.filter((cell) => cell.eligible)
+  const on = eligible.filter((cell) => cell.state === 'ON').length
+  const off = eligible.filter((cell) => cell.state === 'OFF').length
+  const effectiveOn = eligible.filter((cell) => cell.effectiveState === 'ON').length
+  const effectiveOff = eligible.filter((cell) => cell.effectiveState === 'OFF').length
+  const status = (onCount: number, offCount: number) => eligible.length === 0 ? 'unavailable' : onCount === eligible.length ? 'enabled' : offCount === eligible.length ? 'disabled' : 'mixed'
+  return { tool, appliedStatus: status(on, off), effectiveStatus: status(effectiveOn, effectiveOff), eligible: eligible.length, on, off, effectiveOn, effectiveOff, pending: cells.filter((cell) => cell.pending).length, missing: cells.filter((cell) => cell.state === '-').length, readOnly: cells.filter((cell) => cell.state === 'RO').length, conflict: cells.filter((cell) => cell.state === 'CONFLICT').length }
 }
 
 function demoBudget(tool: string, model: string, tokens: number, budgetTokens: number, pendingCount: number, measured: boolean) {

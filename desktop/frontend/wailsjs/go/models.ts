@@ -116,7 +116,10 @@ export namespace contextbudget {
 		    return a;
 		}
 	}
+
+
 }
+
 export namespace gui {
 
 	export class ActionCounts {
@@ -139,6 +142,152 @@ export namespace gui {
 	        this.skippedConflict = source["skippedConflict"];
 	    }
 	}
+	export class SkillSetToolSummary {
+	    tool: string;
+	    appliedStatus: string;
+	    effectiveStatus: string;
+	    eligible: number;
+	    on: number;
+	    off: number;
+	    effectiveOn: number;
+	    effectiveOff: number;
+	    pending: number;
+	    missing: number;
+	    readOnly: number;
+	    conflict: number;
+
+	    static createFrom(source: any = {}) {
+	        return new SkillSetToolSummary(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.appliedStatus = source["appliedStatus"];
+	        this.effectiveStatus = source["effectiveStatus"];
+	        this.eligible = source["eligible"];
+	        this.on = source["on"];
+	        this.off = source["off"];
+	        this.effectiveOn = source["effectiveOn"];
+	        this.effectiveOff = source["effectiveOff"];
+	        this.pending = source["pending"];
+	        this.missing = source["missing"];
+	        this.readOnly = source["readOnly"];
+	        this.conflict = source["conflict"];
+	    }
+	}
+	export class SkillSetMemberCell {
+	    tool: string;
+	    state: string;
+	    effectiveState: string;
+	    pending?: string;
+	    eligible: boolean;
+	    reason?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SkillSetMemberCell(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.state = source["state"];
+	        this.effectiveState = source["effectiveState"];
+	        this.pending = source["pending"];
+	        this.eligible = source["eligible"];
+	        this.reason = source["reason"];
+	    }
+	}
+	export class SkillSetMember {
+	    name: string;
+	    description: string;
+	    group: string;
+	    source: string;
+	    available: boolean;
+	    claude: SkillSetMemberCell;
+	    codex: SkillSetMemberCell;
+
+	    static createFrom(source: any = {}) {
+	        return new SkillSetMember(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.group = source["group"];
+	        this.source = source["source"];
+	        this.available = source["available"];
+	        this.claude = this.convertValues(source["claude"], SkillSetMemberCell);
+	        this.codex = this.convertValues(source["codex"], SkillSetMemberCell);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SkillSet {
+	    setId: string;
+	    name: string;
+	    description: string;
+	    members: SkillSetMember[];
+	    claude: SkillSetToolSummary;
+	    codex: SkillSetToolSummary;
+	    unavailable: number;
+	    pending: number;
+	    createdAt: string;
+	    updatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SkillSet(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.setId = source["setId"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.members = this.convertValues(source["members"], SkillSetMember);
+	        this.claude = this.convertValues(source["claude"], SkillSetToolSummary);
+	        this.codex = this.convertValues(source["codex"], SkillSetToolSummary);
+	        this.unavailable = source["unavailable"];
+	        this.pending = source["pending"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class PendingChange {
 	    tool: string;
 	    skillName: string;
@@ -160,6 +309,8 @@ export namespace gui {
 	    counts: ActionCounts;
 	    pending: PendingChange[];
 	    contextBudgets: contextbudget.Reports;
+	    skillSets: SkillSet[];
+	    skillSetsWarning?: string;
 
 	    static createFrom(source: any = {}) {
 	        return new ActionResult(source);
@@ -171,6 +322,8 @@ export namespace gui {
 	        this.counts = this.convertValues(source["counts"], ActionCounts);
 	        this.pending = this.convertValues(source["pending"], PendingChange);
 	        this.contextBudgets = this.convertValues(source["contextBudgets"], contextbudget.Reports);
+	        this.skillSets = this.convertValues(source["skillSets"], SkillSet);
+	        this.skillSetsWarning = source["skillSetsWarning"];
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -499,6 +652,8 @@ export namespace gui {
 	}
 	export class Snapshot {
 	    rows: SkillRow[];
+	    skillSets: SkillSet[];
+	    skillSetsWarning?: string;
 	    groups: GroupSummary[];
 	    sources: string[];
 	    managedSources: ManagedSource[];
@@ -516,6 +671,8 @@ export namespace gui {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.rows = this.convertValues(source["rows"], SkillRow);
+	        this.skillSets = this.convertValues(source["skillSets"], SkillSet);
+	        this.skillSetsWarning = source["skillSetsWarning"];
 	        this.groups = this.convertValues(source["groups"], GroupSummary);
 	        this.sources = source["sources"];
 	        this.managedSources = this.convertValues(source["managedSources"], ManagedSource);
@@ -767,6 +924,100 @@ export namespace gui {
 
 
 
+	export class SkillSetImpact {
+	    setId: string;
+	    name: string;
+	    skills: string[];
+
+	    static createFrom(source: any = {}) {
+	        return new SkillSetImpact(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.setId = source["setId"];
+	        this.name = source["name"];
+	        this.skills = source["skills"];
+	    }
+	}
+
+
+	export class SkillSetMutationResult {
+	    message: string;
+	    skillSets: SkillSet[];
+	    warning?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SkillSetMutationResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.message = source["message"];
+	        this.skillSets = this.convertValues(source["skillSets"], SkillSet);
+	        this.warning = source["warning"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SkillSetTogglePreview {
+	    setId: string;
+	    name: string;
+	    tools: string[];
+	    direction: string;
+	    eligible: number;
+	    counts: ActionCounts;
+
+	    static createFrom(source: any = {}) {
+	        return new SkillSetTogglePreview(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.setId = source["setId"];
+	        this.name = source["name"];
+	        this.tools = source["tools"];
+	        this.direction = source["direction"];
+	        this.eligible = source["eligible"];
+	        this.counts = this.convertValues(source["counts"], ActionCounts);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+
 	export class SourceMutationFailure {
 	    stage: string;
 	    group?: string;
@@ -861,6 +1112,8 @@ export namespace gui {
 	    disabledLinks: number;
 	    removesCheckout: boolean;
 	    preservesSource: boolean;
+	    affectedSkillSets: SkillSetImpact[];
+	    skillSetImpactWarning?: string;
 
 	    static createFrom(source: any = {}) {
 	        return new UninstallPreview(source);
@@ -876,7 +1129,27 @@ export namespace gui {
 	        this.disabledLinks = source["disabledLinks"];
 	        this.removesCheckout = source["removesCheckout"];
 	        this.preservesSource = source["preservesSource"];
+	        this.affectedSkillSets = this.convertValues(source["affectedSkillSets"], SkillSetImpact);
+	        this.skillSetImpactWarning = source["skillSetImpactWarning"];
 	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

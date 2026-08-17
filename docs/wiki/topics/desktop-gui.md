@@ -12,15 +12,18 @@
   Wails bindings, and plain CSS tokens. There is no router, external state
   store, Tailwind, or chart library. Frontend development requires Node.js
   22.12 or newer and npm 10 or newer.
-- The `v0.4.2` dark-only public preview contains Dashboard, Skills, and a
-  managed-only Sources screen. Iteration 9's experimental skills.sh Go adapter
-  and domain tests remain in the repository, but Discover has no public Wails
-  binding or React navigation in this preview.
+- The dark-only desktop source build contains Dashboard, Skills, saved Skill
+  Sets, and a managed-only Sources screen. Iteration 9's experimental skills.sh
+  Go adapter and domain tests remain in the repository, but Discover has no
+  public Wails binding or React navigation in the `v0.4.2` preview.
 - `implemented`: Iteration 7 adds a read-only global skill-catalog context
   panel to Dashboard without expanding the source-management surface.
 - `implemented`: Iteration 10 replaces the flat Skills table with an
   active-first workspace and source-grouped inactive accordions without
   changing toggle or Apply semantics.
+- `implemented`: Iteration 14 adds tool-agnostic saved Skill Sets, contextual
+  creation, scoped smart-toggle preview/staging, and unavailable-member
+  retention without changing CLI/TUI behavior.
 
 ## Security And State Boundary
 
@@ -38,6 +41,12 @@ accidental loss unless the user explicitly discards pending work.
 Scoped Skills bulk calls accept only exact skill/group names and tool names.
 Go validates and deduplicates the scope before calling the existing
 `staging.ToggleBatch`; legacy both-tool group/visible methods remain wrappers.
+
+Skill Set calls accept opaque set IDs, skill basenames, and explicit tool names.
+Go owns recipe validation and resolves every name against the current scan.
+Preview uses a copy of Pending; confirmed use stages through the same
+`staging.ToggleBatch` engine. Recipe CRUD writes only the separate private
+metadata file and never applies, clears, or owns skill state.
 
 Source operations have a separate exclusive lane. They refuse to start while
 toggle changes are pending, block other mutations and app close while active,
@@ -103,13 +112,30 @@ none of the catalog methods.
   Their argument allowlist is exact. Failures degrade to labeled filesystem
   estimates and never fail the main skill scan.
 
+## Saved Skill Sets Workspace
+
+- The workspace lists each recipe once with optional `When to use` copy,
+  member count, unavailable count, and applied/effective Claude and Codex
+  summaries. Expanded rows show current member source and per-tool state.
+- Create/edit uses one searchable tool-agnostic member list. Existing missing
+  members remain editable, while arbitrary new unavailable names are rejected.
+- Toggle always requires an explicit Claude, Codex, or Both selection and a
+  read-only impact preview before staging. Apply remains the only skill-state
+  filesystem mutation.
+- **Save as set** seeds unique skill names from Pending. Skill details expose
+  **Add to Skill Set…** for an existing or new recipe.
+- Set deletion removes metadata only and preserves Pending. Source uninstall
+  warns about affected sets but retains their now-unavailable basenames.
+- Corrupt recipe metadata is a page-local warning; Dashboard, Skills, Sources,
+  and their mutations remain available.
+
 ## Visual Contract
 
 [`../../../DESIGN.md`](../../../DESIGN.md) describes the implemented interface
-and points to repository-owned Dashboard and Discover screenshots generated
-from synthetic demo data. The visual system uses a dark palette, flat panel
-hierarchy, persistent sidebar, dense tables, cyan informational accents, and
-one warm primary action per region.
+and points to repository-owned Dashboard, Skill Sets, and dormant Discover
+screenshots generated from synthetic demo data. The visual system uses a dark
+palette, flat panel hierarchy, persistent sidebar, dense tables, cyan
+informational accents, and one warm primary action per region.
 
 The implementation uses semantic controls, visible focus, reduced-motion
 handling, an icon-only compact sidebar at 1024×720, scrollable wide tables,
@@ -125,6 +151,12 @@ selection toggle whose `ON`, `OFF`, `MIXED`, or `N/A` state reflects every
 non-conflict discovered target, independent of the row filter. Dialogs trap and
 restore focus, announce progress/errors, remain usable at the 1024×720
 minimum, and use typed confirmation for destructive removal.
+
+The Skill Sets screen uses the same compact table language, expandable member
+detail, and centered dialogs. Dialog focus is contained, action scope is named
+in text, unavailable members remain explicit, and the layout remains usable at
+1024×720. The synthetic 1440×960 capture is
+[`../../images/skill-sets.png`](../../images/skill-sets.png).
 
 Discover uses the same dense table/surface language for rankings and search,
 adds compact activity sparklines and agent state badges, and opens details in a

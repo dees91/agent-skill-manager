@@ -10,6 +10,10 @@ sources:
     path: "docs/images/discover.png"
     platform: desktop
     dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/skill-sets.png"
+    platform: desktop
+    dimensions: "1440x960"
 confidence:
   overall: high
   colors: high
@@ -92,6 +96,10 @@ in public documentation.
 - **Active-first Skills workspace:** conflicts first, then always-expanded
   active skills, collapsed available-by-source groups, and explicitly opted-in
   read-only groups. Pending changes stay in their applied section until Apply.
+- **Saved Skill Sets:** task-oriented recipes show member count, applied and
+  post-Apply state per tool, unavailable members, and expandable member detail.
+  Create/edit supports one tool-agnostic member selection plus an optional
+  `When to use` note; every toggle opens an explicit Claude/Codex/Both preview.
 - **Managed Sources:** Git repositories and linked folders with unambiguous
   update modes, counts, locations, and separately confirmed lifecycle actions.
 - **Install workflow:** inspect, matrix selection, review, and apply. Tool-column
@@ -120,6 +128,11 @@ Skill toggles are staged locally. Apply is the only action that persists those
 pending changes. Source lifecycle actions are immediate but separately reviewed
 and confirmed. Focus, hover, disabled, loading, conflict, and offline states must
 all have textual or structural cues.
+
+Skill Set metadata changes are immediate local edits, while using a set only
+stages ordinary skill toggles. Sets may overlap; they do not own or reference
+count active skills. Unavailable member names remain visible and reconnect by
+basename when the skill returns.
 
 Motion is short and functional. Reduced-motion preferences remove nonessential
 transitions. Long-running source operations show phase progress and do not imply

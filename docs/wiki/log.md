@@ -4,6 +4,29 @@ This public log summarizes reusable project decisions and implementation
 milestones. Workstation-specific observations and private filesystem state are
 intentionally excluded.
 
+## [2026-08-17] verification | Validated saved Skill Sets
+
+- Passed root and desktop Go tests/vet, 21 frontend tests, production frontend
+  build, pinned vulnerability scans, generated bindings, local CLI install, and
+  an ad-hoc-signed Apple Silicon app build.
+- Verified synthetic 1440×960 and 1024×720 GUI states, scoped preview/staging,
+  contextual creation, console health, and WCAG A/AA automation with no
+  violations.
+- Wiki lint found every topic/source indexed and no broken relative links,
+  stale Phase 14 planning status, secrets, or workstation inventory.
+
+## [2026-08-17] implementation | Added saved Skill Sets
+
+- Added GUI-only, tool-agnostic task recipes with optional `When to use` notes,
+  explicit Claude/Codex/Both smart-toggle previews, and shared Pending/Apply
+  semantics.
+- Added an independent owner-only `skill-sets.json` store with atomic writes,
+  bounded backups, corruption isolation, missing-member reconnection, and
+  non-blocking source-uninstall impact warnings.
+- Added Pending and skill-details creation shortcuts, synthetic demo/test data,
+  a repository-owned screenshot, backend/frontend coverage, responsive browser
+  QA, and WCAG A/AA validation.
+
 ## [2026-08-14] documentation | Improved repository discovery assets
 
 - Tightened the README value proposition, added direct download, source

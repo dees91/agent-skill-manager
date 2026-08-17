@@ -17,6 +17,7 @@ import (
 	"github.com/dees91/agent-skill-manager/internal/ops"
 	"github.com/dees91/agent-skill-manager/internal/paths"
 	"github.com/dees91/agent-skill-manager/internal/scan"
+	"github.com/dees91/agent-skill-manager/internal/skillsets"
 	"github.com/dees91/agent-skill-manager/internal/skillssh"
 	"github.com/dees91/agent-skill-manager/internal/staging"
 	"github.com/dees91/agent-skill-manager/internal/state"
@@ -30,29 +31,32 @@ type catalogClient interface {
 
 // Service owns one desktop session, including its in-memory pending changes.
 type Service struct {
-	mu              sync.Mutex
-	paths           paths.Paths
-	scanner         scan.Scanner
-	operations      *ops.Service
-	contextAnalyzer *contextbudget.Analyzer
-	contextResult   contextbudget.Result
-	pending         staging.Memory
-	rows            []model.SkillRow
-	managedSources  []ManagedSource
-	includeReadOnly bool
-	scannedAt       time.Time
-	now             func() time.Time
-	store           state.Store
-	gitRunner       install.GitRunner
-	catalog         catalogClient
-	catalogSkills   map[string]skillssh.Skill
-	drafts          map[string]installDraftState
-	reviews         map[string]installReviewState
-	sourceOperation sync.Mutex
-	sourceBusy      atomic.Bool
-	progressMu      sync.Mutex
-	progress        func(SourceProgress)
-	privacyReady    bool
+	mu               sync.Mutex
+	paths            paths.Paths
+	scanner          scan.Scanner
+	operations       *ops.Service
+	contextAnalyzer  *contextbudget.Analyzer
+	contextResult    contextbudget.Result
+	pending          staging.Memory
+	rows             []model.SkillRow
+	managedSources   []ManagedSource
+	includeReadOnly  bool
+	scannedAt        time.Time
+	now              func() time.Time
+	store            state.Store
+	skillSetStore    skillsets.Store
+	skillSetFile     skillsets.File
+	skillSetsWarning string
+	gitRunner        install.GitRunner
+	catalog          catalogClient
+	catalogSkills    map[string]skillssh.Skill
+	drafts           map[string]installDraftState
+	reviews          map[string]installReviewState
+	sourceOperation  sync.Mutex
+	sourceBusy       atomic.Bool
+	progressMu       sync.Mutex
+	progress         func(SourceProgress)
+	privacyReady     bool
 }
 
 // New creates a desktop session for the provided filesystem paths.
@@ -65,6 +69,7 @@ func New(p paths.Paths) *Service {
 		pending:         staging.Memory{},
 		now:             time.Now,
 		store:           state.New(p),
+		skillSetStore:   skillsets.New(p),
 		catalog:         skillssh.New(p.SkillsSHCacheFile),
 		catalogSkills:   map[string]skillssh.Skill{},
 		drafts:          map[string]installDraftState{},
@@ -407,6 +412,7 @@ func (s *Service) reloadLocked(includeReadOnly bool) error {
 		return manifestErr
 	}
 	s.managedSources = projectManagedSources(manifest)
+	s.reloadSkillSetsLocked()
 	s.contextResult = s.contextAnalyzer.Estimate(s.rows)
 	s.includeReadOnly = includeReadOnly
 	s.scannedAt = s.now().UTC()
@@ -456,25 +462,29 @@ func (s *Service) snapshotLocked() Snapshot {
 	groups := projectGroups(scan.GroupSummaries(s.rows))
 	stats, conflicts := summarize(s.rows)
 	return Snapshot{
-		Rows:            rows,
-		Groups:          groups,
-		Sources:         collectSources(s.rows),
-		ManagedSources:  append([]ManagedSource{}, s.managedSources...),
-		Stats:           stats,
-		Conflicts:       conflicts,
-		ContextBudgets:  s.contextResult.Project(s.contextPendingLocked()),
-		Pending:         s.pendingChangesLocked(),
-		IncludeReadOnly: s.includeReadOnly,
-		ScannedAt:       formatTime(s.scannedAt),
+		Rows:             rows,
+		SkillSets:        s.projectSkillSetsLocked(),
+		SkillSetsWarning: s.skillSetsWarning,
+		Groups:           groups,
+		Sources:          collectSources(s.rows),
+		ManagedSources:   append([]ManagedSource{}, s.managedSources...),
+		Stats:            stats,
+		Conflicts:        conflicts,
+		ContextBudgets:   s.contextResult.Project(s.contextPendingLocked()),
+		Pending:          s.pendingChangesLocked(),
+		IncludeReadOnly:  s.includeReadOnly,
+		ScannedAt:        formatTime(s.scannedAt),
 	}
 }
 
 func (s *Service) actionResultLocked(message string, counts ActionCounts) ActionResult {
 	return ActionResult{
-		Message:        message,
-		Counts:         counts,
-		Pending:        s.pendingChangesLocked(),
-		ContextBudgets: s.contextResult.Project(s.contextPendingLocked()),
+		Message:          message,
+		Counts:           counts,
+		Pending:          s.pendingChangesLocked(),
+		ContextBudgets:   s.contextResult.Project(s.contextPendingLocked()),
+		SkillSets:        s.projectSkillSetsLocked(),
+		SkillSetsWarning: s.skillSetsWarning,
 	}
 }
 

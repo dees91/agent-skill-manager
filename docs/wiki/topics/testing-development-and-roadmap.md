@@ -77,6 +77,10 @@ from the tracked PNG under repository settings.
   projections, opaque IDs, exact-cell local install/review/apply, typed local
   uninstall with source preservation, and pending-operation exclusion; shared
   install/update/uninstall packages retain fake/local Git safety coverage.
+- Skill Set suites cover version/shape validation, atomic owner-only storage,
+  bounded independent backups, CRUD, corruption isolation, missing-member
+  retention/reconnection, overlapping projections, scoped preview/staging,
+  Pending preservation, and source-uninstall impact.
 - Discover backend coverage projects ON/OFF/conflict state and verifies that a
   selected catalog entry installs exactly one skill into only the selected
   agent cells while rejecting unknown, well-known, offline, pending, and busy
@@ -96,6 +100,9 @@ from the tracked PNG under repository settings.
   additionally checks active-first placement,
   collapsed source groups, session navigation memory, search expansion,
   scoped tool/result/group actions, pending placement, and conflict exposure.
+  Skill Set coverage checks dedicated navigation, explicit tool selection,
+  preview/staging, creation from Pending, addition from skill details, and
+  non-blocking uninstall warnings.
 - Wails production packaging is checked as a local ad-hoc-signed
   `darwin/arm64` `.app`; native render checks cover both 1440×960 initial and
   1024×720 minimum sizes.
@@ -154,12 +161,17 @@ from the tracked PNG under repository settings.
   retention, query-free catalog cache migration, manual provider diagnostics,
   hidden Discover binding/UI, dependency notices, and public `v0.4.1`
   repository/release hardening.
+- Phase 14: independent saved-recipe persistence, basename-based Skill Sets,
+  path-free CRUD and scoped smart-toggle preview/staging, contextual desktop
+  creation, missing-member reconnection, uninstall impact warnings,
+  responsive/accessibility validation, and local builds.
 
 All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.
 The `v0.4.2` maintenance prerelease supersedes that first preview with patched
 Go, Wails, terminal UI, and frontend dependencies plus the empty-profile GUI
-projection fix; it does not expand the public product surface.
+projection fix. Phase 14 is complete in the source tree but has not been tagged
+or published as a release.
 
 ## Explicitly Deferred Work
 

@@ -16,6 +16,9 @@
 - [`internal/skillssh`](../../../internal/skillssh/) owns anonymous catalog
   HTTP, response validation/limits, normalization, local search, freshness,
   and the versioned normalized cache. It does not mutate installed skills.
+- [`internal/skillsets`](../../../internal/skillsets/) owns the independent
+  versioned saved-recipe file, validation, atomic persistence, and bounded
+  backups. It stores skill basenames but no paths or tool selections.
 - [`internal/gui`](../../../internal/gui/) owns the concurrency-safe desktop
   session, identifier-only action API, source drafts/reviews, snapshots,
   summaries, apply results, and pending state. It has no Wails dependency.
@@ -65,6 +68,24 @@ The frontend never submits filesystem paths or prebuilt operations. Desktop
 pending state is owned by the Go process and survives frontend projections but
 not application exit. Startup, explicit refresh, read-only opt-in, and Apply
 are scan boundaries; filters and staging actions do not rescan.
+
+## Saved Skill Set Flow
+
+```text
+opaque Skill Set ID + explicit Claude/Codex tool names
+  -> gui.Service resolves saved basenames against current scan rows
+  -> staging.ToggleBatch previews against a copy of Pending
+  -> confirmed use stages through the same engine in session Pending
+  -> overlapping sets receive refreshed effective-state projections
+  -> ordinary Apply performs deterministic filesystem moves and rescans
+```
+
+Create/update/delete mutate only `skill-sets.json`; they do not apply or clear
+Pending. Missing names remain in recipe metadata and project as unavailable
+until a matching basename returns. A corrupt recipe file produces a desktop
+warning without blocking normal scan/toggle/source operations. Source uninstall
+previews cross-check installed names against sets, but never block or rewrite
+those recipes.
 
 ## Desktop Source Lifecycle Flow
 

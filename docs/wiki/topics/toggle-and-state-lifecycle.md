@@ -52,6 +52,9 @@ resolution is manual in the current scope.
 - Group toggle uses all loaded rows in the selected row's group.
 - All-visible toggle uses rows after current text, source, group, and read-only
   filters.
+- Skill Set toggle resolves saved basenames against the current rows and uses
+  only the explicitly selected Claude/Codex scope. Its preview runs the same
+  algorithm against a copy of Pending; confirmation stages the real batch.
 - If every applicable effective cell is `ON`, the batch targets `OFF`.
 - Otherwise, it targets `ON` for effective `OFF` cells.
 - Read-only, missing, and conflict cells are skipped and counted.

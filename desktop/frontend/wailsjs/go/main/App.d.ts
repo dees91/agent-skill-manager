@@ -10,11 +10,17 @@ export function ChooseLocalInstall():Promise<gui.InstallDraft>;
 
 export function ClearPending():Promise<gui.ActionResult>;
 
+export function CreateSkillSet(arg1:string,arg2:string,arg3:Array<string>):Promise<gui.SkillSetMutationResult>;
+
+export function DeleteSkillSet(arg1:string):Promise<gui.SkillSetMutationResult>;
+
 export function GetSnapshot(arg1:boolean):Promise<gui.Snapshot>;
 
 export function MeasureContextBudgets():Promise<gui.Snapshot>;
 
 export function PrepareGitInstall(arg1:string):Promise<gui.InstallDraft>;
+
+export function PreviewSkillSetToggle(arg1:string,arg2:Array<string>):Promise<gui.SkillSetTogglePreview>;
 
 export function PreviewUninstall(arg1:string):Promise<gui.UninstallPreview>;
 
@@ -30,6 +36,8 @@ export function ToggleGroupScope(arg1:string,arg2:Array<string>):Promise<gui.Act
 
 export function ToggleSkillScope(arg1:Array<string>,arg2:Array<string>):Promise<gui.ActionResult>;
 
+export function ToggleSkillSet(arg1:string,arg2:Array<string>):Promise<gui.ActionResult>;
+
 export function ToggleVisible(arg1:Array<string>):Promise<gui.ActionResult>;
 
 export function UndoCell(arg1:string,arg2:string):Promise<gui.ActionResult>;
@@ -37,5 +45,7 @@ export function UndoCell(arg1:string,arg2:string):Promise<gui.ActionResult>;
 export function UninstallSource(arg1:string,arg2:string,arg3:boolean):Promise<gui.SourceMutationResult>;
 
 export function UpdateAllSources(arg1:boolean):Promise<gui.SourceMutationResult>;
+
+export function UpdateSkillSet(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<gui.SkillSetMutationResult>;
 
 export function UpdateSource(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;

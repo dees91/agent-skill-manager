@@ -14,7 +14,8 @@ page is added, removed, renamed, or materially repurposed.
     uninstall flows.
 - [topics/desktop-gui.md](topics/desktop-gui.md) - Wails/React architecture,
   security boundary, scan/apply and source-lifecycle session models,
-  explicit context diagnostics, dormant Discover domain, visual contract, and packaging.
+  explicit context diagnostics, saved Skill Sets, dormant Discover domain,
+  visual contract, and packaging.
 - [log.md](log.md) - append-only maintenance timeline.
 
 ## Topics
@@ -42,8 +43,13 @@ page is added, removed, renamed, or materially repurposed.
     semantics.
 - [topics/desktop-gui.md](topics/desktop-gui.md)
   - native app scope/stack, identifier-only bindings, pending and source
-    operation sessions, global context-budget metrics, dormant skills.sh domain,
-    implementation-derived design, responsive behavior, and build commands.
+    operation sessions, global context-budget metrics, saved Skill Sets,
+    dormant skills.sh domain, implementation-derived design, responsive
+    behavior, and build commands.
+- [topics/saved-skill-sets.md](topics/saved-skill-sets.md)
+  - task-oriented recipe semantics, separate private persistence, missing
+    member reconnection, scoped smart-toggle staging, contextual GUI creation,
+    source-uninstall impact, and deferred scope.
 - [topics/state-safety-and-recovery.md](topics/state-safety-and-recovery.md)
   - manifest shape, backups, atomic writes, mutation boundaries, and recovery
     limits.
@@ -55,7 +61,7 @@ page is added, removed, renamed, or materially repurposed.
 
 - [sources/product-decisions-and-plans.md](sources/product-decisions-and-plans.md)
   - digest and routing map for `AGENTS.md`, `README.md`, `DESIGN.md`, and the
-    twelve iteration plans.
+    fourteen iteration plans.
 - [sources/implementation-snapshot-2026-08-11.md](sources/implementation-snapshot-2026-08-11.md)
   - dated package-level source inspection and verification status used to seed
     the initial topic pages.

@@ -290,6 +290,7 @@ Use a global state directory:
 ```text
 ~/.skill-manager/
   state.json
+  skill-sets.json
   backups/
   disabled/
     claude/
@@ -771,6 +772,35 @@ operations without changing skill ownership semantics.
   binaries, SBOM/provenance, auto-update, and commercialization review remain
   required follow-up before a stable or commercial release.
 
+### Saved Skill Sets (Iteration 14)
+
+Iteration 14 adds reusable, task-oriented recipes to the macOS app without
+changing CLI, TUI, source ownership, or filesystem toggle semantics.
+
+- A `Skill Set` has a stable opaque identifier, a unique user-facing name, an
+  optional `When to use` description, and a sorted unique list of skill
+  basenames. It is distinct from the automatically detected source `Group`.
+- Membership is tool-agnostic. Each use explicitly selects Claude, Codex, or
+  both and stages changes through the existing Pending/Apply workflow.
+- A set uses the existing smart-toggle rule: all eligible effective cells ON
+  targets OFF; otherwise eligible OFF cells target ON. Sets may overlap and do
+  not own or reference-count active skills.
+- Persist sets separately in `~/.skill-manager/skill-sets.json`; do not advance
+  the ownership/toggle manifest from version 2. The file contains no source or
+  filesystem paths and uses private atomic persistence plus bounded backups.
+- Missing members remain in the set as unavailable. Reinstalling the same skill
+  basename reconnects it, regardless of source. Source uninstall warns about
+  affected sets but neither blocks nor rewrites them.
+- Add a dedicated `Skill Sets` screen, `Save as Skill Set` from Pending, and
+  `Add to Skill Set` from skill details. Creating, editing, and deleting set
+  metadata is immediate and must not change skill state or existing Pending.
+- Frontend mutations use set IDs, names, descriptions, skill names, and tool
+  names only. They never accept or send filesystem paths or prebuilt toggle
+  operations.
+- Automatic history suggestions, active-set reference counting, project-local
+  sets, import/export, per-skill notes, workflow steps, and CLI/TUI surfaces
+  remain out of scope.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -839,6 +869,9 @@ Backend tests should cover:
   installation through the existing managed-source services
 - Scoped desktop smart-toggle validation and active/available grouping,
   pending placement, search expansion, and session-only accordion state
+- Skill Set persistence, validation, corruption isolation, missing-member
+  retention, scoped smart-toggle preview/staging, overlapping-set projection,
+  contextual creation, and non-blocking uninstall impact
 
 TUI can be tested at the model/update layer. Full terminal rendering tests are optional for MVP.
 
@@ -873,6 +906,8 @@ Keep [planning/phase-11-publication-readiness-tasks.md](./planning/phase-11-publ
 Keep [planning/phase-12-github-release-tasks.md](./planning/phase-12-github-release-tasks.md) as the source of truth for Iteration 12 GitHub binary release task status.
 
 Keep [planning/phase-13-public-preview-hardening-tasks.md](./planning/phase-13-public-preview-hardening-tasks.md) as the source of truth for Iteration 13 public-preview hardening and publication task status.
+
+Keep [planning/phase-14-skill-sets-tasks.md](./planning/phase-14-skill-sets-tasks.md) as the source of truth for Iteration 14 saved Skill Set task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

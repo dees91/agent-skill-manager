@@ -3,9 +3,12 @@ import {
   ApplyPending,
   ChooseLocalInstall,
   ClearPending,
+  CreateSkillSet,
+  DeleteSkillSet,
   GetSnapshot,
   MeasureContextBudgets,
   PrepareGitInstall,
+  PreviewSkillSetToggle,
   PreviewUninstall,
   ReviewInstall,
   ToggleBoth,
@@ -13,10 +16,12 @@ import {
   ToggleGroup,
   ToggleGroupScope,
   ToggleSkillScope,
+  ToggleSkillSet,
   ToggleVisible,
   UndoCell,
   UninstallSource,
   UpdateAllSources,
+  UpdateSkillSet,
   UpdateSource,
 } from '../wailsjs/go/main/App'
 import type { contextbudget, gui } from '../wailsjs/go/models'
@@ -24,6 +29,9 @@ import type { contextbudget, gui } from '../wailsjs/go/models'
 export type Snapshot = gui.Snapshot
 export type SkillRow = gui.SkillRow
 export type SkillCell = gui.SkillCell
+export type SkillSet = gui.SkillSet
+export type SkillSetMutationResult = gui.SkillSetMutationResult
+export type SkillSetTogglePreview = gui.SkillSetTogglePreview
 export type PendingChange = gui.PendingChange
 export type ActionResult = gui.ActionResult
 export type ApplyResult = gui.ApplyResult
@@ -56,6 +64,11 @@ export interface Backend {
   undoCell(skillName: string, tool: string): Promise<ActionResult>
   clearPending(): Promise<ActionResult>
   applyPending(includeReadOnly: boolean): Promise<ApplyResult>
+  createSkillSet(name: string, description: string, skillNames: string[]): Promise<SkillSetMutationResult>
+  updateSkillSet(setID: string, name: string, description: string, skillNames: string[]): Promise<SkillSetMutationResult>
+  deleteSkillSet(setID: string): Promise<SkillSetMutationResult>
+  previewSkillSetToggle(setID: string, tools: string[]): Promise<SkillSetTogglePreview>
+  toggleSkillSet(setID: string, tools: string[]): Promise<ActionResult>
   prepareGitInstall(gitURL: string): Promise<InstallDraft>
   chooseLocalInstall(): Promise<InstallDraft>
   reviewInstall(draftID: string, selections: InstallCellRequest[]): Promise<InstallReview>
@@ -78,6 +91,11 @@ const generatedBackend: Backend = {
   undoCell: UndoCell,
   clearPending: ClearPending,
   applyPending: ApplyPending,
+  createSkillSet: CreateSkillSet,
+  updateSkillSet: UpdateSkillSet,
+  deleteSkillSet: DeleteSkillSet,
+  previewSkillSetToggle: PreviewSkillSetToggle,
+  toggleSkillSet: ToggleSkillSet,
   prepareGitInstall: PrepareGitInstall,
   chooseLocalInstall: ChooseLocalInstall,
   reviewInstall: ReviewInstall,
@@ -107,6 +125,11 @@ export const wailsBackend: Backend = {
   undoCell: async (...args) => (await activeBackend()).undoCell(...args),
   clearPending: async (...args) => (await activeBackend()).clearPending(...args),
   applyPending: async (...args) => (await activeBackend()).applyPending(...args),
+  createSkillSet: async (...args) => (await activeBackend()).createSkillSet(...args),
+  updateSkillSet: async (...args) => (await activeBackend()).updateSkillSet(...args),
+  deleteSkillSet: async (...args) => (await activeBackend()).deleteSkillSet(...args),
+  previewSkillSetToggle: async (...args) => (await activeBackend()).previewSkillSetToggle(...args),
+  toggleSkillSet: async (...args) => (await activeBackend()).toggleSkillSet(...args),
   prepareGitInstall: async (...args) => (await activeBackend()).prepareGitInstall(...args),
   chooseLocalInstall: async (...args) => (await activeBackend()).chooseLocalInstall(...args),
   reviewInstall: async (...args) => (await activeBackend()).reviewInstall(...args),
@@ -117,12 +140,14 @@ export const wailsBackend: Backend = {
   uninstallSource: async (...args) => (await activeBackend()).uninstallSource(...args),
 }
 
-export function projectPending(snapshot: Snapshot, pending: PendingChange[], contextBudgets: ContextBudgetReports): Snapshot {
+export function projectPending(snapshot: Snapshot, pending: PendingChange[], contextBudgets: ContextBudgetReports, skillSets = snapshot.skillSets, skillSetsWarning = snapshot.skillSetsWarning): Snapshot {
   const byCell = new Map(pending.map((change) => [`${change.tool}:${change.skillName}`, change.operation]))
   return {
     ...snapshot,
     pending,
     contextBudgets,
+    skillSets: skillSets ?? [],
+    skillSetsWarning,
     rows: snapshot.rows.map((row) => ({
       ...row,
       claude: projectCell(row.claude, byCell),

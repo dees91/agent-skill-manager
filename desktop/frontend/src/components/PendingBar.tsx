@@ -1,4 +1,4 @@
-import { Check, ChevronUp, Clock3, RotateCcw, Trash2, X } from 'lucide-react'
+import { BookmarkPlus, Check, ChevronUp, Clock3, RotateCcw, Trash2, X } from 'lucide-react'
 import type { PendingChange } from '../api'
 
 interface PendingBarProps {
@@ -10,9 +10,10 @@ interface PendingBarProps {
   onUndo: (name: string, tool: string) => void
   onClear: () => void
   onApply: () => void
+  onSaveAsSkillSet: () => void
 }
 
-export default function PendingBar({ pending, reviewOpen, busy, onToggleReview, onCloseReview, onUndo, onClear, onApply }: PendingBarProps) {
+export default function PendingBar({ pending, reviewOpen, busy, onToggleReview, onCloseReview, onUndo, onClear, onApply, onSaveAsSkillSet }: PendingBarProps) {
   const enables = pending.filter((change) => change.operation === 'enable').length
   const disables = pending.length - enables
   return (
@@ -37,6 +38,7 @@ export default function PendingBar({ pending, reviewOpen, busy, onToggleReview, 
           <span className="pending-pulse" /><strong>{pending.length} pending change{pending.length === 1 ? '' : 's'}</strong><span>{enables} enable · {disables} disable</span><ChevronUp size={16} className={reviewOpen ? 'rotated' : ''} />
         </button>
         <div className="pending-actions">
+          <button className="ghost-button" onClick={onSaveAsSkillSet} disabled={busy}><BookmarkPlus size={15} /> Save as set</button>
           <button className="ghost-button danger-quiet" onClick={onClear} disabled={busy}><Trash2 size={15} /> Clear</button>
           <button className="primary-button" onClick={onApply} disabled={busy}><Check size={16} /> {busy ? 'Working…' : 'Apply changes'}</button>
         </div>

@@ -18,6 +18,14 @@ export function ClearPending() {
   return window['go']['main']['App']['ClearPending']();
 }
 
+export function CreateSkillSet(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CreateSkillSet'](arg1, arg2, arg3);
+}
+
+export function DeleteSkillSet(arg1) {
+  return window['go']['main']['App']['DeleteSkillSet'](arg1);
+}
+
 export function GetSnapshot(arg1) {
   return window['go']['main']['App']['GetSnapshot'](arg1);
 }
@@ -28,6 +36,10 @@ export function MeasureContextBudgets() {
 
 export function PrepareGitInstall(arg1) {
   return window['go']['main']['App']['PrepareGitInstall'](arg1);
+}
+
+export function PreviewSkillSetToggle(arg1, arg2) {
+  return window['go']['main']['App']['PreviewSkillSetToggle'](arg1, arg2);
 }
 
 export function PreviewUninstall(arg1) {
@@ -58,6 +70,10 @@ export function ToggleSkillScope(arg1, arg2) {
   return window['go']['main']['App']['ToggleSkillScope'](arg1, arg2);
 }
 
+export function ToggleSkillSet(arg1, arg2) {
+  return window['go']['main']['App']['ToggleSkillSet'](arg1, arg2);
+}
+
 export function ToggleVisible(arg1) {
   return window['go']['main']['App']['ToggleVisible'](arg1);
 }
@@ -72,6 +88,10 @@ export function UninstallSource(arg1, arg2, arg3) {
 
 export function UpdateAllSources(arg1) {
   return window['go']['main']['App']['UpdateAllSources'](arg1);
+}
+
+export function UpdateSkillSet(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['UpdateSkillSet'](arg1, arg2, arg3, arg4);
 }
 
 export function UpdateSource(arg1, arg2) {

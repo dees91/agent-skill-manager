@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   ArrowUpDown,
+  BookmarkPlus,
   ChevronDown,
   ChevronsUpDown,
   CircleAlert,
@@ -32,6 +33,7 @@ interface SkillsViewProps {
   onToggleCell: (name: string, tool: string) => void
   onToggleSkillScope: (names: string[], tools: string[]) => void
   onToggleGroupScope: (group: string, tools: string[]) => void
+  onAddToSkillSet: (name: string) => void
   onCloseDetails: () => void
 }
 
@@ -191,7 +193,7 @@ export default function SkillsView(props: SkillsViewProps) {
         )}
       </div>
 
-      {selectedRow && <DetailsDrawer row={selectedRow} onClose={props.onCloseDetails} onToggleGroup={(groupName) => props.onToggleGroupScope(groupName, tools)} busy={busy} toolScope={toolScope} />}
+      {selectedRow && <DetailsDrawer row={selectedRow} onClose={props.onCloseDetails} onToggleGroup={(groupName) => props.onToggleGroupScope(groupName, tools)} onAddToSkillSet={props.onAddToSkillSet} busy={busy} toolScope={toolScope} />}
     </section>
   )
 }
@@ -306,12 +308,14 @@ function SelectFilter({ label, value, onChange, options }: { label: string; valu
   return <label className="select-filter"><span className="sr-only">{label}</span><select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([key, text]) => <option value={key} key={key}>{text}</option>)}</select><ChevronsUpDown size={13} /></label>
 }
 
-function DetailsDrawer({ row, onClose, onToggleGroup, busy, toolScope }: { row: SkillRow; onClose: () => void; onToggleGroup: (group: string) => void; busy: boolean; toolScope: SkillToolScope }) {
+function DetailsDrawer({ row, onClose, onToggleGroup, onAddToSkillSet, busy, toolScope }: { row: SkillRow; onClose: () => void; onToggleGroup: (group: string) => void; onAddToSkillSet: (name: string) => void; busy: boolean; toolScope: SkillToolScope }) {
+  const canSaveToSet = [row.claude, row.codex].some((cell) => cell && !cell.readOnly && ['ON', 'OFF'].includes(cell.state))
   return (
     <aside className="details-drawer" aria-label={`Details for ${row.name}`}>
       <div className="drawer-header"><div><p className="eyebrow">Skill details</p><h2>{row.name}</h2></div><button className="icon-button" onClick={onClose} aria-label="Close skill details"><X size={17} /></button></div>
       <p className="details-description">{row.description || 'No description was parsed from SKILL.md.'}</p>
       <dl className="details-summary"><div><dt>Group</dt><dd>{row.group}</dd></div><div><dt>Source</dt><dd>{row.source}</dd></div></dl>
+      <button className="secondary-button details-group-action" onClick={() => onAddToSkillSet(row.name)} disabled={busy || !canSaveToSet} title={canSaveToSet ? undefined : 'Only toggleable user skills can be added'}><BookmarkPlus size={15} /> Add to Skill Set…</button>
       <button className="secondary-button details-group-action" onClick={() => onToggleGroup(row.group)} disabled={busy}><ArrowUpDown size={15} /> Smart-toggle group · {toolScope === 'all' ? 'All tools' : titleCase(toolScope)}</button>
       <div className="detail-cells">
         {row.claude && <CellDetails title="Claude Code" cell={row.claude} />}

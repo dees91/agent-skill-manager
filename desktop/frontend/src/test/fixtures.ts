@@ -20,6 +20,8 @@ export function fixtureSnapshot(): Snapshot {
         codex: cell('codex-helper', 'codex', 'ON', 'Skills CLI', 'Skills CLI'),
       },
     ],
+    skillSets: [skillSetFixture()],
+    skillSetsWarning: '',
     groups: [
       { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), sources: ['local'] },
       { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), sources: ['Skills CLI'] },
@@ -75,6 +77,8 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     counts: { changed: 1, removed: 0, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 },
     pending,
     contextBudgets: budgetReports(pending),
+    skillSets: snapshot.skillSets,
+    skillSetsWarning: snapshot.skillSetsWarning,
   })
   return {
     getSnapshot: vi.fn(async () => snapshot),
@@ -88,15 +92,48 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     undoCell: vi.fn(async () => action([])),
     clearPending: vi.fn(async () => action([])),
     applyPending: vi.fn(async (): Promise<ApplyResult> => new gui.ApplyResult({ completed: [], message: 'Applied 1 change(s).', snapshot })),
+    createSkillSet: vi.fn(async () => new gui.SkillSetMutationResult({ message: 'Created Skill Set.', skillSets: snapshot.skillSets, warning: '' })),
+    updateSkillSet: vi.fn(async () => new gui.SkillSetMutationResult({ message: 'Updated Skill Set.', skillSets: snapshot.skillSets, warning: '' })),
+    deleteSkillSet: vi.fn(async () => new gui.SkillSetMutationResult({ message: 'Deleted Skill Set.', skillSets: [], warning: '' })),
+    previewSkillSetToggle: vi.fn(async (setId, tools) => new gui.SkillSetTogglePreview({ setId, name: 'Review support', tools, direction: 'disable', eligible: tools.length, counts: { changed: tools.length, removed: 0, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 } })),
+    toggleSkillSet: vi.fn(async () => action()),
     prepareGitInstall: vi.fn(async () => new gui.InstallDraft({ draftId: 'draft:1', kind: 'git', group: 'demo/skills', location: 'https://github.com/demo/skills', candidates: [candidate('alpha')], cloned: true, reused: false, retainedClone: true, cancelled: false })),
     chooseLocalInstall: vi.fn(async () => new gui.InstallDraft({ draftId: 'draft:2', kind: 'local', group: 'local-skills', location: '/Users/example/Projects/local-skills', candidates: [candidate('local-alpha')], cloned: false, reused: false, retainedClone: false, cancelled: false })),
     reviewInstall: vi.fn(async (draftId, selections) => new gui.InstallReview({ reviewId: 'review:1', draftId, group: 'demo/skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true })),
     applyInstall: vi.fn(async () => new gui.SourceMutationResult({ message: 'Installed 2 links.', completed: [], createdLinks: 2, alreadyInstalled: 0, snapshot })),
     updateSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
     updateAllSources: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
-    previewUninstall: vi.fn(async (sourceId) => new gui.UninstallPreview({ sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0, removesCheckout: true, preservesSource: false })),
+    previewUninstall: vi.fn(async (sourceId) => new gui.UninstallPreview({ sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0, removesCheckout: true, preservesSource: false, affectedSkillSets: [], skillSetImpactWarning: '' })),
     uninstallSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Uninstalled source.', completed: [], removedActive: 2, removedDisabled: 0, snapshot })),
   }
+}
+
+function skillSetFixture() {
+  return {
+    setId: 'set:review-support',
+    name: 'Review support',
+    description: 'Use when reviewing a cross-tool change.',
+    members: [
+      {
+        name: 'alpha-skill', description: 'Alpha automation skill', group: 'local', source: 'local', available: true,
+        claude: setMemberCell('claude', 'ON'), codex: setMemberCell('codex', 'OFF'),
+      },
+    ],
+    claude: setSummary('claude', 'enabled', 1, 1, 0),
+    codex: setSummary('codex', 'disabled', 1, 0, 1),
+    unavailable: 0,
+    pending: 0,
+    createdAt: '2026-08-11T09:00:00Z',
+    updatedAt: '2026-08-11T09:00:00Z',
+  }
+}
+
+function setMemberCell(tool: string, state: string) {
+  return { tool, state, effectiveState: state, pending: '', eligible: true, reason: '' }
+}
+
+function setSummary(tool: string, status: string, eligible: number, on: number, off: number) {
+  return { tool, appliedStatus: status, effectiveStatus: status, eligible, on, off, effectiveOn: on, effectiveOff: off, pending: 0, missing: 0, readOnly: 0, conflict: 0 }
 }
 
 function candidate(name: string) {

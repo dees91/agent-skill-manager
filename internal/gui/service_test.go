@@ -28,7 +28,7 @@ func TestEmptySnapshotSerializesCollectionsAsArrays(t *testing.T) {
 	if err := json.Unmarshal(contents, &projection); err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"rows", "groups", "sources", "managedSources", "conflicts", "pending"} {
+	for _, field := range []string{"rows", "skillSets", "groups", "sources", "managedSources", "conflicts", "pending"} {
 		if string(projection[field]) != "[]" {
 			t.Fatalf("empty snapshot field %s = %s, want []", field, projection[field])
 		}
