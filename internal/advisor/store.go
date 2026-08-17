@@ -204,7 +204,7 @@ type fileLock struct {
 }
 
 func (s store) lock(exclusive bool) (*fileLock, error) {
-	if err := state.New(s.paths).Secure(); err != nil {
+	if err := prepareStateRootForLock(s.paths.StateDir); err != nil {
 		return nil, err
 	}
 	fd, err := unix.Open(s.paths.AdvisorLockFile, unix.O_RDWR|unix.O_CREAT|unix.O_CLOEXEC|unix.O_NOFOLLOW, privateFileMode)
@@ -232,7 +232,38 @@ func (s store) lock(exclusive bool) (*fileLock, error) {
 		_ = unix.Close(fd)
 		return nil, fmt.Errorf("lock advisor activations: %w", err)
 	}
-	return &fileLock{file: os.NewFile(uintptr(fd), s.paths.AdvisorLockFile)}, nil
+	lock := &fileLock{file: os.NewFile(uintptr(fd), s.paths.AdvisorLockFile)}
+	if err := state.New(s.paths).Secure(); err != nil {
+		if closeErr := lock.close(); closeErr != nil {
+			return nil, fmt.Errorf("%w; additionally failed to close advisor lock: %v", err, closeErr)
+		}
+		return nil, err
+	}
+	return lock, nil
+}
+
+// prepareStateRootForLock performs only the minimum bootstrap required before
+// opening the lock file. The recursive state-tree security pass must happen
+// after flock acquisition because it walks disabled entries that an advisor
+// activation can move while holding the same lock.
+func prepareStateRootForLock(path string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		if err := os.MkdirAll(path, privateDirMode); err != nil {
+			return fmt.Errorf("create state directory %s: %w", path, err)
+		}
+		info, err = os.Lstat(path)
+	}
+	if err != nil {
+		return fmt.Errorf("inspect state directory %s: %w", path, err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fmt.Errorf("unsafe state path %s: expected a real directory", path)
+	}
+	if err := os.Chmod(path, privateDirMode); err != nil {
+		return fmt.Errorf("secure state directory %s: %w", path, err)
+	}
+	return nil
 }
 
 func (l *fileLock) close() error {

@@ -271,3 +271,11 @@ intentionally excluded.
   current wiki synthesis for local packaging and GitHub publication.
 - Reviewed and pinned the only npm dependency install-script approvals used by
   the desktop and repository-owned media build.
+
+## [2026-08-17] implementation | Serialize advisor state-tree security
+
+- Fixed a Linux CI race where concurrent activations could walk the disabled
+  tree before acquiring `advisor.lock` while another activation moved a skill.
+- Kept no-follow state-root bootstrapping before lock acquisition and moved the
+  recursive permission pass behind the lock, with deterministic ordering and
+  repeated concurrency coverage.

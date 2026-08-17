@@ -74,3 +74,48 @@ func TestLockRejectsSymlink(t *testing.T) {
 		t.Fatal("lock() error = nil, want symlink rejection")
 	}
 }
+
+func TestLockSecuresStateTreeOnlyAfterExclusiveAcquisition(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	first, err := newStore(p).lock(true)
+	if err != nil {
+		t.Fatalf("first lock() error = %v", err)
+	}
+
+	target := filepath.Join(t.TempDir(), "state-target.json")
+	if err := os.WriteFile(target, []byte(`{"version":2}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, p.StateFile); err != nil {
+		t.Fatal(err)
+	}
+
+	started := make(chan struct{})
+	outcome := make(chan error, 1)
+	go func() {
+		close(started)
+		second, lockErr := newStore(p).lock(true)
+		if second != nil {
+			_ = second.close()
+		}
+		outcome <- lockErr
+	}()
+	<-started
+	select {
+	case lockErr := <-outcome:
+		t.Fatalf("second lock returned before first was released: %v", lockErr)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	if err := first.close(); err != nil {
+		t.Fatalf("first close() error = %v", err)
+	}
+	select {
+	case lockErr := <-outcome:
+		if lockErr == nil || !strings.Contains(lockErr.Error(), "expected a regular file") {
+			t.Fatalf("second lock() error = %v, want deferred state-file rejection", lockErr)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("second lock did not resume after first was released")
+	}
+}

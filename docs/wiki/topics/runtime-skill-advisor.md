@@ -58,7 +58,10 @@ selected tool + 1-5 skill names
   owner-only permissions, and backed up independently with the same 10-file
   and 30-day bounds.
 - `advisor.lock` is opened without following symlinks and serializes receipt
-  load/plan/mutate/save sequences across CLI processes. Ordinary toggle apply
+  load/plan/mutate/save sequences across CLI processes. Only the real private
+  state root is bootstrapped before lock acquisition; the recursive state-tree
+  permission pass runs after acquisition so it cannot walk a disabled entry
+  while another advisor activation moves that entry. Ordinary toggle apply
   still performs its own immediate filesystem validation.
 
 See [interfaces.md](interfaces.md) for commands and
