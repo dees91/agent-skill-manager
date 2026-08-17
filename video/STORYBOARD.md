@@ -1,6 +1,6 @@
 # Skill Manager README Demo Storyboard
 
-Revision: 3
+Revision: 4
 
 Format: 20 seconds, 1920x1080, 30 fps, silent, seamless dark loop
 
@@ -67,6 +67,8 @@ Format: static PNG, 1280x640, at most 1 MiB
 
 - Visual: synthetic Dashboard capture with a slow zoom toward visibility and
   provider context-budget information.
+- The capture uses the current navigation and demo inventory, including the
+  `Skill Sets` workspace introduced after the original Dashboard asset.
 - Callout: **See visibility and estimated prompt cost.**
 - Intent: show practical overview value, not merely a decorative dashboard.
 

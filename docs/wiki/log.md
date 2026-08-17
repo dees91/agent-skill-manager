@@ -256,3 +256,9 @@ intentionally excluded.
   notice, strict wiki-link, privacy, accessibility, and media-output checks.
 - Rebuilt the persistent CLI and ad-hoc-signed Apple Silicon desktop app,
   verified its bundle, installed it in `/Applications`, and launch-checked it.
+
+## [2026-08-17] maintenance | Refresh the Dashboard visual evidence
+
+- Replaced the stale documentation and video Dashboard captures with the
+  current synthetic demo inventory and navigation, including Skill Sets.
+- Advanced the demo storyboard revision and regenerated its README animation.
