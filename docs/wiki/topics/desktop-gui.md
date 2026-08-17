@@ -15,7 +15,7 @@
 - The dark-only desktop source build contains Dashboard, Skills, saved Skill
   Sets, and a managed-only Sources screen. Iteration 9's experimental skills.sh
   Go adapter and domain tests remain in the repository, but Discover has no
-  public Wails binding or React navigation in the `v0.4.2` preview.
+  public Wails binding or React navigation in the `v0.5.0` preview.
 - `implemented`: Iteration 7 adds a read-only global skill-catalog context
   panel to Dashboard without expanding the source-management surface.
 - `implemented`: Iteration 10 replaces the flat Skills table with an
@@ -192,7 +192,7 @@ make gui-dev
 make gui-bindings
 make gui-test
 make gui-build
-make release-package RELEASE_VERSION=0.4.2
+make release-package RELEASE_VERSION=0.5.0
 ```
 
 `make gui-build` produces a local ad-hoc-signed Apple Silicon app.

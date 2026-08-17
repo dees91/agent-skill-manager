@@ -262,3 +262,12 @@ intentionally excluded.
 - Replaced the stale documentation and video Dashboard captures with the
   current synthetic demo inventory and navigation, including Skill Sets.
 - Advanced the demo storyboard revision and regenerated its README animation.
+
+## [2026-08-17] release | Prepare v0.5.0 public preview
+
+- Selected a minor prerelease for the completed Skill Sets, Skill Advisor, and
+  favorites features while retaining the Apple Silicon preview limitations.
+- Updated source version metadata, download guidance, release notes, and the
+  current wiki synthesis for local packaging and GitHub publication.
+- Reviewed and pinned the only npm dependency install-script approvals used by
+  the desktop and repository-owned media build.

@@ -11,7 +11,7 @@ make build
 make dev
 make gui-test
 make gui-build
-make release-package RELEASE_VERSION=0.4.2
+make release-package RELEASE_VERSION=0.5.0
 ```
 
 - `go run .` is suitable for repository-local checks.
@@ -184,8 +184,8 @@ All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.
 The `v0.4.2` maintenance prerelease supersedes that first preview with patched
 Go, Wails, terminal UI, and frontend dependencies plus the empty-profile GUI
-projection fix. Phases 14 through 16 are complete in the source tree but have not
-been tagged or published as a release.
+projection fix. The `v0.5.0` release candidate packages the completed Phase 14
+through 16 work: Skill Sets, the first-party Skill Advisor, and favorites.
 
 ## Explicitly Deferred Work
 

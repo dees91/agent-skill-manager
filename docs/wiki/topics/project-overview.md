@@ -21,12 +21,11 @@
   history hygiene. Phase 12 adds locally verified Apple Silicon desktop and CLI
   archives; Phase 13 hardens privacy/licensing and publishes `v0.4.1` as the
   first public binary preview. The `v0.4.2` maintenance preview supersedes it
-  with security and dependency updates plus an empty-profile GUI fix. Phase 14
-  adds saved task-oriented Skill Sets to the desktop source build without
-  changing CLI/TUI behavior. Phase 15 adds a public first-party Skill Advisor
-  plus a tool-neutral receipt/lease CLI for temporary task-specific activation.
-  Phase 16 adds private managed-skill favorites and a favorite-first macOS
-  Skills filter without changing CLI, TUI, or advisor behavior.
+  with security and dependency updates plus an empty-profile GUI fix. The
+  `v0.5.0` feature preview packages Phases 14 through 16: saved task-oriented
+  Skill Sets, a public first-party Skill Advisor with tool-neutral receipt/lease
+  activation, and private managed-skill favorites with a favorite-first macOS
+  Skills filter.
 
 ## Product Shape
 
@@ -39,7 +38,7 @@
   managed-only Sources over the same scan, staging,
   install/update/uninstall, and state boundaries as the terminal interfaces.
   The experimental Discover domain is dormant and has no public
-  binding/navigation in `v0.4.2`. The Dashboard shows approximate Claude and
+  binding/navigation in `v0.5.0`. The Dashboard shows approximate Claude and
   Codex startup catalog cost and runs provider diagnostics only after an
   explicit action. Skills keeps applied ON rows prominent and collapses the
   much larger OFF catalog by source while preserving pending Apply semantics.
