@@ -279,3 +279,12 @@ intentionally excluded.
 - Kept no-follow state-root bootstrapping before lock acquisition and moved the
   recursive permission pass behind the lock, with deterministic ordering and
   repeated concurrency coverage.
+
+## [2026-08-17] verification | Publish v0.5.0 public preview
+
+- Tagged the exact green candidate commit after the full local Apple Silicon
+  packaging gate and public Root Go plus Desktop/frontend CI succeeded.
+- Uploaded the desktop ZIP, CLI tarball, and SHA-256 manifest to a draft,
+  downloaded them again, verified byte identity, signatures, architecture,
+  version metadata, archive contents, checksums, CLI behavior, and an isolated
+  desktop launch, then published the draft as a GitHub prerelease.

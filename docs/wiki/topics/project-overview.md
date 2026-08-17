@@ -22,10 +22,10 @@
   archives; Phase 13 hardens privacy/licensing and publishes `v0.4.1` as the
   first public binary preview. The `v0.4.2` maintenance preview supersedes it
   with security and dependency updates plus an empty-profile GUI fix. The
-  `v0.5.0` feature preview packages Phases 14 through 16: saved task-oriented
-  Skill Sets, a public first-party Skill Advisor with tool-neutral receipt/lease
-  activation, and private managed-skill favorites with a favorite-first macOS
-  Skills filter.
+  published `v0.5.0` feature preview packages Phases 14 through 16: saved
+  task-oriented Skill Sets, a public first-party Skill Advisor with tool-neutral
+  receipt/lease activation, and private managed-skill favorites with a
+  favorite-first macOS Skills filter.
 
 ## Product Shape
 
