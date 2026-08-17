@@ -13,12 +13,13 @@ import {
   ListChecks,
   Search,
   SlidersHorizontal,
+  Star,
   X,
 } from 'lucide-react'
-import type { SkillCell, SkillRow, Snapshot } from '../api'
+import { favoriteEligible, type SkillCell, type SkillRow, type Snapshot } from '../api'
 
 export type SkillToolScope = 'all' | 'claude' | 'codex'
-type SkillStatusScope = 'all' | 'active' | 'available'
+type SkillStatusScope = 'all' | 'active' | 'available' | 'favorites'
 type Placement = 'attention' | 'active' | 'available' | 'readonly' | 'unavailable'
 
 interface SkillsViewProps {
@@ -33,6 +34,7 @@ interface SkillsViewProps {
   onToggleCell: (name: string, tool: string) => void
   onToggleSkillScope: (names: string[], tools: string[]) => void
   onToggleGroupScope: (group: string, tools: string[]) => void
+  onSetFavorite: (name: string, favorite: boolean) => void
   onAddToSkillSet: (name: string) => void
   onCloseDetails: () => void
 }
@@ -62,13 +64,15 @@ export default function SkillsView(props: SkillsViewProps) {
       .sort(compareRows)
   }, [group, query, snapshot.rows, source, toolScope])
 
-  const attentionRows = matchingRows.filter((row) => placementFor(row, tools) === 'attention')
-  const activeRows = matchingRows.filter((row) => placementFor(row, tools) === 'active')
-  const availableRows = matchingRows.filter((row) => placementFor(row, tools) === 'available')
-  const readOnlyRows = matchingRows.filter((row) => placementFor(row, tools) === 'readonly')
+  const favoriteRows = matchingRows.filter((row) => row.favorite)
+  const scopedRows = statusScope === 'favorites' ? favoriteRows : matchingRows
+  const attentionRows = scopedRows.filter((row) => placementFor(row, tools) === 'attention')
+  const activeRows = scopedRows.filter((row) => placementFor(row, tools) === 'active')
+  const availableRows = scopedRows.filter((row) => placementFor(row, tools) === 'available')
+  const readOnlyRows = scopedRows.filter((row) => placementFor(row, tools) === 'readonly')
   const showActive = statusScope !== 'available'
   const showAvailable = statusScope !== 'active'
-  const resultRows = matchingRows.filter((row) => {
+  const resultRows = scopedRows.filter((row) => {
     const placement = placementFor(row, tools)
     if (placement === 'attention') return true
     if (statusScope === 'active') return placement === 'active'
@@ -113,7 +117,7 @@ export default function SkillsView(props: SkillsViewProps) {
       <div className="skills-filter-panel">
         <div className="skills-filter-primary">
           <label className="search-field" htmlFor="skill-search"><Search size={16} /><input id="skill-search" aria-label="Search name, description, group, or source" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills or sources…" /><kbd>⌘F</kbd></label>
-          <SegmentedFilter label="Skill availability" value={statusScope} options={[["all", `All ${matchingRows.length}`], ["active", `Active ${activeRows.length}`], ["available", `Available ${availableRows.length}`]]} onChange={(value) => setStatusScope(value as SkillStatusScope)} />
+          <SegmentedFilter label="Skill availability" value={statusScope} options={[["all", `All ${matchingRows.length}`], ["active", `Active ${matchingRows.filter((row) => placementFor(row, tools) === 'active').length}`], ["available", `Available ${matchingRows.filter((row) => placementFor(row, tools) === 'available').length}`], ["favorites", `Favorites ${favoriteRows.length}`]]} onChange={(value) => setStatusScope(value as SkillStatusScope)} />
           <SegmentedFilter label="Tool scope" value={toolScope} options={[["all", "All tools"], ["claude", "Claude"], ["codex", "Codex"]]} onChange={(value) => setToolScope(value as SkillToolScope)} />
           <button className={`secondary-button filters-button ${filtersOpen ? 'active' : ''}`} aria-expanded={filtersOpen} aria-controls="advanced-skill-filters" onClick={() => setFiltersOpen((open) => !open)}>
             <Filter size={14} /> Filters {advancedFilterCount > 0 && <span>{advancedFilterCount}</span>}<ChevronDown size={13} />
@@ -131,6 +135,8 @@ export default function SkillsView(props: SkillsViewProps) {
         )}
       </div>
 
+      {snapshot.favoritesWarning && <div className="favorites-warning" role="alert"><CircleAlert size={17} /><div><strong>Favorites are unavailable</strong><p>{snapshot.favoritesWarning}</p><small>Normal skill toggles and Apply remain available. Repair or restore favorites.json, then refresh.</small></div></div>}
+
       <div className="skills-results-summary">
         <span><strong>{visibleCount}</strong> of {snapshot.rows.length} skills shown</span>
         <span>Bulk scope: <strong>{toolScope === 'all' ? 'Claude + Codex' : titleCase(toolScope)}</strong></span>
@@ -139,13 +145,13 @@ export default function SkillsView(props: SkillsViewProps) {
       <div className="skills-workspace">
         {attentionRows.length > 0 && (
           <WorkspaceSection title="Needs attention" count={attentionRows.length} tone="attention" description="Resolve blockers before these skills can be restored.">
-            <SkillsTable rows={attentionRows} selectedRow={selectedRow} busy={busy} tools={tools} showGroup onSelect={props.onSelect} onToggleCell={props.onToggleCell} onToggleSkillScope={props.onToggleSkillScope} />
+            <SkillsTable rows={attentionRows} selectedRow={selectedRow} busy={busy} tools={tools} showGroup favoritesUnavailable={Boolean(snapshot.favoritesWarning)} onSelect={props.onSelect} onToggleCell={props.onToggleCell} onToggleSkillScope={props.onToggleSkillScope} onSetFavorite={props.onSetFavorite} />
           </WorkspaceSection>
         )}
 
         {showActive && activeRows.length > 0 && (
           <WorkspaceSection title="Active now" count={activeRows.length} tone="active" description="Immediately visible to the selected tool scope.">
-            <SkillsTable rows={activeRows} selectedRow={selectedRow} busy={busy} tools={tools} showGroup onSelect={props.onSelect} onToggleCell={props.onToggleCell} onToggleSkillScope={props.onToggleSkillScope} />
+            <SkillsTable rows={activeRows} selectedRow={selectedRow} busy={busy} tools={tools} showGroup favoritesUnavailable={Boolean(snapshot.favoritesWarning)} onSelect={props.onSelect} onToggleCell={props.onToggleCell} onToggleSkillScope={props.onToggleSkillScope} onSetFavorite={props.onSetFavorite} />
           </WorkspaceSection>
         )}
 
@@ -157,13 +163,15 @@ export default function SkillsView(props: SkillsViewProps) {
               selectedRow={selectedRow}
               busy={busy}
               tools={tools}
-              queryActive={Boolean(query.trim())}
+              forceExpanded={Boolean(query.trim()) || statusScope === 'favorites'}
               expandedGroups={expandedGroups}
               onToggleExpanded={toggleExpanded}
               onSelect={props.onSelect}
               onToggleCell={props.onToggleCell}
               onToggleSkillScope={props.onToggleSkillScope}
               onToggleGroupScope={props.onToggleGroupScope}
+              onSetFavorite={props.onSetFavorite}
+              favoritesUnavailable={Boolean(snapshot.favoritesWarning)}
             />
           </WorkspaceSection>
         )}
@@ -176,24 +184,26 @@ export default function SkillsView(props: SkillsViewProps) {
               selectedRow={selectedRow}
               busy={busy}
               tools={tools}
-              queryActive={Boolean(query.trim())}
+              forceExpanded={Boolean(query.trim())}
               expandedGroups={expandedGroups}
               onToggleExpanded={toggleExpanded}
               onSelect={props.onSelect}
               onToggleCell={props.onToggleCell}
               onToggleSkillScope={props.onToggleSkillScope}
               onToggleGroupScope={props.onToggleGroupScope}
+              onSetFavorite={props.onSetFavorite}
+              favoritesUnavailable={Boolean(snapshot.favoritesWarning)}
               readOnly
             />
           </WorkspaceSection>
         )}
 
         {visibleCount === 0 && (
-          <div className="empty-table skills-empty"><Filter size={24} /><strong>No matching skills</strong><p>Adjust the search or clear the active filters.</p><button className="secondary-button" onClick={resetFilters}>Clear filters</button></div>
+          <div className="empty-table skills-empty">{statusScope === 'favorites' ? <Star size={24} /> : <Filter size={24} />}<strong>{statusScope === 'favorites' ? 'No favorite skills found' : 'No matching skills'}</strong><p>{statusScope === 'favorites' ? 'Star a managed skill or adjust the current filters.' : 'Adjust the search or clear the active filters.'}</p><button className="secondary-button" onClick={resetFilters}>{statusScope === 'favorites' ? 'Show all skills' : 'Clear filters'}</button></div>
         )}
       </div>
 
-      {selectedRow && <DetailsDrawer row={selectedRow} onClose={props.onCloseDetails} onToggleGroup={(groupName) => props.onToggleGroupScope(groupName, tools)} onAddToSkillSet={props.onAddToSkillSet} busy={busy} toolScope={toolScope} />}
+      {selectedRow && <DetailsDrawer row={selectedRow} onClose={props.onCloseDetails} onToggleGroup={(groupName) => props.onToggleGroupScope(groupName, tools)} onAddToSkillSet={props.onAddToSkillSet} onSetFavorite={props.onSetFavorite} favoritesUnavailable={Boolean(snapshot.favoritesWarning)} busy={busy} toolScope={toolScope} />}
     </section>
   )
 }
@@ -213,7 +223,7 @@ function GroupedSkills(props: {
   selectedRow: SkillRow | null
   busy: boolean
   tools: string[]
-  queryActive: boolean
+  forceExpanded: boolean
   expandedGroups: string[]
   readOnly?: boolean
   onToggleExpanded: (group: string) => void
@@ -221,18 +231,20 @@ function GroupedSkills(props: {
   onToggleCell: (name: string, tool: string) => void
   onToggleSkillScope: (names: string[], tools: string[]) => void
   onToggleGroupScope: (group: string, tools: string[]) => void
+  onSetFavorite: (name: string, favorite: boolean) => void
+  favoritesUnavailable: boolean
 }) {
   const groups = groupRows(props.rows)
   return <div className="skill-groups">{groups.map(([groupName, rows]) => {
     const allGroupRows = props.allRows.filter((row) => row.group === groupName)
     const metrics = groupMetrics(allGroupRows, props.tools)
-    const expanded = props.queryActive || props.expandedGroups.includes(groupName)
+    const expanded = props.forceExpanded || props.expandedGroups.includes(groupName)
     const panelID = `skill-group-${props.readOnly ? 'readonly-' : ''}${slug(groupName)}`
     const sourceText = unique(allGroupRows.flatMap(rowSources)).join(', ') || 'unknown'
     return (
       <section className={`skill-group ${expanded ? 'expanded' : ''}`} key={groupName}>
         <header className="skill-group-header">
-          <button className="skill-group-toggle" aria-label={`${groupName}, ${sourceText}, ${metrics.active} active, ${metrics.available} available${metrics.pending ? `, ${metrics.pending} pending` : ''}`} aria-expanded={expanded} aria-controls={panelID} aria-disabled={props.queryActive} title={props.queryActive ? 'Search results expand matching groups temporarily.' : undefined} onClick={() => { if (!props.queryActive) props.onToggleExpanded(groupName) }}>
+          <button className="skill-group-toggle" aria-label={`${groupName}, ${sourceText}, ${metrics.active} active, ${metrics.available} available${metrics.pending ? `, ${metrics.pending} pending` : ''}`} aria-expanded={expanded} aria-controls={panelID} aria-disabled={props.forceExpanded} title={props.forceExpanded ? 'Filtered results expand matching groups temporarily.' : undefined} onClick={() => { if (!props.forceExpanded) props.onToggleExpanded(groupName) }}>
             <ChevronDown size={15} />
             <span className="group-icon"><FolderGit2 size={14} /></span>
             <span className="skill-group-identity"><strong>{groupName}</strong><small>{sourceText}</small></span>
@@ -247,7 +259,7 @@ function GroupedSkills(props: {
             ><ArrowUpDown size={14} /> Toggle group <span>{metrics.targets}</span></button>
           )}
         </header>
-        <div id={panelID} hidden={!expanded}>{expanded && <SkillsTable rows={rows} selectedRow={props.selectedRow} busy={props.busy} tools={props.tools} onSelect={props.onSelect} onToggleCell={props.onToggleCell} onToggleSkillScope={props.onToggleSkillScope} />}</div>
+        <div id={panelID} hidden={!expanded}>{expanded && <SkillsTable rows={rows} selectedRow={props.selectedRow} busy={props.busy} tools={props.tools} favoritesUnavailable={props.favoritesUnavailable} onSelect={props.onSelect} onToggleCell={props.onToggleCell} onToggleSkillScope={props.onToggleSkillScope} onSetFavorite={props.onSetFavorite} />}</div>
       </section>
     )
   })}</div>
@@ -259,9 +271,11 @@ function SkillsTable(props: {
   busy: boolean
   tools: string[]
   showGroup?: boolean
+  favoritesUnavailable: boolean
   onSelect: (name: string) => void
   onToggleCell: (name: string, tool: string) => void
   onToggleSkillScope: (names: string[], tools: string[]) => void
+  onSetFavorite: (name: string, favorite: boolean) => void
 }) {
   return (
     <div className="skills-table-wrap">
@@ -274,7 +288,7 @@ function SkillsTable(props: {
               <td><div className="skill-name"><span className="skill-glyph">{initials(row.name)}</span><div><strong>{row.name}</strong><small>{row.description || 'No description in SKILL.md'}</small>{props.showGroup && <span className="active-group-label"><FolderGit2 size={11} />{row.group}<i>{row.source}</i></span>}</div></div></td>
               <td><ToolCell cell={row.claude} rowName={row.name} busy={props.busy} onToggle={props.onToggleCell} /></td>
               <td><ToolCell cell={row.codex} rowName={row.name} busy={props.busy} onToggle={props.onToggleCell} /></td>
-              <td><div className="row-actions"><button className="icon-button subtle" title="Smart-toggle this row in the selected tool scope" aria-label={`Smart-toggle ${row.name}: ${targets} eligible ${targets === 1 ? 'cell' : 'cells'}`} onClick={(event) => { event.stopPropagation(); props.onToggleSkillScope([row.name], props.tools) }} disabled={props.busy || targets === 0}><SlidersHorizontal size={15} /></button></div></td>
+              <td><div className="row-actions">{favoriteEligible(row) && <button className={`icon-button subtle favorite-button ${row.favorite ? 'active' : ''}`} title={row.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-label={`${row.favorite ? 'Remove' : 'Add'} ${row.name} ${row.favorite ? 'from' : 'to'} favorites`} aria-pressed={row.favorite} onClick={(event) => { event.stopPropagation(); props.onSetFavorite(row.name, !row.favorite) }} disabled={props.busy || props.favoritesUnavailable}><Star size={15} fill={row.favorite ? 'currentColor' : 'none'} /></button>}<button className="icon-button subtle" title="Smart-toggle this row in the selected tool scope" aria-label={`Smart-toggle ${row.name}: ${targets} eligible ${targets === 1 ? 'cell' : 'cells'}`} onClick={(event) => { event.stopPropagation(); props.onToggleSkillScope([row.name], props.tools) }} disabled={props.busy || targets === 0}><SlidersHorizontal size={15} /></button></div></td>
             </tr>
           )
         })}</tbody>
@@ -308,13 +322,14 @@ function SelectFilter({ label, value, onChange, options }: { label: string; valu
   return <label className="select-filter"><span className="sr-only">{label}</span><select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([key, text]) => <option value={key} key={key}>{text}</option>)}</select><ChevronsUpDown size={13} /></label>
 }
 
-function DetailsDrawer({ row, onClose, onToggleGroup, onAddToSkillSet, busy, toolScope }: { row: SkillRow; onClose: () => void; onToggleGroup: (group: string) => void; onAddToSkillSet: (name: string) => void; busy: boolean; toolScope: SkillToolScope }) {
+function DetailsDrawer({ row, onClose, onToggleGroup, onAddToSkillSet, onSetFavorite, favoritesUnavailable, busy, toolScope }: { row: SkillRow; onClose: () => void; onToggleGroup: (group: string) => void; onAddToSkillSet: (name: string) => void; onSetFavorite: (name: string, favorite: boolean) => void; favoritesUnavailable: boolean; busy: boolean; toolScope: SkillToolScope }) {
   const canSaveToSet = [row.claude, row.codex].some((cell) => cell && !cell.readOnly && ['ON', 'OFF'].includes(cell.state))
   return (
     <aside className="details-drawer" aria-label={`Details for ${row.name}`}>
       <div className="drawer-header"><div><p className="eyebrow">Skill details</p><h2>{row.name}</h2></div><button className="icon-button" onClick={onClose} aria-label="Close skill details"><X size={17} /></button></div>
       <p className="details-description">{row.description || 'No description was parsed from SKILL.md.'}</p>
       <dl className="details-summary"><div><dt>Group</dt><dd>{row.group}</dd></div><div><dt>Source</dt><dd>{row.source}</dd></div></dl>
+      {favoriteEligible(row) && <button className={`secondary-button details-group-action details-favorite-action ${row.favorite ? 'active' : ''}`} onClick={() => onSetFavorite(row.name, !row.favorite)} disabled={busy || favoritesUnavailable}><Star size={15} fill={row.favorite ? 'currentColor' : 'none'} /> {row.favorite ? 'Remove from favorites' : 'Add to favorites'}</button>}
       <button className="secondary-button details-group-action" onClick={() => onAddToSkillSet(row.name)} disabled={busy || !canSaveToSet} title={canSaveToSet ? undefined : 'Only toggleable user skills can be added'}><BookmarkPlus size={15} /> Add to Skill Set…</button>
       <button className="secondary-button details-group-action" onClick={() => onToggleGroup(row.group)} disabled={busy}><ArrowUpDown size={15} /> Smart-toggle group · {toolScope === 'all' ? 'All tools' : titleCase(toolScope)}</button>
       <div className="detail-cells">
@@ -385,10 +400,12 @@ function rowSources(row: SkillRow) {
 function groupRows(rows: SkillRow[]): [string, SkillRow[]][] {
   const grouped = new Map<string, SkillRow[]>()
   rows.forEach((row) => grouped.set(row.group, [...(grouped.get(row.group) ?? []), row]))
-  return [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([name, items]) => [name, items.sort(compareRows)])
+  return [...grouped.entries()].sort(([leftName, leftRows], [rightName, rightRows]) => Number(rightRows.some((row) => row.favorite)) - Number(leftRows.some((row) => row.favorite)) || leftName.localeCompare(rightName)).map(([name, items]) => [name, items.sort(compareRows)])
 }
 
 function compareRows(left: SkillRow, right: SkillRow) {
+  const byFavorite = Number(right.favorite) - Number(left.favorite)
+  if (byFavorite) return byFavorite
   const byGroup = left.group.localeCompare(right.group)
   return byGroup || left.name.localeCompare(right.name)
 }

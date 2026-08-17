@@ -25,6 +25,8 @@
   adds saved task-oriented Skill Sets to the desktop source build without
   changing CLI/TUI behavior. Phase 15 adds a public first-party Skill Advisor
   plus a tool-neutral receipt/lease CLI for temporary task-specific activation.
+  Phase 16 adds private managed-skill favorites and a favorite-first macOS
+  Skills filter without changing CLI, TUI, or advisor behavior.
 
 ## Product Shape
 
@@ -41,12 +43,13 @@
   Codex startup catalog cost and runs provider diagnostics only after an
   explicit action. Skills keeps applied ON rows prominent and collapses the
   much larger OFF catalog by source while preserving pending Apply semantics.
+  Favorites keep recurring managed basenames easy to find across ON/OFF state.
   Skill Sets remember overlapping task recipes and stage them for an explicitly
   chosen tool scope.
 - Fixed macOS-oriented paths derived directly from `$HOME`; no configuration
   file in the current scope.
 - Local state under `~/.skill-manager/`, including disabled entries, manifest
-  backups, separate saved-recipe and advisor receipt metadata, managed
+  backups, separate favorite, saved-recipe, and advisor receipt metadata, managed
   repository checkouts, and transient uninstall staging.
 
 ## Primary Invariants
@@ -83,6 +86,7 @@ main
       -> tui  -> staging -> model
       -> advisor -> scan, ops, state, model
       -> gui  -> staging, scan, ops, install, state, model
+              -> favorites -> private versioned basename file
               -> skillsets -> private versioned recipe file
               -> contextbudget -> metadata, paths, model
               -> skillssh -> anonymous catalog HTTP + normalized disk cache

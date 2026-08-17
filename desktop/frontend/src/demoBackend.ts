@@ -1,4 +1,4 @@
-import type { ActionResult, ApplyResult, Backend, PendingChange, SkillCell, SkillRow, Snapshot } from './api'
+import { favoriteEligible, type ActionResult, type ApplyResult, type Backend, type PendingChange, type SkillCell, type SkillRow, type Snapshot } from './api'
 
 const seedRows: SkillRow[] = [
   row('release-checklist', 'Prepare a project for a safe release.', 'example-labs/engineering-skills', 'symlink repo', 'ON', 'ON'),
@@ -20,6 +20,7 @@ const seedRows: SkillRow[] = [
 class DemoBackend implements Backend {
   private rows = seedRows
   private pending: PendingChange[] = []
+  private favorites = new Set(['dependency-review', 'media-compose'])
   private diagnosticsMeasured = false
   private skillSets = [
     { setId: 'set:media-demos', name: 'Media demos', description: 'Use when creating an occasional project video.', skills: ['media-compose', 'video-encode'], createdAt: '2026-08-14T09:00:00Z', updatedAt: '2026-08-14T09:00:00Z' },
@@ -160,13 +161,22 @@ class DemoBackend implements Backend {
     return this.toggleSkillScope(set.skills, tools)
   }
 
+  async setSkillFavorite(skillName: string, favorite: boolean) {
+    const skillRow = this.rows.find((candidate) => candidate.name === skillName)
+    const eligible = Boolean(skillRow && favoriteEligible(skillRow))
+    if (favorite && !eligible) throw new Error(`Skill ${skillName} is not a managed user skill.`)
+    if (favorite) this.favorites.add(skillName)
+    else this.favorites.delete(skillName)
+    return { message: `${favorite ? 'Added' : 'Removed'} ${skillName} ${favorite ? 'to' : 'from'} favorites.`, favorites: [...this.favorites].sort(), warning: '' } as never
+  }
+
   private action(message: string, changed: number, removed = 0) {
     return { message, counts: { changed, removed, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 }, pending: [...this.pending], contextBudgets: demoBudgets(this.pending, this.diagnosticsMeasured), skillSets: this.projectSkillSets(), skillSetsWarning: '' } as unknown as ActionResult
   }
 
   private snapshot(includeReadOnly: boolean) {
     const visible = this.rows.filter((row) => includeReadOnly || ![row.claude, row.codex].some((cell) => cell?.readOnly))
-    const rows = visible.map((row) => projectRow(row, this.pending))
+    const rows = visible.map((row) => ({ ...projectRow(row, this.pending), favorite: favoriteEligible(row) && this.favorites.has(row.name) } as SkillRow))
     const groups = [...new Set(rows.map((row) => row.group))].map((group) => {
       const grouped = rows.filter((row) => row.group === group)
       return { group, rows: grouped.length, claude: counts(grouped, 'claude'), codex: counts(grouped, 'codex'), sources: [...new Set(grouped.map((row) => row.source))] }
@@ -175,6 +185,7 @@ class DemoBackend implements Backend {
       rows,
       skillSets: this.projectSkillSets(),
       skillSetsWarning: '',
+      favoritesWarning: '',
       groups,
       sources: [...new Set(rows.map((row) => row.source))].sort(),
       managedSources: [...this.sources],
@@ -211,7 +222,8 @@ class DemoBackend implements Backend {
   async updateAllSources() { return this.sourceResult('Updated 1 source; 0 already up to date.') }
   async previewUninstall(sourceID: string) {
     const source = this.sources.find((item) => item.sourceId === sourceID)!
-    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: source.claudeCount + source.codexCount, disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local', affectedSkillSets: [], skillSetImpactWarning: '' } as never
+    const affectedFavorites = this.rows.filter((row) => row.group === source.group && this.favorites.has(row.name)).map((row) => row.name).sort()
+    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: source.claudeCount + source.codexCount, disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local', affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites, favoriteImpactWarning: '' } as never
   }
   async uninstallSource(sourceID: string) {
     this.sources = this.sources.filter((source) => source.sourceId !== sourceID)
@@ -259,7 +271,7 @@ function cell(name: string, tool: string, state: string, group: string, source: 
 }
 
 function projectRow(row: SkillRow, pending: PendingChange[]) {
-  return { ...row, claude: projectCell(row.claude, pending), codex: projectCell(row.codex, pending) } as SkillRow
+  return { ...row, favorite: false, claude: projectCell(row.claude, pending), codex: projectCell(row.codex, pending) } as SkillRow
 }
 
 function projectCell(cell: SkillCell | undefined, pending: PendingChange[]) {

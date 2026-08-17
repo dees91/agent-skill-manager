@@ -56,6 +56,10 @@ Git repositories only.
   unavailable names and current per-tool state. Pending offers **Save as set**;
   skill details offers **Add to Skill Set…**. Recipe deletion never changes
   skill state or clears Pending.
+- Eligible Skills rows and details expose favorite stars. `Favorites N` is a
+  fourth availability chip; it preserves active-first placement, composes with
+  the existing filters, and temporarily expands matching available groups.
+  Favorite metadata changes are immediate and do not alter Pending.
 - Sources lists only manifest-owned Git/local sources. Install supports Git URL
   inspection or native local-folder selection, then an exact per-skill
   Claude/Codex matrix, review, and Apply. One toggle per tool column selects or

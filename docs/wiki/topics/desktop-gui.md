@@ -24,6 +24,9 @@
 - `implemented`: Iteration 14 adds tool-agnostic saved Skill Sets, contextual
   creation, scoped smart-toggle preview/staging, and unavailable-member
   retention without changing CLI/TUI behavior.
+- `implemented`: Iteration 16 adds tool-agnostic managed-skill favorites,
+  favorite-first ordering, and a Favorites availability filter without
+  changing CLI/TUI behavior.
 
 ## Security And State Boundary
 
@@ -47,6 +50,11 @@ Go owns recipe validation and resolves every name against the current scan.
 Preview uses a copy of Pending; confirmed use stages through the same
 `staging.ToggleBatch` engine. Recipe CRUD writes only the separate private
 metadata file and never applies, clears, or owns skill state.
+
+Favorite calls accept one skill basename and desired boolean state. Go checks
+managed-row eligibility before add, persists only basename metadata, and
+returns the complete path-free favorite list. Favorite changes do not touch
+Pending or filesystem visibility.
 
 Source operations have a separate exclusive lane. They refuse to start while
 toggle changes are pending, block other mutations and app close while active,
@@ -85,6 +93,10 @@ none of the catalog methods.
 - Result bulk includes filtered rows in collapsed groups. Group bulk ignores
   filtering and uses the complete loaded group. Eligible cell counts make both
   impacts explicit.
+- Eligible managed rows and details expose favorite stars. Favorites remain in
+  their applied-state section, sort before other rows/groups, and can be
+  isolated with a fourth availability chip that temporarily opens matching
+  available groups.
 
 ## Global Skill Context Budget
 
@@ -128,6 +140,10 @@ none of the catalog methods.
   warns about affected sets but retains their now-unavailable basenames.
 - Corrupt recipe metadata is a page-local warning; Dashboard, Skills, Sources,
   and their mutations remain available.
+
+Favorite metadata uses the same isolated-warning principle. Corruption disables
+only favorite controls, and source uninstall reports retained favorite names as
+a separate non-blocking impact.
 
 ## Visual Contract
 

@@ -110,6 +110,11 @@ func (a *App) ToggleSkillSet(setID string, tools []string) (gui.ActionResult, er
 	return a.service.ToggleSkillSet(setID, tools)
 }
 
+// SetSkillFavorite updates one tool-agnostic bookmark by skill basename.
+func (a *App) SetSkillFavorite(skillName string, favorite bool) (gui.FavoriteMutationResult, error) {
+	return a.service.SetSkillFavorite(skillName, favorite)
+}
+
 // PrepareGitInstall validates, clones/reuses, and discovers a Git source.
 func (a *App) PrepareGitInstall(gitURL string) (gui.InstallDraft, error) {
 	return a.service.PrepareGitInstall(gitURL)

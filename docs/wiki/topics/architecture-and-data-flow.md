@@ -19,6 +19,9 @@
 - [`internal/skillsets`](../../../internal/skillsets/) owns the independent
   versioned saved-recipe file, validation, atomic persistence, and bounded
   backups. It stores skill basenames but no paths or tool selections.
+- [`internal/favorites`](../../../internal/favorites/) owns the independent
+  versioned favorite-basename file, validation, atomic persistence, and bounded
+  backups. It stores no paths, tools, source metadata, or usage history.
 - [`internal/advisor`](../../../internal/advisor/) owns the versioned
   receipt/lease file, cross-process lock, exact activation/cleanup preflight,
   and path-free public result types. It reuses `scan` and `ops` rather than
@@ -109,6 +112,21 @@ until a matching basename returns. A corrupt recipe file produces a desktop
 warning without blocking normal scan/toggle/source operations. Source uninstall
 previews cross-check installed names against sets, but never block or rewrite
 those recipes.
+
+## Favorite Flow
+
+```text
+skill basename + desired boolean state
+  -> Wails App forwards identifiers only
+  -> gui.Service validates current managed-row eligibility for add
+  -> favorites.Store atomically replaces favorites.json when state changes
+  -> complete sorted basename list returns to React
+  -> current rows update without changing Pending or filesystem visibility
+```
+
+Missing basenames remain in metadata and reconnect during a later scan. A
+corrupt favorite file disables only favorite controls. Source uninstall
+previews matching basenames but retains the favorite list.
 
 ## Desktop Source Lifecycle Flow
 

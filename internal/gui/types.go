@@ -63,6 +63,7 @@ type Snapshot struct {
 	Rows             []SkillRow            `json:"rows"`
 	SkillSets        []SkillSet            `json:"skillSets"`
 	SkillSetsWarning string                `json:"skillSetsWarning,omitempty"`
+	FavoritesWarning string                `json:"favoritesWarning,omitempty"`
 	Groups           []GroupSummary        `json:"groups"`
 	Sources          []string              `json:"sources"`
 	ManagedSources   []ManagedSource       `json:"managedSources"`
@@ -130,6 +131,13 @@ type SkillSetMutationResult struct {
 	Message   string     `json:"message"`
 	SkillSets []SkillSet `json:"skillSets"`
 	Warning   string     `json:"warning,omitempty"`
+}
+
+// FavoriteMutationResult returns the complete path-free favorite collection.
+type FavoriteMutationResult struct {
+	Message   string   `json:"message"`
+	Favorites []string `json:"favorites"`
+	Warning   string   `json:"warning,omitempty"`
 }
 
 // SkillSetTogglePreview explains one reversible staging action before it runs.
@@ -266,6 +274,8 @@ type UninstallPreview struct {
 	PreservesSource       bool             `json:"preservesSource"`
 	AffectedSkillSets     []SkillSetImpact `json:"affectedSkillSets"`
 	SkillSetImpactWarning string           `json:"skillSetImpactWarning,omitempty"`
+	AffectedFavorites     []string         `json:"affectedFavorites"`
+	FavoriteImpactWarning string           `json:"favoriteImpactWarning,omitempty"`
 }
 
 // SkillSetImpact is a non-blocking source-uninstall dependency warning.
@@ -281,6 +291,7 @@ type SkillRow struct {
 	Description string     `json:"description"`
 	Source      string     `json:"source"`
 	Group       string     `json:"group"`
+	Favorite    bool       `json:"favorite"`
 	Claude      *SkillCell `json:"claude,omitempty"`
 	Codex       *SkillCell `json:"codex,omitempty"`
 }
@@ -400,12 +411,13 @@ type ApplyResult struct {
 	Snapshot  Snapshot        `json:"snapshot"`
 }
 
-func projectRow(row model.SkillRow, pending staging.Memory) SkillRow {
+func projectRow(row model.SkillRow, pending staging.Memory, favorite bool) SkillRow {
 	return SkillRow{
 		Name:        row.Name,
 		Description: row.Description,
 		Source:      row.Source.String(),
 		Group:       normalizedGroup(row.Group).String(),
+		Favorite:    favorite,
 		Claude:      projectCell(row.Claude, pending),
 		Codex:       projectCell(row.Codex, pending),
 	}

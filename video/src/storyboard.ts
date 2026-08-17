@@ -1,5 +1,5 @@
 export const VIDEO = {
-  revision: 2,
+  revision: 3,
   fps: 30,
   width: 1920,
   height: 1080,

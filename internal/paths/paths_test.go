@@ -22,6 +22,8 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 		"StateFile":         filepath.Join(home, ".skill-manager", "state.json"),
 		"AdvisorFile":       filepath.Join(home, ".skill-manager", "advisor-activations.json"),
 		"AdvisorLockFile":   filepath.Join(home, ".skill-manager", "advisor.lock"),
+		"SkillSetsFile":     filepath.Join(home, ".skill-manager", "skill-sets.json"),
+		"FavoritesFile":     filepath.Join(home, ".skill-manager", "favorites.json"),
 		"CacheDir":          filepath.Join(home, ".skill-manager", "cache"),
 		"SkillsSHCacheFile": filepath.Join(home, ".skill-manager", "cache", "skills-sh", "catalog-v1.json"),
 		"BackupDir":         filepath.Join(home, ".skill-manager", "backups"),
@@ -61,6 +63,12 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	}
 	if got.AdvisorLockFile != want["AdvisorLockFile"] {
 		t.Fatalf("AdvisorLockFile = %q, want %q", got.AdvisorLockFile, want["AdvisorLockFile"])
+	}
+	if got.SkillSetsFile != want["SkillSetsFile"] {
+		t.Fatalf("SkillSetsFile = %q, want %q", got.SkillSetsFile, want["SkillSetsFile"])
+	}
+	if got.FavoritesFile != want["FavoritesFile"] {
+		t.Fatalf("FavoritesFile = %q, want %q", got.FavoritesFile, want["FavoritesFile"])
 	}
 	if got.CacheDir != want["CacheDir"] {
 		t.Fatalf("CacheDir = %q, want %q", got.CacheDir, want["CacheDir"])

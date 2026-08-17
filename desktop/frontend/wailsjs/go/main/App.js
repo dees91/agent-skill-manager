@@ -50,6 +50,10 @@ export function ReviewInstall(arg1, arg2) {
   return window['go']['main']['App']['ReviewInstall'](arg1, arg2);
 }
 
+export function SetSkillFavorite(arg1, arg2) {
+  return window['go']['main']['App']['SetSkillFavorite'](arg1, arg2);
+}
+
 export function ToggleBoth(arg1) {
   return window['go']['main']['App']['ToggleBoth'](arg1);
 }

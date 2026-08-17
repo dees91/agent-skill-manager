@@ -615,6 +615,7 @@ export namespace gui {
 	    description: string;
 	    source: string;
 	    group: string;
+	    favorite: boolean;
 	    claude?: SkillCell;
 	    codex?: SkillCell;
 
@@ -628,6 +629,7 @@ export namespace gui {
 	        this.description = source["description"];
 	        this.source = source["source"];
 	        this.group = source["group"];
+	        this.favorite = source["favorite"];
 	        this.claude = this.convertValues(source["claude"], SkillCell);
 	        this.codex = this.convertValues(source["codex"], SkillCell);
 	    }
@@ -654,6 +656,7 @@ export namespace gui {
 	    rows: SkillRow[];
 	    skillSets: SkillSet[];
 	    skillSetsWarning?: string;
+	    favoritesWarning?: string;
 	    groups: GroupSummary[];
 	    sources: string[];
 	    managedSources: ManagedSource[];
@@ -673,6 +676,7 @@ export namespace gui {
 	        this.rows = this.convertValues(source["rows"], SkillRow);
 	        this.skillSets = this.convertValues(source["skillSets"], SkillSet);
 	        this.skillSetsWarning = source["skillSetsWarning"];
+	        this.favoritesWarning = source["favoritesWarning"];
 	        this.groups = this.convertValues(source["groups"], GroupSummary);
 	        this.sources = source["sources"];
 	        this.managedSources = this.convertValues(source["managedSources"], ManagedSource);
@@ -741,6 +745,22 @@ export namespace gui {
 
 
 
+	export class FavoriteMutationResult {
+	    message: string;
+	    favorites: string[];
+	    warning?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FavoriteMutationResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.message = source["message"];
+	        this.favorites = source["favorites"];
+	        this.warning = source["warning"];
+	    }
+	}
 
 	export class InstallCandidateCell {
 	    tool: string;
@@ -1114,6 +1134,8 @@ export namespace gui {
 	    preservesSource: boolean;
 	    affectedSkillSets: SkillSetImpact[];
 	    skillSetImpactWarning?: string;
+	    affectedFavorites: string[];
+	    favoriteImpactWarning?: string;
 
 	    static createFrom(source: any = {}) {
 	        return new UninstallPreview(source);
@@ -1131,6 +1153,8 @@ export namespace gui {
 	        this.preservesSource = source["preservesSource"];
 	        this.affectedSkillSets = this.convertValues(source["affectedSkillSets"], SkillSetImpact);
 	        this.skillSetImpactWarning = source["skillSetImpactWarning"];
+	        this.affectedFavorites = source["affectedFavorites"];
+	        this.favoriteImpactWarning = source["favoriteImpactWarning"];
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

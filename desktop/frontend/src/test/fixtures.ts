@@ -9,6 +9,7 @@ export function fixtureSnapshot(): Snapshot {
         description: 'Alpha automation skill',
         source: 'local',
         group: 'local',
+        favorite: true,
         claude: cell('alpha-skill', 'claude', 'ON'),
         codex: cell('alpha-skill', 'codex', 'OFF'),
       },
@@ -17,11 +18,13 @@ export function fixtureSnapshot(): Snapshot {
         description: 'Codex-only helper',
         source: 'Skills CLI',
         group: 'Skills CLI',
+        favorite: false,
         codex: cell('codex-helper', 'codex', 'ON', 'Skills CLI', 'Skills CLI'),
       },
     ],
     skillSets: [skillSetFixture()],
     skillSetsWarning: '',
+    favoritesWarning: '',
     groups: [
       { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), sources: ['local'] },
       { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), sources: ['Skills CLI'] },
@@ -72,6 +75,7 @@ export function fixtureSnapshot(): Snapshot {
 }
 
 export function mockBackend(snapshot = fixtureSnapshot()): Backend {
+  const favorites = new Set(snapshot.rows.filter((row) => row.favorite).map((row) => row.name))
   const action = (pending = snapshot.pending): ActionResult => new gui.ActionResult({
     message: 'Pending change added.',
     counts: { changed: 1, removed: 0, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 },
@@ -97,13 +101,18 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     deleteSkillSet: vi.fn(async () => new gui.SkillSetMutationResult({ message: 'Deleted Skill Set.', skillSets: [], warning: '' })),
     previewSkillSetToggle: vi.fn(async (setId, tools) => new gui.SkillSetTogglePreview({ setId, name: 'Review support', tools, direction: 'disable', eligible: tools.length, counts: { changed: tools.length, removed: 0, skippedReadOnly: 0, skippedMissing: 0, skippedConflict: 0 } })),
     toggleSkillSet: vi.fn(async () => action()),
+    setSkillFavorite: vi.fn(async (skillName, favorite) => {
+      if (favorite) favorites.add(skillName)
+      else favorites.delete(skillName)
+      return new gui.FavoriteMutationResult({ message: `${favorite ? 'Added' : 'Removed'} ${skillName} ${favorite ? 'to' : 'from'} favorites.`, favorites: [...favorites].sort(), warning: '' })
+    }),
     prepareGitInstall: vi.fn(async () => new gui.InstallDraft({ draftId: 'draft:1', kind: 'git', group: 'demo/skills', location: 'https://github.com/demo/skills', candidates: [candidate('alpha')], cloned: true, reused: false, retainedClone: true, cancelled: false })),
     chooseLocalInstall: vi.fn(async () => new gui.InstallDraft({ draftId: 'draft:2', kind: 'local', group: 'local-skills', location: '/Users/example/Projects/local-skills', candidates: [candidate('local-alpha')], cloned: false, reused: false, retainedClone: false, cancelled: false })),
     reviewInstall: vi.fn(async (draftId, selections) => new gui.InstallReview({ reviewId: 'review:1', draftId, group: 'demo/skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true })),
     applyInstall: vi.fn(async () => new gui.SourceMutationResult({ message: 'Installed 2 links.', completed: [], createdLinks: 2, alreadyInstalled: 0, snapshot })),
     updateSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
     updateAllSources: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
-    previewUninstall: vi.fn(async (sourceId) => new gui.UninstallPreview({ sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0, removesCheckout: true, preservesSource: false, affectedSkillSets: [], skillSetImpactWarning: '' })),
+    previewUninstall: vi.fn(async (sourceId) => new gui.UninstallPreview({ sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0, removesCheckout: true, preservesSource: false, affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites: [], favoriteImpactWarning: '' })),
     uninstallSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Uninstalled source.', completed: [], removedActive: 2, removedDisabled: 0, snapshot })),
   }
 }

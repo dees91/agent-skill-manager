@@ -85,6 +85,10 @@ from the tracked PNG under repository settings.
   boundaries, baseline-ON preservation, receipt/lease sharing, concurrent
   activation locking, strict dry-run, exact cleanup, manual early disable, and
   symlink drift rejection. A repository contract test covers the public skill.
+- Favorite suites use temporary homes to cover version/shape validation,
+  owner-only atomic storage, bounded backups, managed/conflict eligibility,
+  read-only rejection, corruption isolation, basename reconnection, Pending
+  independence, source-busy exclusion, and uninstall retention.
 - Discover backend coverage projects ON/OFF/conflict state and verifies that a
   selected catalog entry installs exactly one skill into only the selected
   agent cells while rejecting unknown, well-known, offline, pending, and busy
@@ -172,12 +176,15 @@ from the tracked PNG under repository settings.
 - Phase 15: public first-party Skill Advisor, versioned path-free inventory,
   opaque receipt/reference-counted lease persistence, cross-process locking,
   drift-safe explicit cleanup, and same-turn instruction loading.
+- Phase 16: private basename-based favorites, path-free desktop mutation,
+  favorite-first active workspace filtering, corruption isolation, missing-name
+  reconnection, uninstall impact, and responsive/accessibility coverage.
 
 All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.
 The `v0.4.2` maintenance prerelease supersedes that first preview with patched
 Go, Wails, terminal UI, and frontend dependencies plus the empty-profile GUI
-projection fix. Phases 14 and 15 are complete in the source tree but have not
+projection fix. Phases 14 through 16 are complete in the source tree but have not
 been tagged or published as a release.
 
 ## Explicitly Deferred Work

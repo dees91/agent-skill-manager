@@ -95,7 +95,9 @@ in public documentation.
   an explicit action for running local provider diagnostics.
 - **Active-first Skills workspace:** conflicts first, then always-expanded
   active skills, collapsed available-by-source groups, and explicitly opted-in
-  read-only groups. Pending changes stay in their applied section until Apply.
+  read-only groups. Managed rows expose accessible favorite stars; a Favorites
+  chip narrows the same hierarchy and favorite rows/sources sort first. Pending
+  changes stay in their applied section until Apply.
 - **Saved Skill Sets:** task-oriented recipes show member count, applied and
   post-Apply state per tool, unavailable members, and expandable member detail.
   Create/edit supports one tool-agnostic member selection plus an optional
@@ -133,6 +135,11 @@ Skill Set metadata changes are immediate local edits, while using a set only
 stages ordinary skill toggles. Sets may overlap; they do not own or reference
 count active skills. Unavailable member names remain visible and reconnect by
 basename when the skill returns.
+
+Favorite metadata changes are immediate and independent from staged toggles.
+The favorite filter temporarily expands matching available groups without
+changing the user's session expansion choices. Missing basenames remain saved
+and reconnect when a managed skill returns.
 
 Motion is short and functional. Reduced-motion preferences remove nonessential
 transitions. Long-running source operations show phase progress and do not imply

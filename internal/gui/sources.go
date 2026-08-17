@@ -339,7 +339,8 @@ func (s *Service) PreviewUninstall(sourceID string) (UninstallPreview, error) {
 			}
 			on, off := referenceCounts(plan.References.References)
 			impacts, warning := s.sourceSkillSetImpacts(repository.InstalledSkills)
-			result = UninstallPreview{SourceID: sourceID, Kind: sourceKindGit, Group: repository.Group.String(), Location: repository.CheckoutPath, ActiveLinks: on, DisabledLinks: off, RemovesCheckout: true, AffectedSkillSets: impacts, SkillSetImpactWarning: warning}
+			favoriteImpacts, favoriteWarning := s.sourceFavoriteImpacts(repository.InstalledSkills)
+			result = UninstallPreview{SourceID: sourceID, Kind: sourceKindGit, Group: repository.Group.String(), Location: repository.CheckoutPath, ActiveLinks: on, DisabledLinks: off, RemovesCheckout: true, AffectedSkillSets: impacts, SkillSetImpactWarning: warning, AffectedFavorites: favoriteImpacts, FavoriteImpactWarning: favoriteWarning}
 			return nil
 		}
 		if source, ok := findLocalSourceByID(manifest, sourceID); ok {
@@ -350,7 +351,8 @@ func (s *Service) PreviewUninstall(sourceID string) (UninstallPreview, error) {
 			}
 			on, off := referenceCounts(plan.References.References)
 			impacts, warning := s.sourceSkillSetImpacts(source.InstalledSkills)
-			result = UninstallPreview{SourceID: sourceID, Kind: sourceKindLocal, Group: source.Group.String(), Location: source.CanonicalPath, ActiveLinks: on, DisabledLinks: off, PreservesSource: true, AffectedSkillSets: impacts, SkillSetImpactWarning: warning}
+			favoriteImpacts, favoriteWarning := s.sourceFavoriteImpacts(source.InstalledSkills)
+			result = UninstallPreview{SourceID: sourceID, Kind: sourceKindLocal, Group: source.Group.String(), Location: source.CanonicalPath, ActiveLinks: on, DisabledLinks: off, PreservesSource: true, AffectedSkillSets: impacts, SkillSetImpactWarning: warning, AffectedFavorites: favoriteImpacts, FavoriteImpactWarning: favoriteWarning}
 			return nil
 		}
 		return fmt.Errorf("managed source not found")

@@ -203,7 +203,7 @@ func (s Store) Secure() error {
 		return fmt.Errorf("inspect state backups %s: %w", s.paths.BackupDir, err)
 	}
 	for _, entry := range backups {
-		if entry.Type().IsRegular() && (isStateBackupName(entry.Name()) || isSkillSetsBackupName(entry.Name())) {
+		if entry.Type().IsRegular() && (isStateBackupName(entry.Name()) || isSkillSetsBackupName(entry.Name()) || isFavoritesBackupName(entry.Name())) {
 			if err := secureRegularFile(filepath.Join(s.paths.BackupDir, entry.Name())); err != nil {
 				return err
 			}
@@ -300,6 +300,11 @@ func isStateBackupName(name string) bool {
 func isSkillSetsBackupName(name string) bool {
 	return len(name) > len("skill-sets-.json") && len(name) <= 72 &&
 		name[:len("skill-sets-")] == "skill-sets-" && filepath.Ext(name) == ".json"
+}
+
+func isFavoritesBackupName(name string) bool {
+	return len(name) > len("favorites-.json") && len(name) <= 72 &&
+		name[:len("favorites-")] == "favorites-" && filepath.Ext(name) == ".json"
 }
 
 func secureRegularFile(path string) error {

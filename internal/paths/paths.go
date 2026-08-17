@@ -21,6 +21,7 @@ type Paths struct {
 	AdvisorFile       string
 	AdvisorLockFile   string
 	SkillSetsFile     string
+	FavoritesFile     string
 	CacheDir          string
 	SkillsSHCacheFile string
 	BackupDir         string
@@ -58,6 +59,7 @@ func ForHome(home string) Paths {
 		AdvisorFile:       filepath.Join(stateDir, "advisor-activations.json"),
 		AdvisorLockFile:   filepath.Join(stateDir, "advisor.lock"),
 		SkillSetsFile:     filepath.Join(stateDir, "skill-sets.json"),
+		FavoritesFile:     filepath.Join(stateDir, "favorites.json"),
 		CacheDir:          cacheDir,
 		SkillsSHCacheFile: filepath.Join(cacheDir, "skills-sh", "catalog-v1.json"),
 		BackupDir:         filepath.Join(stateDir, "backups"),

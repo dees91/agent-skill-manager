@@ -291,6 +291,7 @@ Use a global state directory:
 ~/.skill-manager/
   state.json
   skill-sets.json
+  favorites.json
   backups/
   disabled/
     claude/
@@ -836,6 +837,31 @@ semantics.
   is explicit; do not add automatic expiry, task-end cleanup, hooks, plugins,
   or a GUI surface in this iteration.
 
+### Skill Favorites (Iteration 16)
+
+Iteration 16 adds private, tool-agnostic favorites to the macOS Skills
+workspace without changing CLI, TUI, list JSON, Skill Advisor, source
+ownership, or filesystem toggle semantics.
+
+- A favorite is identified by skill basename and applies across Claude and
+  Codex. Managed user rows remain eligible while ON, OFF, or conflicted;
+  read-only-only system and plugin rows are excluded.
+- Persist sorted unique basenames separately in
+  `~/.skill-manager/favorites.json`; do not advance the ownership/toggle
+  manifest from version 2. Use private atomic persistence and bounded backups.
+- Missing favorites remain recorded and reconnect when the same basename is
+  installed again. Source uninstall reports affected names but does not block,
+  prune, or rewrite favorite metadata.
+- Add accessible stars to Skills rows and details, a mutually exclusive
+  `Favorites` availability chip, and favorite-first ordering. Favorites keep
+  the active-first section placement and existing Pending/Apply behavior.
+- Frontend mutations send only a skill name and desired boolean state. A
+  corrupt favorites file disables favorite controls and shows a page-local
+  warning without blocking normal scans, toggles, Apply, or source lifecycle.
+- Separate Favorites navigation, folders/tags, notes, synchronization,
+  project-local favorites, CLI/TUI controls, and advisor recommendations remain
+  out of scope.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -910,6 +936,9 @@ Backend tests should cover:
 - Path-free JSON inventory, advisor argument/version contracts, receipt/lease
   reference counting, concurrency locking, dry-run, baseline-ON preservation,
   drift-safe cleanup, and first-party skill validation
+- Favorites persistence, owner-only atomic writes, corruption isolation,
+  managed-row eligibility, basename reconnection, GUI filter/sort behavior,
+  Pending independence, and non-blocking uninstall impact
 
 TUI can be tested at the model/update layer. Full terminal rendering tests are optional for MVP.
 
@@ -948,6 +977,8 @@ Keep [planning/phase-13-public-preview-hardening-tasks.md](./planning/phase-13-p
 Keep [planning/phase-14-skill-sets-tasks.md](./planning/phase-14-skill-sets-tasks.md) as the source of truth for Iteration 14 saved Skill Set task status.
 
 Keep [planning/phase-15-skill-advisor-tasks.md](./planning/phase-15-skill-advisor-tasks.md) as the source of truth for Iteration 15 first-party Skill Advisor task status.
+
+Keep [planning/phase-16-skill-favorites-tasks.md](./planning/phase-16-skill-favorites-tasks.md) as the source of truth for Iteration 16 skill favorites task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

@@ -243,3 +243,16 @@ intentionally excluded.
   vulnerability, skill contract, and strict wiki checks.
 - Verified the public skill through a fresh Codex process and exercised live
   Claude/Codex receipt activation and exact cleanup with no receipts left.
+
+## [2026-08-17] implementation | Add managed-skill favorites
+
+- Added isolated basename persistence, path-free desktop mutation, active-first
+  favorite filtering and ordering, source-uninstall impact, tests, and public
+  documentation for Phase 16.
+
+## [2026-08-17] verification | Verify and install skill favorites
+
+- Passed focused, race, full backend/frontend, vet, vulnerability, dependency
+  notice, strict wiki-link, privacy, accessibility, and media-output checks.
+- Rebuilt the persistent CLI and ad-hoc-signed Apple Silicon desktop app,
+  verified its bundle, installed it in `/Applications`, and launch-checked it.

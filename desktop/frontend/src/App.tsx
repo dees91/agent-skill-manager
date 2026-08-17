@@ -15,8 +15,8 @@ import PendingBar from './components/PendingBar'
 import SkillsView from './components/SkillsView'
 import SkillSetsView, { type SkillSetEditorRequest } from './components/SkillSetsView'
 import SourcesView from './components/SourcesView'
-import type { ActionResult, Backend, SkillRow, SkillSetMutationResult, Snapshot, SourceMutationResult, SourceProgress } from './api'
-import { projectPending, wailsBackend } from './api'
+import type { ActionResult, Backend, FavoriteMutationResult, SkillRow, SkillSetMutationResult, Snapshot, SourceMutationResult, SourceProgress } from './api'
+import { favoriteEligible, projectPending, wailsBackend } from './api'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 
 type View = 'dashboard' | 'skills' | 'skillsets' | 'sources'
@@ -96,6 +96,25 @@ export default function App({ backend = wailsBackend }: AppProps) {
   const acceptSkillSetMutation = useCallback((result: SkillSetMutationResult) => {
     setSnapshot((current) => current ? { ...current, skillSets: result.skillSets, skillSetsWarning: result.warning } as Snapshot : current)
   }, [])
+
+  const setSkillFavorite = useCallback(async (skillName: string, favorite: boolean) => {
+    if (!snapshot || busy) return
+    setBusy(true)
+    try {
+      const result: FavoriteMutationResult = await backend.setSkillFavorite(skillName, favorite)
+      const favorites = new Set(result.favorites)
+      setSnapshot((current) => current ? {
+        ...current,
+        favoritesWarning: result.warning,
+        rows: current.rows.map((row) => ({ ...row, favorite: favoriteEligible(row) && favorites.has(row.name) } as SkillRow)),
+      } as Snapshot : current)
+      announce(result.message)
+    } catch (reason) {
+      announce(errorMessage(reason))
+    } finally {
+      setBusy(false)
+    }
+  }, [announce, backend, busy, snapshot])
 
   const openSkillSetEditor = useCallback((kind: SkillSetEditorRequest['kind'], skillNames: string[]) => {
     skillSetRequestID.current += 1
@@ -265,6 +284,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
               onToggleCell={(name, tool) => runAction(() => backend.toggleCell(name, tool))}
               onToggleSkillScope={(names, tools) => runAction(() => backend.toggleSkillScope(names, tools))}
               onToggleGroupScope={(group, tools) => runAction(() => backend.toggleGroupScope(group, tools))}
+              onSetFavorite={(name, favorite) => void setSkillFavorite(name, favorite)}
               onAddToSkillSet={(name) => openSkillSetEditor('skill', [name])}
               onCloseDetails={() => setSelectedSkill(null)}
             />

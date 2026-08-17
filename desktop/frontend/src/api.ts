@@ -11,6 +11,7 @@ import {
   PreviewSkillSetToggle,
   PreviewUninstall,
   ReviewInstall,
+  SetSkillFavorite,
   ToggleBoth,
   ToggleCell,
   ToggleGroup,
@@ -32,6 +33,7 @@ export type SkillCell = gui.SkillCell
 export type SkillSet = gui.SkillSet
 export type SkillSetMutationResult = gui.SkillSetMutationResult
 export type SkillSetTogglePreview = gui.SkillSetTogglePreview
+export type FavoriteMutationResult = gui.FavoriteMutationResult
 export type PendingChange = gui.PendingChange
 export type ActionResult = gui.ActionResult
 export type ApplyResult = gui.ApplyResult
@@ -69,6 +71,7 @@ export interface Backend {
   deleteSkillSet(setID: string): Promise<SkillSetMutationResult>
   previewSkillSetToggle(setID: string, tools: string[]): Promise<SkillSetTogglePreview>
   toggleSkillSet(setID: string, tools: string[]): Promise<ActionResult>
+  setSkillFavorite(skillName: string, favorite: boolean): Promise<FavoriteMutationResult>
   prepareGitInstall(gitURL: string): Promise<InstallDraft>
   chooseLocalInstall(): Promise<InstallDraft>
   reviewInstall(draftID: string, selections: InstallCellRequest[]): Promise<InstallReview>
@@ -96,6 +99,7 @@ const generatedBackend: Backend = {
   deleteSkillSet: DeleteSkillSet,
   previewSkillSetToggle: PreviewSkillSetToggle,
   toggleSkillSet: ToggleSkillSet,
+  setSkillFavorite: SetSkillFavorite,
   prepareGitInstall: PrepareGitInstall,
   chooseLocalInstall: ChooseLocalInstall,
   reviewInstall: ReviewInstall,
@@ -130,6 +134,7 @@ export const wailsBackend: Backend = {
   deleteSkillSet: async (...args) => (await activeBackend()).deleteSkillSet(...args),
   previewSkillSetToggle: async (...args) => (await activeBackend()).previewSkillSetToggle(...args),
   toggleSkillSet: async (...args) => (await activeBackend()).toggleSkillSet(...args),
+  setSkillFavorite: async (...args) => (await activeBackend()).setSkillFavorite(...args),
   prepareGitInstall: async (...args) => (await activeBackend()).prepareGitInstall(...args),
   chooseLocalInstall: async (...args) => (await activeBackend()).chooseLocalInstall(...args),
   reviewInstall: async (...args) => (await activeBackend()).reviewInstall(...args),
@@ -154,6 +159,10 @@ export function projectPending(snapshot: Snapshot, pending: PendingChange[], con
       codex: projectCell(row.codex, byCell),
     })),
   } as Snapshot
+}
+
+export function favoriteEligible(row: SkillRow): boolean {
+  return [row.claude, row.codex].some((cell) => Boolean(cell && !cell.readOnly && (cell.conflict || ['ON', 'OFF', 'CONFLICT'].includes(cell.state))))
 }
 
 function projectCell(cell: SkillCell | undefined, pending: Map<string, string>): SkillCell | undefined {

@@ -26,6 +26,8 @@ export function PreviewUninstall(arg1:string):Promise<gui.UninstallPreview>;
 
 export function ReviewInstall(arg1:string,arg2:Array<gui.InstallCellRequest>):Promise<gui.InstallReview>;
 
+export function SetSkillFavorite(arg1:string,arg2:boolean):Promise<gui.FavoriteMutationResult>;
+
 export function ToggleBoth(arg1:string):Promise<gui.ActionResult>;
 
 export function ToggleCell(arg1:string,arg2:string):Promise<gui.ActionResult>;

@@ -8,6 +8,7 @@
   advisor-activations.json
   advisor.lock
   skill-sets.json
+  favorites.json
   backups/
   disabled/
     claude/<skill-name>
@@ -42,6 +43,10 @@ basenames, and created/updated timestamps. It intentionally contains no tool
 selection, source ownership, or filesystem path, and it does not change the
 `state.json` version 2 schema.
 
+`favorites.json` version 1 is an independent sorted list of unique skill
+basenames. It intentionally contains no tool, source, path, timestamp, prompt,
+or usage history and does not change the `state.json` version 2 schema.
+
 `advisor-activations.json` version 1 is an independent receipt/lease store.
 Receipts contain opaque IDs, one explicit tool, creation time, and up to five
 skill basenames. Leases add only the exact restore fingerprints and receipt
@@ -71,6 +76,10 @@ installed-state projection still comes from the filesystem and manifest.
 - Skill Set mutations atomically replace their separate file and write an
   independent `skill-sets-*.json` backup before each replacement with the same
   owner-only, 10-file, 30-day bounds.
+- Favorite mutations atomically replace their separate file and write an
+  independent `favorites-*.json` backup before each changed replacement with
+  the same owner-only, 10-file, 30-day bounds. Idempotent writes do not create a
+  replacement or backup.
 - Advisor mutations are serialized through a no-follow owner-only lock,
   atomically replace their separate file, and write independent
   `advisor-activations-*.json` backups with the same retention bounds.
@@ -96,6 +105,7 @@ The tool may:
 - remove an audited local installation's links and state through staging;
 - write Skill Manager state and backups.
 - write saved Skill Set metadata and its independent backups.
+- write favorite basename metadata and its independent backups.
 - write advisor receipt/lease metadata, its process lock, and independent
   backups;
 - reuse exact reversible toggle operations for receipt-scoped activation and
@@ -129,6 +139,9 @@ The tool must not:
 - Malformed or unsupported Skill Set metadata disables recipe CRUD/toggling
   but is isolated from core scan, Pending, Apply, and source lifecycle. A valid
   backup may be restored manually without changing `state.json`.
+- Malformed or unsupported favorite metadata disables only favorite controls.
+  It remains isolated from core scan, Pending, Apply, and source lifecycle; a
+  valid backup may be restored manually without changing `state.json`.
 - Malformed or unsupported advisor metadata blocks advisor commands but remains
   isolated from normal list/status, direct toggles, TUI, GUI, and source
   lifecycle. Cleanup never guesses ownership from the filesystem alone.

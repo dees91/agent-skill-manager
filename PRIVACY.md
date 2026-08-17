@@ -26,7 +26,9 @@ directories involved in an explicit operation. State can include original and
 disabled paths, symlink targets, repository URLs, canonical local source paths,
 installed skill names, timestamps, and commits. Advisor state additionally
 stores opaque receipt IDs, tool/skill claims, and exact restore fingerprints;
-it never stores prompt or task content.
+it never stores prompt or task content. Saved Skill Sets and favorites store
+only skill basenames plus their feature-specific recipe metadata; favorites do
+not store tools, source paths, prompts, task text, or usage history.
 
 State directories are restricted to the current user (`0700`). State, backup,
 and catalog-cache JSON files use mode `0600`. When a new state backup is made,
@@ -71,6 +73,8 @@ Failure is non-fatal and falls back to the filesystem estimate.
 
 Uninstalling a source removes the state and links owned by that source under the
 documented safety checks. It does not remove link-in-place local source folders.
+Saved Skill Set and favorite basenames are retained so they can reconnect after
+the same skill name is installed again.
 To remove all remaining Skill Manager metadata after restoring or uninstalling
 managed entries, the user may manually archive and delete `~/.skill-manager`.
 Deleting `~/.skill-manager/cache/skills-sh/` removes only dormant catalog cache

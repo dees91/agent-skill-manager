@@ -146,6 +146,68 @@ describe('Skill Manager desktop app', () => {
     expect(screen.queryByText('camera-helper')).not.toBeInTheDocument()
   })
 
+  it('filters to favorites, expands their available groups, and removes a favorite without touching Pending', async () => {
+    const user = userEvent.setup()
+    const snapshot = withAvailableSkills()
+    const camera = snapshot.rows.find((row) => row.name === 'camera-helper')!
+    camera.favorite = true
+    const system = skillRow('system-only')
+    system.favorite = false
+    system.claude!.state = 'RO'
+    system.claude!.effectiveState = 'RO'
+    system.claude!.readOnly = true
+    system.codex!.state = 'RO'
+    system.codex!.effectiveState = 'RO'
+    system.codex!.readOnly = true
+    snapshot.rows.push(system)
+    snapshot.pending = [{ skillName: 'alpha-skill', tool: 'claude', operation: 'disable' }] as never
+    const backend = mockBackend(snapshot)
+    backend.setSkillFavorite = vi.fn(async (skillName, favorite) => new gui.FavoriteMutationResult({
+      message: `${favorite ? 'Added' : 'Removed'} ${skillName} ${favorite ? 'to' : 'from'} favorites.`,
+      favorites: ['camera-helper', 'system-only'],
+      warning: '',
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Skills/ }))
+    await user.click(within(screen.getByRole('group', { name: 'Skill availability' })).getByRole('button', { name: /Favorites 2/ }))
+
+    expect(screen.getByText('alpha-skill')).toBeInTheDocument()
+    expect(screen.getByText('camera-helper')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /android\/skills.*symlink repo/ })).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(screen.getByRole('button', { name: 'Remove alpha-skill from favorites' }))
+    await waitFor(() => expect(backend.setSkillFavorite).toHaveBeenCalledWith('alpha-skill', false))
+    expect(screen.queryByText('alpha-skill')).not.toBeInTheDocument()
+    expect(screen.getByText('camera-helper')).toBeInTheDocument()
+    expect(screen.queryByText('system-only')).not.toBeInTheDocument()
+    expect(screen.getByText('1 pending change')).toBeInTheDocument()
+  })
+
+  it('updates a favorite from skill details and keeps favorite controls isolated on metadata errors', async () => {
+    const user = userEvent.setup()
+    const snapshot = fixtureSnapshot()
+    snapshot.favoritesWarning = 'decode favorites failed'
+    const backend = mockBackend(snapshot)
+    const { unmount } = render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Skills/ }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Favorites are unavailable')
+    expect(screen.getByRole('button', { name: 'Remove alpha-skill from favorites' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'claude alpha-skill: ON' })).toBeEnabled()
+
+    unmount()
+    snapshot.favoritesWarning = ''
+    const healthyBackend = mockBackend(snapshot)
+    render(<App backend={healthyBackend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Skills/ }))
+    await user.click(screen.getByText('alpha-skill'))
+    await user.click(screen.getByRole('button', { name: 'Remove from favorites' }))
+    await waitFor(() => expect(healthyBackend.setSkillFavorite).toHaveBeenCalledWith('alpha-skill', false))
+  })
+
   it('keeps a pending disable in Active now until Apply', async () => {
     const user = userEvent.setup()
     const backend = mockBackend(withAvailableSkills())
@@ -386,6 +448,23 @@ describe('Skill Manager desktop app', () => {
     expect(await screen.findByText('1 Skill Set contains skills installed by this source')).toBeInTheDocument()
     expect(screen.getByText('Review support: alpha-skill')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Uninstall source' })).toBeDisabled()
+  })
+
+  it('warns without pruning when uninstall affects favorites', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.previewUninstall = vi.fn(async (sourceId) => new gui.UninstallPreview({
+      sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0,
+      removesCheckout: true, preservesSource: false, skillSetImpactWarning: '', affectedSkillSets: [],
+      affectedFavorites: ['alpha-skill'], favoriteImpactWarning: '',
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Uninstall demo/skills' }))
+
+    expect(await screen.findByText('1 favorite skill is installed by this source')).toBeInTheDocument()
+    expect(screen.getByText('Favorites are remembered; removed skills may become unavailable until reinstalled.')).toBeInTheDocument()
   })
 
   /* Discover UI regression scenarios remain as implementation notes while the

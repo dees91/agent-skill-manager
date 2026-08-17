@@ -327,7 +327,8 @@ func TestSecureNarrowsStatePermissionsWithoutChangingRepositoryFiles(t *testing.
 		}
 	}
 	backupPath := filepath.Join(p.BackupDir, "state-20260508T123045.000000123Z.json")
-	for _, file := range []string{p.StateFile, p.SkillsSHCacheFile, backupPath, checkoutFile} {
+	favoritesBackupPath := filepath.Join(p.BackupDir, "favorites-20260508T123045.000000123Z.json")
+	for _, file := range []string{p.StateFile, p.SkillsSHCacheFile, backupPath, favoritesBackupPath, checkoutFile} {
 		if err := os.WriteFile(file, []byte("{}"), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -345,7 +346,7 @@ func TestSecureNarrowsStatePermissionsWithoutChangingRepositoryFiles(t *testing.
 			t.Fatalf("directory %s mode = %v err=%v", directory, info.Mode().Perm(), err)
 		}
 	}
-	for _, file := range []string{p.StateFile, p.SkillsSHCacheFile, backupPath} {
+	for _, file := range []string{p.StateFile, p.SkillsSHCacheFile, backupPath, favoritesBackupPath} {
 		info, err := os.Stat(file)
 		if err != nil || info.Mode().Perm() != 0o600 {
 			t.Fatalf("metadata %s mode = %v err=%v", file, info.Mode().Perm(), err)

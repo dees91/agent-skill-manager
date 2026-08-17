@@ -272,7 +272,8 @@ the CLI and TUI:
 - **Dashboard** summarizes managed visibility, groups, conflicts, and an
   approximate global skill-catalog context budget for each provider.
 - **Skills** keeps active skills expanded, groups inactive skills by source,
-  and stages reversible toggles for explicit review and Apply.
+  remembers favorite managed skills, and stages reversible toggles for explicit
+  review and Apply.
 - **Skill Sets** remembers task-oriented combinations, including an optional
   **When to use** note, and stages them for Claude, Codex, or both.
 - **Sources** installs exact Claude/Codex skill cells and safely updates or
@@ -295,6 +296,12 @@ tool scope and follows the same Pending/Apply boundary as ordinary toggles.
 Missing members remain in the recipe and reconnect when a skill with the same
 basename is installed again. The CLI and TUI do not manage Skill Sets yet.
 
+Favorites make large installed catalogs easier to revisit. Star any managed
+user skill from its row or details, use the **Favorites** availability filter,
+and keep favorites sorted ahead of other skills. A favorite survives ON/OFF
+changes and source removal; reinstalling the same basename reconnects it. The
+CLI, TUI, and Skill Advisor do not manage favorites yet.
+
 ## State And Safety Model
 
 Skill Manager keeps its state under `~/.skill-manager/`:
@@ -305,6 +312,7 @@ Skill Manager keeps its state under `~/.skill-manager/`:
   advisor-activations.json
   advisor.lock
   skill-sets.json
+  favorites.json
   backups/
   cache/skills-sh/catalog-v1.json
   disabled/claude/
@@ -321,6 +329,10 @@ Important invariants:
 - Skill Set metadata uses a separate atomic, owner-only file and bounded
   `skill-sets-*.json` backups, so malformed recipe data does not block normal
   skill scanning and toggles.
+- Favorites use a separate atomic, owner-only basename list and bounded
+  `favorites-*.json` backups. Malformed favorite metadata disables only the
+  favorite controls; normal scanning, Pending, Apply, and source actions remain
+  available.
 - Advisor metadata uses a separate atomic, owner-only file, a no-follow process
   lock, and bounded `advisor-activations-*.json` backups. It stores receipt,
   tool, skill, timestamp, and restore fingerprints but never task or prompt

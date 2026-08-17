@@ -35,3 +35,8 @@ untrusted discovery data and never executes it as a command. Advisor
 activations are limited to exact tool/skill cells, serialized through a
 no-follow owner-only lock, and restored only after path, entry-type, and
 symlink-target validation. Receipt metadata contains no prompt or task text.
+
+Desktop favorite mutations accept only a validated skill basename and boolean
+state. Favorite metadata is isolated from the ownership manifest, written with
+owner-only permissions and atomic replacement, and never supplies filesystem
+paths or prebuilt operations to the backend.

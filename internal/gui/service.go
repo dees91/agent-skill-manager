@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dees91/agent-skill-manager/internal/contextbudget"
+	"github.com/dees91/agent-skill-manager/internal/favorites"
 	"github.com/dees91/agent-skill-manager/internal/install"
 	"github.com/dees91/agent-skill-manager/internal/model"
 	"github.com/dees91/agent-skill-manager/internal/ops"
@@ -47,6 +48,9 @@ type Service struct {
 	skillSetStore    skillsets.Store
 	skillSetFile     skillsets.File
 	skillSetsWarning string
+	favoriteStore    favorites.Store
+	favoriteFile     favorites.File
+	favoritesWarning string
 	gitRunner        install.GitRunner
 	catalog          catalogClient
 	catalogSkills    map[string]skillssh.Skill
@@ -70,6 +74,7 @@ func New(p paths.Paths) *Service {
 		now:             time.Now,
 		store:           state.New(p),
 		skillSetStore:   skillsets.New(p),
+		favoriteStore:   favorites.New(p),
 		catalog:         skillssh.New(p.SkillsSHCacheFile),
 		catalogSkills:   map[string]skillssh.Skill{},
 		drafts:          map[string]installDraftState{},
@@ -413,6 +418,7 @@ func (s *Service) reloadLocked(includeReadOnly bool) error {
 	}
 	s.managedSources = projectManagedSources(manifest)
 	s.reloadSkillSetsLocked()
+	s.reloadFavoritesLocked()
 	s.contextResult = s.contextAnalyzer.Estimate(s.rows)
 	s.includeReadOnly = includeReadOnly
 	s.scannedAt = s.now().UTC()
@@ -457,7 +463,8 @@ func (s *Service) rowLocked(name string) (model.SkillRow, error) {
 func (s *Service) snapshotLocked() Snapshot {
 	rows := make([]SkillRow, 0, len(s.rows))
 	for _, row := range s.rows {
-		rows = append(rows, projectRow(row, s.pending))
+		favorite := favoriteEligible(row) && s.favoriteFile.Contains(row.Name)
+		rows = append(rows, projectRow(row, s.pending, favorite))
 	}
 	groups := projectGroups(scan.GroupSummaries(s.rows))
 	stats, conflicts := summarize(s.rows)
@@ -465,6 +472,7 @@ func (s *Service) snapshotLocked() Snapshot {
 		Rows:             rows,
 		SkillSets:        s.projectSkillSetsLocked(),
 		SkillSetsWarning: s.skillSetsWarning,
+		FavoritesWarning: s.favoritesWarning,
 		Groups:           groups,
 		Sources:          collectSources(s.rows),
 		ManagedSources:   append([]ManagedSource{}, s.managedSources...),

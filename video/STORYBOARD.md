@@ -1,6 +1,6 @@
 # Skill Manager README Demo Storyboard
 
-Revision: 2
+Revision: 3
 
 Format: 20 seconds, 1920x1080, 30 fps, silent, seamless dark loop
 
@@ -75,6 +75,9 @@ Format: static PNG, 1280x640, at most 1 MiB
 - Visual: synthetic Skills captures. The Codex cell for
   `dependency-review` moves from ON, to a staged pending disable, to stable OFF
   after Apply.
+- The refreshed workspace also shows favorite stars and the `Favorites` filter
+  as discoverable supporting controls; the scene remains focused on the
+  reversible toggle and does not imply that favoriting changes visibility.
 - Callout sequence: **Stage first.** → **Apply once.** → **Restore anytime.**
 - Motion: pointer movement and click rings explain the interaction; the app
   captures supply the exact product state.
