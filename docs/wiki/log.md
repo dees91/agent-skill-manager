@@ -302,3 +302,8 @@ intentionally excluded.
   Go vet runs, dependency notices, wiki links, and the ad-hoc ARM64 build.
 - Launch-checked the bundle with an isolated home and inspected the live native
   menu target to confirm the item label, exact version/description, and icon.
+
+## [2026-08-22] maintenance | Rewrite the public README for clarity
+
+- Reworked the user-facing prose and navigation while preserving the documented
+  commands, paths, product behavior, safety rules, and link targets.
