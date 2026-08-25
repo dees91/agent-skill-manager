@@ -178,7 +178,8 @@ from the tracked PNG under repository settings.
   responsive/accessibility validation, and local builds.
 - Phase 15: public first-party Skill Advisor, versioned path-free inventory,
   opaque receipt/reference-counted lease persistence, cross-process locking,
-  drift-safe explicit cleanup, and same-turn instruction loading.
+  drift-safe agent-owned normal-exit cleanup, unknown-receipt isolation, and
+  same-turn instruction loading.
 - Phase 16: private basename-based favorites, path-free desktop mutation,
   favorite-first active workspace filtering, corruption isolation, missing-name
   reconnection, uninstall impact, and responsive/accessibility coverage.

@@ -31,6 +31,10 @@
 - `advisor status [--tool claude|codex] [--json]` lists outstanding receipts
   without exposing filesystem paths.
 
+The first-party skill invokes exact-receipt cleanup itself before each normal
+final response. The CLI remains receipt-specific; it does not infer stale
+receipts or expose bulk/expiry cleanup.
+
 There is no CLI uninstall-all, force mode, separate `repo remove`, local-source
 listing command, or TUI source-management screen. `repos` intentionally lists
 Git repositories only.

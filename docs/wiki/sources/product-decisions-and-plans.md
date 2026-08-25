@@ -71,8 +71,9 @@ to seed the wiki. It summarizes their roles; it does not replace them.
     unavailable-member retention, and source-uninstall impact warnings.
 - [`planning/phase-15-skill-advisor-tasks.md`](../../../planning/phase-15-skill-advisor-tasks.md)
   - `documented`: first-party public skill distribution, versioned path-free
-    inventory, opaque receipt/reference-counted lease activation, explicit
-    cleanup, and same-turn instruction loading.
+    inventory, opaque receipt/reference-counted lease activation, agent-owned
+    normal-exit cleanup, unknown-receipt isolation, and same-turn instruction
+    loading.
 - [`planning/phase-16-skill-favorites-tasks.md`](../../../planning/phase-16-skill-favorites-tasks.md)
   - `documented`: private basename favorites, isolated persistence, path-free
     desktop mutation, favorite-first Skills filtering, missing-name
@@ -122,8 +123,10 @@ to seed the wiki. It summarizes their roles; it does not replace them.
 - Skill Advisor reports clearly relevant toggleable ON and OFF cells separately
   within one five-skill selection bound and loads instructions for both. It
   owns only cells it moves from OFF to ON or whose existing advisor lease it
-  shares; final cleanup restores OFF after exact drift validation, and
-  pre-existing ON cells remain outside advisor ownership.
+  shares. The current invocation cleans its exact receipt before every normal
+  final response; failure preserves and reports it, while unknown receipts are
+  never inferred stale. Final cleanup restores OFF after exact drift validation,
+  and pre-existing ON cells remain outside advisor ownership.
 - Favorites store only tool-agnostic basenames, never own skill visibility, and
   survive missing skills or source uninstall. Only managed user rows are
   eligible for the macOS star/filter surface.

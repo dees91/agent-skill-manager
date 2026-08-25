@@ -313,3 +313,16 @@ intentionally excluded.
 - Updated the first-party Skill Advisor to report relevant ON and OFF skills
   separately, retain a five-skill total bound, activate through the existing
   receipt API, and load instructions for every selected skill.
+
+## [2026-08-25] decision | Make advisor cleanup workflow-owned
+
+- Replaced user-delegated task-end cleanup with agent-owned cleanup of the
+  exact receipt before every normal final response.
+- Kept unknown receipts explicit-only and deferred expiry, bulk cleanup,
+  provider hooks, and crash recovery.
+
+## [2026-08-25] verification | Verify advisor-owned cleanup contract
+
+- Passed skill validation, the focused and full Go suites, Go vet, strict wiki
+  validation, and diff checks without changing the CLI or persisted receipt
+  schema.

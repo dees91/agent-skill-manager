@@ -201,8 +201,9 @@ The current source build includes the optional
 can inspect locally installed skills and report the smallest clearly relevant
 set in two groups: already active and needing activation. It selects at most
 five total for the current Claude Code or Codex host, activates the OFF skills,
-and returns an opaque receipt for exact cleanup when it owns or shares a lease.
-It needs no plugin or provider hook.
+and returns an opaque receipt when it owns or shares a lease. The agent cleans
+that exact receipt itself before its final response. It needs no plugin or
+provider hook.
 
 After reviewing the skill instructions, install it for both tools from the
 public repository:
@@ -233,9 +234,12 @@ skill-manager advisor cleanup --receipt <receipt-id> --json
 selected names as already active or needing activation before it calls the API.
 Skills that were already ON remain user-owned. Several receipts may share one
 advisor-enabled skill; the skill returns to OFF only when the final receipt is
-cleaned up. Cleanup is always explicit. The advisor reads every selected
-`SKILL.md`, including those already ON, so the current task does not depend on a
-provider catalog refresh.
+cleaned up. The advisor reads every selected `SKILL.md`, including those already
+ON, so the current task does not depend on a provider catalog refresh. Before a
+normal final response, the agent cleans the exact receipt created by its own
+invocation instead of asking the user to paste a command. If cleanup fails, it
+preserves and reports the receipt and recovery command. It never infers that an
+unknown receipt is stale.
 If a provider cannot see a newly installed advisor, start a new provider
 session.
 

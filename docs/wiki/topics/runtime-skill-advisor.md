@@ -38,7 +38,7 @@ selected tool + 1-5 ON/OFF skill names
   -> already_on, shared lease, or reversible enable action
   -> opaque receipt when at least one lease is owned or shared
   -> direct SKILL.md read and task execution
-  -> explicit cleanup by exact receipt
+  -> agent cleans its exact receipt before the normal final response
   -> final claim restores the original OFF state
 ```
 
@@ -48,8 +48,14 @@ selected tool + 1-5 ON/OFF skill names
 - Cleanup validates tool/name, original and disabled paths, entry type, and
   symlink target. Drift or restore conflict blocks mutation and preserves the
   receipt for inspection/retry.
-- Cleanup is explicit. There is no automatic task-end cleanup, age-based
-  expiry, or inference that another receipt is stale.
+- `user-confirmed`: a receipt returned to the current skill invocation is a
+  workflow-owned temporary resource. The agent cleans that exact receipt before
+  every successful, blocked, or abandoned normal exit while it retains control;
+  successful cleanup is not delegated to the user.
+- Cleanup failure preserves the receipt and is the only normal case where the
+  skill reports the recovery command. Receipts not returned to the current
+  invocation remain explicit-only; there is no age-based expiry or inference
+  that another receipt is stale.
 
 ## Persistence And Concurrency
 

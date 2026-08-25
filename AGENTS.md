@@ -839,9 +839,15 @@ semantics.
   and blocks cleanup rather than touching an unexpected entry.
 - The skill directly reads each selected `SKILL.md`, whether already ON or
   newly activated, before continuing, so same-turn use does not depend on
-  provider catalog-refresh timing. Cleanup
-  is explicit; do not add automatic expiry, task-end cleanup, hooks, plugins,
-  or a GUI surface in this iteration.
+  provider catalog-refresh timing.
+- A receipt returned to the first-party skill is a temporary resource owned by
+  that invocation. The agent must clean that exact receipt before every normal
+  final response, including successful, blocked, and abandoned task exits while
+  it retains control. Successful cleanup is not delegated to the user. Cleanup
+  failure preserves and reports the receipt plus the exact recovery command.
+- Never automatically clean a receipt not returned by the current invocation
+  or infer staleness from age. Do not add automatic expiry, hooks, plugins, or
+  a GUI cleanup surface in this iteration.
 
 ### Skill Favorites (Iteration 16)
 

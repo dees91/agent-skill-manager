@@ -1,6 +1,6 @@
 ---
 name: skill-advisor
-description: Inspect Skill Manager's locally installed Claude Code or Codex skills before non-trivial work, report the smallest clearly relevant set already active, activate relevant inactive skills with receipt-scoped cleanup, and load all selected instructions. Use at the start of implementation, debugging, research, media, document, or other multi-step tasks where a specialized installed skill could materially improve the result; also use when the user asks which skills to enable, invokes $skill-advisor, requests advisor status, or asks to clean up an advisor receipt. Do not use for trivial conversation or one-step factual answers.
+description: Inspect Skill Manager's locally installed Claude Code or Codex skills before non-trivial work, report the smallest clearly relevant set already active, temporarily activate relevant inactive skills, load all selected instructions, and clean up any receipt it creates before finishing. Use at the start of implementation, debugging, research, media, document, or other multi-step tasks where a specialized installed skill could materially improve the result; also use when the user asks which skills to enable, invokes $skill-advisor, requests advisor status, or asks to clean up an advisor receipt. Do not use for trivial conversation or one-step factual answers.
 ---
 
 # Skill Advisor
@@ -57,14 +57,19 @@ After the command succeeds:
    - Codex: `~/.agents/skills/<name>/SKILL.md`
 3. Follow each applicable workflow while preserving higher-priority user, repository, and safety instructions.
 
-If activation fails but the structured error contains a `receiptId`, retain and report that receipt because it may own a completed partial activation. Inspect it with `skill-manager advisor status --json` before retrying.
+If activation fails but the structured error contains a `receiptId`, retain it because it may own a completed partial activation. Attempt cleanup of that exact receipt before retrying activation or responding.
 
-## Clean up explicitly
+## Clean up before finishing
 
-Do not disable skills automatically when the task ends. Report the receipt and this exact cleanup command:
+Treat every `receiptId` returned by the current invocation as a temporary resource owned by this workflow.
 
-```bash
-skill-manager advisor cleanup --receipt <receipt-id> --json
-```
+1. After the task work and verification are complete, run cleanup for the exact receipt before sending the final response:
 
-Run cleanup only when the user requests it or explicitly invokes the cleanup workflow. Clean exactly the requested receipt; never infer that another receipt is stale. If the receipt is unknown, list outstanding receipts with `skill-manager advisor status --json` and ask the user to identify the intended one.
+   ```bash
+   skill-manager advisor cleanup --receipt <receipt-id> --json
+   ```
+
+2. Attempt this cleanup on every normal exit path, including success, a blocked result, or an abandoned task while control remains. Do not ask the user for confirmation: releasing the exact receipt is part of the temporary activation the advisor already owns.
+3. After successful cleanup, do not ask the user to run a command or paste the cleanup command into the final response.
+4. If cleanup fails, do not loop. Retain the receipt, report the error, and provide the cleanup command above with the actual receipt ID for manual recovery.
+5. Never clean a receipt not returned by the current invocation unless the user explicitly requests that exact receipt. Do not infer from age or status that another receipt is stale. If the requested receipt is unknown, list outstanding receipts with `skill-manager advisor status --json` and ask the user to identify it.

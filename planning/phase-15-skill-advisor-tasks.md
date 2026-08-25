@@ -17,8 +17,11 @@
   surface; do not embed it in the binary or depend on a private skill repo.
 - Support Claude Code and Codex through explicit tool arguments and opaque
   activation receipts instead of provider-specific session IDs.
-- Keep invocation heuristic and cleanup explicit. Do not add a plugin, hook,
-  GUI surface, automatic expiry, or automatic task-end cleanup.
+- Keep invocation heuristic model-driven. Treat receipts returned to the
+  current skill invocation as workflow-owned temporary resources and clean
+  them before every normal final response without delegating the command to the
+  user. Keep unknown-receipt cleanup explicit; do not add a plugin, hook, GUI
+  surface, or automatic expiry.
 - Report clearly relevant skills in separate already-active and
   needs-activation groups, while retaining the five-skill total selection
   bound and activating only through the existing receipt API.
@@ -31,6 +34,7 @@
 | P15-T02 | Receipt/lease persistence and reversible activation | done | P15-T01 |
 | P15-T03 | Public first-party skill and installation workflow | done | P15-T02 |
 | P15-T04 | Documentation, verification, local install, and commit | done | P15-T03 |
+| P15-T05 | Agent-owned normal-exit cleanup | done | P15-T03 |
 
 ## Task Definitions
 
@@ -71,3 +75,15 @@
   wiki validation, `make dev`, and isolated plus live installation checks.
 - Review the complete diff for correctness, readability, architecture,
   security, performance, secrets, and public-path hygiene before committing.
+
+### P15-T05: Agent-Owned Normal-Exit Cleanup
+
+- Update the first-party skill so every receipt returned to its current
+  invocation is cleaned before successful, blocked, or abandoned normal exits.
+- Do not request confirmation for exact workflow-owned cleanup or paste the
+  cleanup command after success. Preserve and report the receipt plus command
+  only when cleanup fails.
+- Never infer that an unknown receipt is stale. Keep crash recovery, bulk
+  cleanup, expiry, provider hooks, and GUI cleanup outside this task.
+- Synchronize the authoritative documentation and wiki, then validate the
+  skill contract and repository tests.

@@ -55,7 +55,8 @@ page is added, removed, renamed, or materially repurposed.
     projection, missing-name reconnection, and uninstall impact.
 - [topics/runtime-skill-advisor.md](topics/runtime-skill-advisor.md)
   - first-party skill distribution, path-free inventory API, receipt/lease
-  activation, same-turn instruction loading, explicit cleanup, and concurrency.
+    activation, same-turn instruction loading, agent-owned normal-exit cleanup,
+    and concurrency.
 - [topics/state-safety-and-recovery.md](topics/state-safety-and-recovery.md)
   - manifest shape, backups, atomic writes, mutation boundaries, and recovery
     limits.

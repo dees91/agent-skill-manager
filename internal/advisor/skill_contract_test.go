@@ -27,6 +27,10 @@ func TestFirstPartySkillContract(t *testing.T) {
 		"state: \"off\"",
 		"skill-manager advisor activate",
 		"skill-manager advisor cleanup",
+		"Clean up before finishing",
+		"before sending the final response",
+		"every normal exit path",
+		"not returned by the current invocation",
 		"apiVersion",
 	}
 	for _, required := range requiredInstructions {
@@ -36,6 +40,11 @@ func TestFirstPartySkillContract(t *testing.T) {
 	}
 	if strings.Contains(text, "/Users/") || strings.Contains(text, "TODO") {
 		t.Fatal("SKILL.md contains a private path or placeholder")
+	}
+	for _, superseded := range []string{"Do not disable skills automatically when the task ends", "Run cleanup only when the user requests it"} {
+		if strings.Contains(text, superseded) {
+			t.Fatalf("SKILL.md retains superseded cleanup guidance %q", superseded)
+		}
 	}
 
 	metadataContents, err := os.ReadFile(filepath.Join(skillDir, "agents", "openai.yaml"))

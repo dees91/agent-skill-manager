@@ -1,4 +1,4 @@
 interface:
   display_name: "Skill Advisor"
-  short_description: "Report and activate useful local skills"
-  default_prompt: "Use $skill-advisor to report useful skills already active and activate the smallest useful inactive set for this task."
+  short_description: "Temporarily activate useful local skills"
+  default_prompt: "Use $skill-advisor to report useful skills already active, temporarily activate the smallest useful inactive set, and clean up its receipt before finishing."

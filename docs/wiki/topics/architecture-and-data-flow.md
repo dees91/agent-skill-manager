@@ -62,12 +62,12 @@ or local-source metadata; it does not replace filesystem observation.
 
 ```text
 first-party skill reads list --json
-  -> model selects <=5 relevant OFF cells for current host
+  -> model selects <=5 relevant ON/OFF cells for current host
   -> advisor activate fully preflights names and receipt state under lock
   -> receipt/lease claims are atomically persisted
   -> ops enables each OFF cell through existing state/backup semantics
-  -> skill reads the activated SKILL.md files directly
-  -> explicit cleanup validates restore fingerprints
+  -> skill reads every selected SKILL.md directly
+  -> before a normal final response, agent-owned cleanup validates fingerprints
   -> shared claims are released; final claims are disabled through ops
 ```
 
@@ -76,6 +76,10 @@ enable makes interrupted activations discoverable; cleanup can safely finalize
 a claim whose cell is already back OFF. The advisor lock serializes advisor
 processes, while `ops` still revalidates the live filesystem immediately before
 every move.
+
+Only receipts returned to the current skill invocation are automatically
+cleaned. Pre-existing receipts from status remain untouched unless the user
+explicitly identifies one, preserving concurrent-session lease safety.
 
 ## Desktop Session Flow
 
