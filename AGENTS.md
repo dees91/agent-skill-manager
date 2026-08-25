@@ -822,6 +822,11 @@ semantics.
 - One activation accepts 1-5 unique skill names for exactly one tool and fully
   preflights the requested cells. The binary never selects skills itself; the
   first-party skill chooses the smallest clearly relevant set.
+- The first-party skill uses bounded metadata queries that retain both ON and
+  OFF cells for the current host. It reports the selected already-active and
+  needs-activation skills separately, selects at most five across both groups,
+  and passes all selected toggleable cells through the activation API so
+  baseline ON cells remain unowned while existing leases can be shared.
 - Persist opaque receipts and reference-counted leases separately in
   `~/.skill-manager/advisor-activations.json`. Keep `state.json` at version 2,
   serialize advisor access through `~/.skill-manager/advisor.lock`, use atomic
@@ -832,8 +837,9 @@ semantics.
 - Cleanup must validate the exact tool/name, active/disabled paths, entry type,
   and symlink target before mutation. Drift or conflict preserves the receipt
   and blocks cleanup rather than touching an unexpected entry.
-- The skill directly reads each newly activated `SKILL.md` before continuing,
-  so same-turn use does not depend on provider catalog-refresh timing. Cleanup
+- The skill directly reads each selected `SKILL.md`, whether already ON or
+  newly activated, before continuing, so same-turn use does not depend on
+  provider catalog-refresh timing. Cleanup
   is explicit; do not add automatic expiry, task-end cleanup, hooks, plugins,
   or a GUI surface in this iteration.
 

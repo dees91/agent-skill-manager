@@ -119,8 +119,10 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   tool scope, and all state changes remain in the shared Pending/Apply model.
   Missing members stay recorded, and source uninstall warns without rewriting
   recipes.
-- Skill Advisor owns only cells it moves from OFF to ON. Opaque receipts may
-  share leases, final cleanup restores OFF after exact drift validation, and
+- Skill Advisor reports clearly relevant toggleable ON and OFF cells separately
+  within one five-skill selection bound and loads instructions for both. It
+  owns only cells it moves from OFF to ON or whose existing advisor lease it
+  shares; final cleanup restores OFF after exact drift validation, and
   pre-existing ON cells remain outside advisor ownership.
 - Favorites store only tool-agnostic basenames, never own skill visibility, and
   survive missing skills or source uninstall. Only managed user rows are

@@ -307,3 +307,9 @@ intentionally excluded.
 
 - Reworked the user-facing prose and navigation while preserving the documented
   commands, paths, product behavior, safety rules, and link targets.
+
+## [2026-08-25] implementation | Report already-active advisor selections
+
+- Updated the first-party Skill Advisor to report relevant ON and OFF skills
+  separately, retain a five-skill total bound, activate through the existing
+  receipt API, and load instructions for every selected skill.

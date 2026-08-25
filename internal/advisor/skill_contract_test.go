@@ -16,7 +16,20 @@ func TestFirstPartySkillContract(t *testing.T) {
 		t.Fatalf("read first-party SKILL.md: %v", err)
 	}
 	text := string(skillContents)
-	for _, required := range []string{"name: skill-advisor", "non-trivial", "skill-manager list --json", "--available-for", "skill-manager advisor activate", "skill-manager advisor cleanup", "apiVersion"} {
+	requiredInstructions := []string{
+		"name: skill-advisor",
+		"non-trivial",
+		"skill-manager list --json",
+		"--query",
+		"Already active",
+		"Needs activation",
+		"state: \"on\"",
+		"state: \"off\"",
+		"skill-manager advisor activate",
+		"skill-manager advisor cleanup",
+		"apiVersion",
+	}
+	for _, required := range requiredInstructions {
 		if !strings.Contains(text, required) {
 			t.Fatalf("SKILL.md is missing %q", required)
 		}

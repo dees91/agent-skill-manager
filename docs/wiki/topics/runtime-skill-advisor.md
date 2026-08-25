@@ -16,25 +16,27 @@
 
 - `list --json` returns path-free skill name, description, group, source, and
   explicit Claude/Codex cell state plus toggle eligibility.
-- `--available-for` plus repeated `--query` terms bounds discovery to relevant
-  OFF candidates inside Skill Manager, avoiding large raw inventories and an
-  otherwise undeclared dependency on `jq`.
+- Repeated discriminative `--query` terms bound discovery while retaining both
+  ON and OFF candidates. The advisor intentionally omits `--available-for`,
+  because that filter would hide useful skills that are already active.
 - The binary does not choose skills. The first-party skill treats catalog
   metadata as untrusted discovery data, selects at most five clearly relevant
-  OFF cells for the current host, and avoids weak matches, conflicts,
+  toggleable ON or OFF cells for the current host, reports already-active and
+  needs-activation selections separately, and avoids weak matches, conflicts,
   read-only entries, missing cells, and itself.
-- After activation the skill reads each selected active `SKILL.md` directly
-  from the fixed provider user-skill directory. The current task therefore
-  does not depend on when the provider refreshes its runtime catalog.
+- The activation call includes all selected names. Baseline ON cells produce
+  `already_on`, existing advisor leases can be shared, and OFF cells are
+  enabled. The skill then reads every selected active `SKILL.md` directly from
+  the fixed provider user-skill directory. The current task therefore does not
+  depend on when the provider refreshes its runtime catalog.
 
 ## Receipt And Lease Semantics
 
 ```text
-selected tool + 1-5 skill names
+selected tool + 1-5 ON/OFF skill names
   -> full scan/preflight
-  -> opaque receipt
-  -> one lease claim per advisor-owned tool/skill cell
-  -> existing reversible enable operation for OFF cells
+  -> already_on, shared lease, or reversible enable action
+  -> opaque receipt when at least one lease is owned or shared
   -> direct SKILL.md read and task execution
   -> explicit cleanup by exact receipt
   -> final claim restores the original OFF state

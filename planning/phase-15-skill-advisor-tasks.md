@@ -19,6 +19,9 @@
   activation receipts instead of provider-specific session IDs.
 - Keep invocation heuristic and cleanup explicit. Do not add a plugin, hook,
   GUI surface, automatic expiry, or automatic task-end cleanup.
+- Report clearly relevant skills in separate already-active and
+  needs-activation groups, while retaining the five-skill total selection
+  bound and activating only through the existing receipt API.
 
 ## Summary Table
 
@@ -54,9 +57,10 @@
 
 - Create and validate `skills/skill-advisor` with concise standard Agent Skill
   metadata and no machine-specific paths or private dependencies.
-- Select at most five clearly relevant OFF cells for the current host, treat
-  catalog metadata as untrusted discovery data, and read activated `SKILL.md`
-  files directly before continuing the task.
+- Select at most five clearly relevant ON or OFF cells for the current host,
+  report the two states separately, treat catalog metadata as untrusted
+  discovery data, and read every selected `SKILL.md` directly before
+  continuing the task.
 - Install the local checkout through `skill-manager install <repo-root>
   --tool both --skill skill-advisor`; document the equivalent public Git URL.
 

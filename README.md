@@ -198,9 +198,11 @@ from a source at a time.
 
 The current source build includes the optional
 [`skill-advisor`](skills/skill-advisor/SKILL.md). Before a non-trivial task, it
-can inspect locally installed but inactive skills, activate up to five that
-clearly fit the task for the current Claude Code or Codex host, and return an
-opaque receipt for exact cleanup. It needs no plugin or provider hook.
+can inspect locally installed skills and report the smallest clearly relevant
+set in two groups: already active and needing activation. It selects at most
+five total for the current Claude Code or Codex host, activates the OFF skills,
+and returns an opaque receipt for exact cleanup when it owns or shares a lease.
+It needs no plugin or provider hook.
 
 After reviewing the skill instructions, install it for both tools from the
 public repository:
@@ -221,24 +223,28 @@ The skill uses a versioned, path-free inventory and receipt API:
 
 ```bash
 skill-manager list --json \
-  --available-for codex --query video --query remotion
+  --query video --query remotion
 skill-manager advisor activate --tool codex --skill example-skill --json
 skill-manager advisor status --json
 skill-manager advisor cleanup --receipt <receipt-id> --json
 ```
 
-`activate` accepts one tool and 1-5 unique skill names. Skills that were already
-ON remain user-owned. Several receipts may share one advisor-enabled skill; the
-skill returns to OFF only when the final receipt is cleaned up. Cleanup is
-always explicit. The advisor reads each selected `SKILL.md` immediately after
-activation, so the current task does not depend on a provider catalog refresh.
+`activate` accepts one tool and 1-5 unique skill names. The advisor reports the
+selected names as already active or needing activation before it calls the API.
+Skills that were already ON remain user-owned. Several receipts may share one
+advisor-enabled skill; the skill returns to OFF only when the final receipt is
+cleaned up. Cleanup is always explicit. The advisor reads every selected
+`SKILL.md`, including those already ON, so the current task does not depend on a
+provider catalog refresh.
 If a provider cannot see a newly installed advisor, start a new provider
 session.
 
-`--available-for` limits the JSON inventory to toggleable OFF cells for one
-tool. Repeated `--query` values are case-insensitive OR matches across skill
-name, description, group, and source. This keeps large-catalog advisor prompts
-bounded without requiring `jq` or another JSON processor.
+Repeated `--query` values are case-insensitive OR matches across skill name,
+description, group, and source. The advisor intentionally omits
+`--available-for`, because that option limits JSON inventory to toggleable OFF
+cells and would hide useful skills that are already ON. Discriminative queries
+still keep large-catalog advisor prompts bounded without requiring `jq` or
+another JSON processor.
 
 The skill source and CLI API can change at different times on `main`. Before it
 mutates anything, the skill checks for `apiVersion: 1` and fails with an upgrade
