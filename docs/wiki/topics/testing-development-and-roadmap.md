@@ -82,9 +82,12 @@ from the tracked PNG under repository settings.
   retention/reconnection, overlapping projections, scoped preview/staging,
   Pending preservation, and source-uninstall impact.
 - Advisor suites use temporary homes to cover path-free JSON, argument/version
-  boundaries, baseline-ON preservation, receipt/lease sharing, concurrent
-  activation locking, strict dry-run, exact cleanup, manual early disable, and
-  symlink drift rejection. A repository contract test covers the public skill.
+  and capability boundaries, deterministic field-weighted BM25F/fuzzy ranking,
+  phrase/plural/typo behavior, stable ties, eligibility and result limits,
+  legacy substring-list compatibility, baseline-ON preservation, receipt/lease
+  sharing, concurrent activation locking, strict dry-run, exact cleanup, manual
+  early disable, and symlink drift rejection. A repository contract test covers
+  the public skill.
 - Favorite suites use temporary homes to cover version/shape validation,
   owner-only atomic storage, bounded backups, managed/conflict eligibility,
   read-only rejection, corruption isolation, basename reconnection, Pending
@@ -185,6 +188,9 @@ from the tracked PNG under repository settings.
   reconnection, uninstall impact, and responsive/accessibility coverage.
 - Phase 17: native macOS About version visibility backed by validated embedded
   Wails build metadata and the existing application icon.
+- Phase 18: additive deterministic local `advisor search` ranking with weighted
+  BM25F, phrase bonuses, bounded fuzzy matching, path-free capability-gated
+  results, legacy list compatibility, and first-party skill migration.
 
 All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.

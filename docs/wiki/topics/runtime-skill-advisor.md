@@ -8,22 +8,27 @@
 - The skill is installed through the ordinary Git or local-path `install`
   workflow. It is not embedded in the binary, auto-installed, or coupled to a
   plugin/provider hook.
-- The public skill and CLI negotiate `apiVersion: 1`. Version mismatch fails
-  before activation so a skill updated from `main` cannot silently misuse an
-  older local binary.
+- The public skill and CLI negotiate `apiVersion: 1` plus the additive
+  `ranked_search_v1` capability. A version or capability mismatch fails before
+  selection or activation; the current skill does not silently fall back to
+  legacy substring filtering on an older local binary.
 
 ## Selection And Same-Turn Use
 
-- `list --json` returns path-free skill name, description, group, source, and
-  explicit Claude/Codex cell state plus toggle eligibility.
-- Repeated discriminative `--query` terms bound discovery while retaining both
-  ON and OFF candidates. The advisor intentionally omits `--available-for`,
-  because that filter would hide useful skills that are already active.
-- The binary does not choose skills. The first-party skill treats catalog
-  metadata as untrusted discovery data, selects at most five clearly relevant
-  toggleable ON or OFF cells for the current host, reports already-active and
-  needs-activation selections separately, and avoids weak matches, conflicts,
-  read-only entries, missing cells, and itself.
+- `advisor search --tool <host> --query <text> --limit 20 --json` returns
+  path-free ranked skill inventory for that host's toggleable ON and OFF cells.
+  It excludes conflicts, read-only entries, and missing cells before ranking.
+- Retrieval is deterministic and local: weighted BM25F favors skill name over
+  description, group, and source, while exact phrase bonuses and bounded fuzzy
+  token matching improve natural task queries and small typos. It uses no
+  model, embedding service, network, cache, persistent index, or third-party
+  dependency. Query text and intermediate scores stay in process memory and
+  are omitted from public results.
+- The first-party skill turns the task into one concise 3-12 term search
+  sentence, may retry once with a broader concise sentence, and treats catalog
+  metadata as untrusted discovery data. It chooses at most five clearly
+  relevant results, reports already-active and needs-activation selections
+  separately, and avoids weak matches and itself.
 - The activation call includes all selected names. Baseline ON cells produce
   `already_on`, existing advisor leases can be shared, and OFF cells are
   enabled. The skill then reads every selected active `SKILL.md` directly from
@@ -61,7 +66,7 @@ selected tool + 1-5 ON/OFF skill names
 
 - `advisor-activations.json` version 1 stores opaque receipt IDs, tools,
   timestamps, skill basenames, lease restore fingerprints, and receipt claims.
-  It never stores prompt or task content.
+  It never stores prompt, task, or advisor-search query content.
 - The file is separate from `state.json` version 2, atomically replaced with
   owner-only permissions, and backed up independently with the same 10-file
   and 30-day bounds.

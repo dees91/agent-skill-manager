@@ -82,6 +82,11 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   - `documented`: native macOS About version visibility, embedded build
     metadata as the single display source, existing app icon reuse, and no
     frontend or terminal-interface changes.
+- [`planning/phase-18-advisor-search-tasks.md`](../../../planning/phase-18-advisor-search-tasks.md)
+  - `documented`: additive deterministic local ranked advisor retrieval,
+    weighted BM25F and bounded fuzzy matching, capability negotiation,
+    path-free results, legacy list compatibility, and first-party skill
+    migration.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.
@@ -122,6 +127,10 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   recipes.
 - Skill Advisor reports clearly relevant toggleable ON and OFF cells separately
   within one five-skill selection bound and loads instructions for both. It
+  discovers candidates through capability-gated local ranked search and does
+  not fall back to legacy substring filtering. Ranking is read-only,
+  deterministic, bounded, uncached, and does not expose or persist query text,
+  scores, paths, or reasons. It
   owns only cells it moves from OFF to ON or whose existing advisor lease it
   shares. The current invocation cleans its exact receipt before every normal
   final response; failure preserves and reports it, while unknown receipts are

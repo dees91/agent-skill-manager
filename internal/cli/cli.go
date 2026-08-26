@@ -1026,6 +1026,8 @@ Commands:
                                Disable an active skill
   advisor activate --tool <tool> --skill <name>... [--dry-run] [--json]
                                Activate a receipt-scoped skill set
+  advisor search --tool <tool> --query <text> [--limit <n>] [--json]
+                               Rank tool-specific ON/OFF skill metadata
   advisor cleanup --receipt <id> [--dry-run] [--json]
                                Release one exact advisor receipt
   advisor status [--tool <tool>] [--json]

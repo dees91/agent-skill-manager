@@ -17,6 +17,11 @@ const (
 	MaxSkillsPerActivation = 5
 )
 
+// Capabilities returns the stable additive features supported by this CLI.
+func Capabilities() []string {
+	return []string{CapabilityRankedSearch}
+}
+
 // Action describes one activation or cleanup decision.
 type Action struct {
 	Skill  string `json:"skill"`
@@ -51,8 +56,9 @@ type ReceiptStatus struct {
 
 // StatusResult is returned by advisor status.
 type StatusResult struct {
-	APIVersion int             `json:"apiVersion"`
-	Receipts   []ReceiptStatus `json:"receipts"`
+	APIVersion   int             `json:"apiVersion"`
+	Capabilities []string        `json:"capabilities"`
+	Receipts     []ReceiptStatus `json:"receipts"`
 }
 
 type file struct {

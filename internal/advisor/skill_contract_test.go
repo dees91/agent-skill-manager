@@ -19,8 +19,11 @@ func TestFirstPartySkillContract(t *testing.T) {
 	requiredInstructions := []string{
 		"name: skill-advisor",
 		"non-trivial",
-		"skill-manager list --json",
+		"skill-manager advisor search",
 		"--query",
+		"--limit 20",
+		"ranked_search_v1",
+		"Do not fall back",
 		"Already active",
 		"Needs activation",
 		"state: \"on\"",
@@ -44,6 +47,11 @@ func TestFirstPartySkillContract(t *testing.T) {
 	for _, superseded := range []string{"Do not disable skills automatically when the task ends", "Run cleanup only when the user requests it"} {
 		if strings.Contains(text, superseded) {
 			t.Fatalf("SKILL.md retains superseded cleanup guidance %q", superseded)
+		}
+	}
+	for _, superseded := range []string{"skill-manager list --json \\", "Repeat `--query`", "Omitting `--available-for`"} {
+		if strings.Contains(text, superseded) {
+			t.Fatalf("SKILL.md retains superseded search guidance %q", superseded)
 		}
 	}
 

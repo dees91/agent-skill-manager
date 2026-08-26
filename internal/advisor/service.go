@@ -332,7 +332,7 @@ func (s *Service) planCleanup(contents file, currentReceipt receipt) ([]Action, 
 
 // Status lists outstanding receipts without exposing filesystem paths.
 func (s *Service) Status(tool *model.Tool) (result StatusResult, err error) {
-	result = StatusResult{APIVersion: APIVersion, Receipts: []ReceiptStatus{}}
+	result = StatusResult{APIVersion: APIVersion, Capabilities: Capabilities(), Receipts: []ReceiptStatus{}}
 	if tool != nil {
 		if _, ok := model.ParseTool(tool.String()); !ok {
 			return result, fmt.Errorf("unsupported tool %q", *tool)

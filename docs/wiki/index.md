@@ -54,9 +54,9 @@ page is added, removed, renamed, or materially repurposed.
   - tool-agnostic basename bookmarks, private persistence, active-first GUI
     projection, missing-name reconnection, and uninstall impact.
 - [topics/runtime-skill-advisor.md](topics/runtime-skill-advisor.md)
-  - first-party skill distribution, path-free inventory API, receipt/lease
-    activation, same-turn instruction loading, agent-owned normal-exit cleanup,
-    and concurrency.
+  - first-party skill distribution, local ranked retrieval, capability-gated
+    path-free API, receipt/lease activation, same-turn instruction loading,
+    agent-owned normal-exit cleanup, and concurrency.
 - [topics/state-safety-and-recovery.md](topics/state-safety-and-recovery.md)
   - manifest shape, backups, atomic writes, mutation boundaries, and recovery
     limits.
@@ -68,7 +68,7 @@ page is added, removed, renamed, or materially repurposed.
 
 - [sources/product-decisions-and-plans.md](sources/product-decisions-and-plans.md)
   - digest and routing map for `AGENTS.md`, `README.md`, `DESIGN.md`, and the
-    seventeen iteration plans.
+    eighteen iteration plans.
 - [sources/implementation-snapshot-2026-08-11.md](sources/implementation-snapshot-2026-08-11.md)
   - dated package-level source inspection and verification status used to seed
     the initial topic pages.

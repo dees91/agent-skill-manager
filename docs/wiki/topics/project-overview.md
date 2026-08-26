@@ -26,8 +26,9 @@
   task-oriented Skill Sets, a public first-party Skill Advisor with tool-neutral
   receipt/lease activation, and private managed-skill favorites with a
   favorite-first macOS Skills filter. Current source adds Phase 17's native
-  build-version About dialog; that post-release change is not part of the
-  published `v0.5.0` artifact.
+  build-version About dialog and Phase 18's deterministic local ranked Skill
+  Advisor retrieval; those post-release changes are not part of the published
+  `v0.5.0` artifact.
 
 ## Product Shape
 
@@ -35,7 +36,8 @@
   enable/disable changes.
 - Minimal CLI for listing/status, direct enable/disable, group/repository
   summaries, managed Git repository lifecycle, local path install/uninstall,
-  path-free JSON inventory, and receipt-scoped advisor activation/cleanup.
+  path-free JSON inventory, ranked advisor search, and receipt-scoped advisor
+  activation/cleanup.
 - Dark-only Wails desktop with Dashboard, Skills, saved Skill Sets, and
   managed-only Sources over the same scan, staging,
   install/update/uninstall, and state boundaries as the terminal interfaces.

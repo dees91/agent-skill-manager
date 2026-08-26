@@ -893,6 +893,35 @@ semantics.
 - Keep Wails bindings, provider APIs, application state, CLI/TUI behavior, and
   release/install workflows unchanged.
 
+### Ranked Skill Advisor Search (Iteration 18)
+
+Iteration 18 replaces the first-party Skill Advisor's substring candidate
+lookup with an additive CLI-only ranked retrieval surface. Existing `list
+--json --query` behavior remains unchanged.
+
+- Add `skill-manager advisor search --tool claude|codex --query <text>
+  [--limit <n>] [--json]`. Require exactly one tool and one bounded query;
+  default the result limit to 20 and accept values from 1 through 50.
+- Search only toggleable `ON` and `OFF` cells for the requested tool. Continue
+  to return path-free name, description, group, source, and explicit
+  Claude/Codex state metadata in ranked order.
+- Rank locally and deterministically with weighted BM25F over name,
+  description, group, and source plus bounded token-level fuzzy matching and
+  phrase bonuses. Do not add a model, network call, persisted index, cache, or
+  third-party search dependency.
+- Keep numeric scores, match explanations, filesystem paths, and raw query text
+  out of the public response. Break equal internal scores by skill name.
+- Keep advisor `apiVersion: 1` and advertise the additive
+  `ranked_search_v1` capability through `advisor status --json`. A new
+  first-party skill requires that capability and does not silently fall back to
+  substring filtering when used with an older CLI.
+- The first-party skill derives one concise search sentence from the task,
+  retries once with broader terms when needed, and retains the existing
+  metadata distrust, five-skill selection bound, activation, instruction-load,
+  and exact-receipt cleanup rules.
+- Keep TUI, desktop, toggle state, receipt persistence, install/source
+  ownership, and existing human/list interfaces unchanged.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -967,6 +996,9 @@ Backend tests should cover:
 - Path-free JSON inventory, advisor argument/version contracts, receipt/lease
   reference counting, concurrency locking, dry-run, baseline-ON preservation,
   drift-safe cleanup, and first-party skill validation
+- Ranked advisor search tokenization, field weighting, phrase/fuzzy behavior,
+  deterministic ordering, bounded input/output, capability negotiation,
+  path-free results, and regression coverage for legacy list-query semantics
 - Favorites persistence, owner-only atomic writes, corruption isolation,
   managed-row eligibility, basename reconnection, GUI filter/sort behavior,
   Pending independence, and non-blocking uninstall impact
@@ -1014,6 +1046,8 @@ Keep [planning/phase-15-skill-advisor-tasks.md](./planning/phase-15-skill-adviso
 Keep [planning/phase-16-skill-favorites-tasks.md](./planning/phase-16-skill-favorites-tasks.md) as the source of truth for Iteration 16 skill favorites task status.
 
 Keep [planning/phase-17-desktop-about-tasks.md](./planning/phase-17-desktop-about-tasks.md) as the source of truth for Iteration 17 native desktop About task status.
+
+Keep [planning/phase-18-advisor-search-tasks.md](./planning/phase-18-advisor-search-tasks.md) as the source of truth for Iteration 18 ranked Skill Advisor search task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

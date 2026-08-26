@@ -151,6 +151,7 @@ skill-manager version
 skill-manager list
 skill-manager list --json
 skill-manager list --json --available-for codex --query video --query remotion
+skill-manager advisor search --tool codex --query "video remotion rendering"
 skill-manager status
 skill-manager groups
 skill-manager repos
@@ -223,12 +224,20 @@ skill-manager install . --tool both --skill skill-advisor
 The skill uses a versioned, path-free inventory and receipt API:
 
 ```bash
-skill-manager list --json \
-  --query video --query remotion
+skill-manager advisor status --tool codex --json
+skill-manager advisor search --tool codex \
+  --query "video remotion ffmpeg animation rendering" --limit 20 --json
 skill-manager advisor activate --tool codex --skill example-skill --json
-skill-manager advisor status --json
 skill-manager advisor cleanup --receipt <receipt-id> --json
 ```
+
+`advisor search` ranks only the selected host's toggleable ON and OFF skills.
+It uses deterministic local weighted BM25F across name, description, group, and
+source metadata, with exact-phrase bonuses and bounded fuzzy token matching.
+The default result limit is 20 and the accepted range is 1-50. Search does not
+use a model, embeddings, an API, a cache, or a persistent index. The query stays
+in process memory; JSON results omit it along with filesystem paths, matching
+reasons, and numeric scores.
 
 `activate` accepts one tool and 1-5 unique skill names. The advisor reports the
 selected names as already active or needing activation before it calls the API.
@@ -243,16 +252,14 @@ unknown receipt is stale.
 If a provider cannot see a newly installed advisor, start a new provider
 session.
 
-Repeated `--query` values are case-insensitive OR matches across skill name,
-description, group, and source. The advisor intentionally omits
-`--available-for`, because that option limits JSON inventory to toggleable OFF
-cells and would hide useful skills that are already ON. Discriminative queries
-still keep large-catalog advisor prompts bounded without requiring `jq` or
-another JSON processor.
+The older `list --json --query` flags remain unchanged as case-insensitive OR
+substring filters across skill name, description, group, and source. They are a
+general inventory surface, not the advisor's ranking mechanism.
 
 The skill source and CLI API can change at different times on `main`. Before it
-mutates anything, the skill checks for `apiVersion: 1` and fails with an upgrade
-message if the installed CLI is incompatible.
+selects or mutates anything, it checks for `apiVersion: 1` and the
+`ranked_search_v1` capability. A missing capability fails with an upgrade
+message; the skill does not fall back to substring lookup.
 
 ### TUI controls
 
@@ -349,7 +356,8 @@ These rules apply to every interface:
   controls; scanning, Pending, Apply, and source actions remain available.
 - Advisor metadata uses a separate atomic, owner-only file, a no-follow process
   lock, and bounded `advisor-activations-*.json` backups. It stores the receipt,
-  tool, skill, timestamp, and restore fingerprints—never task or prompt content.
+  tool, skill, timestamp, and restore fingerprints—never task, prompt, or
+  advisor-search query content.
 - State directories are limited to the current user. State and cache JSON files
   use mode `0600`; state backups retain at most 10 files and 30 days.
 - A failed batch stops at the first error and writes the successfully completed

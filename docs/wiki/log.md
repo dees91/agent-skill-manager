@@ -326,3 +326,21 @@ intentionally excluded.
 - Passed skill validation, the focused and full Go suites, Go vet, strict wiki
   validation, and diff checks without changing the CLI or persisted receipt
   schema.
+
+## [2026-08-26] implementation | Add ranked Skill Advisor search
+
+- Added additive, capability-gated `advisor search` over the selected host's
+  toggleable ON/OFF cells using deterministic local weighted BM25F, phrase
+  bonuses, and bounded fuzzy token matching.
+- Kept legacy `list --query` substring behavior unchanged, omitted paths,
+  queries, scores, and reasons from search results, and migrated the first-party
+  skill without an old-CLI fallback.
+
+## [2026-08-26] verification | Verify ranked Skill Advisor search
+
+- Passed focused, repeated deterministic, race, full root/desktop/frontend,
+  vet, vulnerability, npm audit, notices, skill-contract, wiki-link, and diff
+  checks, then rebuilt the persistent CLI with `make dev`.
+- Live read-only smoke testing advertised `ranked_search_v1`, ranked the ADR and
+  quality-review skills first for the target query, preserved legacy list
+  ordering, completed in under half a second, and left `state.json` unchanged.

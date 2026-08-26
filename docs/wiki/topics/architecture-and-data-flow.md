@@ -24,8 +24,8 @@
   backups. It stores no paths, tools, source metadata, or usage history.
 - [`internal/advisor`](../../../internal/advisor/) owns the versioned
   receipt/lease file, cross-process lock, exact activation/cleanup preflight,
-  and path-free public result types. It reuses `scan` and `ops` rather than
-  moving entries directly.
+  deterministic bounded BM25F/fuzzy retrieval, and path-free public result
+  types. It reuses `scan` and `ops` rather than moving entries directly.
 - [`internal/gui`](../../../internal/gui/) owns the concurrency-safe desktop
   session, identifier-only action API, source drafts/reviews, snapshots,
   summaries, apply results, and pending state. It has no Wails dependency.
@@ -61,8 +61,9 @@ or local-source metadata; it does not replace filesystem observation.
 ## Runtime Skill Advisor Flow
 
 ```text
-first-party skill reads list --json
-  -> model selects <=5 relevant ON/OFF cells for current host
+first-party skill checks advisor status apiVersion + capability
+  -> advisor search scans eligible ON/OFF cells and ranks local metadata
+  -> model selects <=5 clearly relevant returned cells for current host
   -> advisor activate fully preflights names and receipt state under lock
   -> receipt/lease claims are atomically persisted
   -> ops enables each OFF cell through existing state/backup semantics
@@ -70,6 +71,12 @@ first-party skill reads list --json
   -> before a normal final response, agent-owned cleanup validates fingerprints
   -> shared claims are released; final claims are disabled through ops
 ```
+
+Search is a pure read-only projection over each fresh filesystem scan. Weighted
+name/description/group/source fields, exact phrases, and bounded fuzzy token
+matches produce deterministic ordering; no query, index, or score is persisted
+or exposed. Legacy `list --query` filtering remains a separate OR-substring
+inventory contract.
 
 Cells that were already ON never enter a lease. Persisting claims before an
 enable makes interrupted activations discoverable; cleanup can safely finalize

@@ -26,9 +26,12 @@ directories involved in an explicit operation. State can include original and
 disabled paths, symlink targets, repository URLs, canonical local source paths,
 installed skill names, timestamps, and commits. Advisor state additionally
 stores opaque receipt IDs, tool/skill claims, and exact restore fingerprints;
-it never stores prompt or task content. Saved Skill Sets and favorites store
-only skill basenames plus their feature-specific recipe metadata; favorites do
-not store tools, source paths, prompts, task text, or usage history.
+it never stores prompt, task, or advisor-search query content. Ranked advisor
+search reads local metadata and keeps the query and intermediate scores only in
+process memory; its output omits query text, scores, reasons, and filesystem
+paths. Saved Skill Sets and favorites store only skill basenames plus their
+feature-specific recipe metadata; favorites do not store tools, source paths,
+prompts, task text, or usage history.
 
 State directories are restricted to the current user (`0700`). State, backup,
 and catalog-cache JSON files use mode `0600`. When a new state backup is made,

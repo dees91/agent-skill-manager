@@ -89,22 +89,26 @@ func (a App) runListJSON(stdout, stderr io.Writer, options listJSONOptions) int 
 		if !listJSONRowMatches(row, options) {
 			continue
 		}
-		output.Skills = append(output.Skills, listJSONSkill{
-			Name:        row.Name,
-			Description: row.Description,
-			Group:       row.Group.String(),
-			Source:      row.Source.String(),
-			Tools: listJSONTools{
-				Claude: listCellJSON(row.Claude),
-				Codex:  listCellJSON(row.Codex),
-			},
-		})
+		output.Skills = append(output.Skills, listJSONSkillFromRow(row))
 	}
 	if err := writeIndentedJSON(stdout, output); err != nil {
 		fmt.Fprintf(stderr, "error: encode skill list: %v\n", err)
 		return 1
 	}
 	return 0
+}
+
+func listJSONSkillFromRow(row model.SkillRow) listJSONSkill {
+	return listJSONSkill{
+		Name:        row.Name,
+		Description: row.Description,
+		Group:       row.Group.String(),
+		Source:      row.Source.String(),
+		Tools: listJSONTools{
+			Claude: listCellJSON(row.Claude),
+			Codex:  listCellJSON(row.Codex),
+		},
+	}
 }
 
 func listJSONRowMatches(row model.SkillRow, options listJSONOptions) bool {
