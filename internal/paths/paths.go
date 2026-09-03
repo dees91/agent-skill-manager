@@ -35,13 +35,21 @@ type Paths struct {
 	TrashDir          string
 }
 
-// Default returns the MVP paths for the current OS user home.
+// Default returns the MVP paths for the current OS user home. It honors
+// XDG_CONFIG_HOME for the Muse user skills directory only; ForHome stays
+// pure so synthetic homes used in tests remain fully isolated.
 func Default() (Paths, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return Paths{}, fmt.Errorf("resolve user home: %w", err)
 	}
-	return ForHome(home), nil
+	p := ForHome(home)
+	if raw := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); raw != "" {
+		if cleaned := filepath.Clean(raw); filepath.IsAbs(cleaned) {
+			p.MuseUserSkills = filepath.Join(cleaned, "muse", "skills")
+		}
+	}
+	return p, nil
 }
 
 // ForHome returns the MVP paths for a provided home directory.
@@ -76,15 +84,9 @@ func ForHome(home string) Paths {
 	}
 }
 
-// museUserSkillsDir resolves the managed Muse skill directory. It honors
-// XDG_CONFIG_HOME when set to an absolute path and otherwise falls back to
-// ~/.config/muse/skills.
+// museUserSkillsDir resolves the managed Muse skill directory under the given
+// home. It never reads the environment so ForHome results stay hermetic.
 func museUserSkillsDir(home string) string {
-	if raw := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); raw != "" {
-		if cleaned := filepath.Clean(raw); filepath.IsAbs(cleaned) {
-			return filepath.Join(cleaned, "muse", "skills")
-		}
-	}
 	return filepath.Join(home, ".config", "muse", "skills")
 }
 

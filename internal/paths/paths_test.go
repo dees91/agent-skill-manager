@@ -8,7 +8,6 @@ import (
 )
 
 func TestForHomeDerivesMVPPaths(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "")
 	home := filepath.Join(string(filepath.Separator), "tmp", "skill-manager-home")
 
 	got := ForHome(home)
@@ -106,7 +105,6 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 }
 
 func TestToolSpecificPathHelpers(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "")
 	p := ForHome(filepath.Join(string(filepath.Separator), "tmp", "skill-manager-home"))
 
 	if got, ok := p.UserSkillsDirFor(model.ToolClaude); !ok || got != p.ClaudeUserSkills {
@@ -136,18 +134,38 @@ func TestToolSpecificPathHelpers(t *testing.T) {
 	}
 }
 
-func TestForHomeHonorsXDGConfigHomeForMuse(t *testing.T) {
+func TestForHomeIgnoresEnvironmentForMuse(t *testing.T) {
+	home := filepath.Join(string(filepath.Separator), "tmp", "skill-manager-home")
+
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(string(filepath.Separator), "tmp", "xdg-config"))
+	got := ForHome(home)
+	if want := filepath.Join(home, ".config", "muse", "skills"); got.MuseUserSkills != want {
+		t.Fatalf("MuseUserSkills = %q, want %q", got.MuseUserSkills, want)
+	}
+}
+
+func TestDefaultHonorsXDGConfigHomeForMuse(t *testing.T) {
 	home := filepath.Join(string(filepath.Separator), "tmp", "skill-manager-home")
 	configHome := filepath.Join(string(filepath.Separator), "tmp", "xdg-config")
 
+	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", configHome)
-	got := ForHome(home)
+	got, err := Default()
+	if err != nil {
+		t.Fatalf("Default() error = %v", err)
+	}
 	if want := filepath.Join(configHome, "muse", "skills"); got.MuseUserSkills != want {
 		t.Fatalf("MuseUserSkills = %q, want %q", got.MuseUserSkills, want)
 	}
+	if got.Home != home {
+		t.Fatalf("Home = %q, want %q", got.Home, home)
+	}
 
 	t.Setenv("XDG_CONFIG_HOME", "relative/path")
-	got = ForHome(home)
+	got, err = Default()
+	if err != nil {
+		t.Fatalf("Default() error = %v", err)
+	}
 	if want := filepath.Join(home, ".config", "muse", "skills"); got.MuseUserSkills != want {
 		t.Fatalf("MuseUserSkills with relative XDG = %q, want %q", got.MuseUserSkills, want)
 	}
