@@ -503,3 +503,17 @@ intentionally excluded.
   and the README download/version guidance to `0.6.0`; added
   `docs/releases/v0.6.0.md`.
 - Third-party notices regenerated with the documented generator and unchanged.
+
+## [2026-09-03] verification | Publish v0.6.0 public preview
+
+- Tagged `d8d48e8` after the full local Apple Silicon packaging gate and public
+  Root Go plus Desktop/frontend CI succeeded for that exact commit; no open PRs
+  or Dependabot alerts remained.
+- Uploaded the desktop ZIP, CLI tarball, and SHA-256 manifest to a draft,
+  downloaded them back, and verified digests against the local manifest,
+  ad-hoc signatures, arm64 Mach-O format, bundle identifier and versions,
+  `LSMinimumSystemVersion` 13.0, archive contents including LICENSE and
+  notices, `skill-manager --version`, and an isolated-home desktop launch.
+- Published the draft as a GitHub prerelease, then installed both artifacts
+  from the public download URLs: CLI at `~/.local/bin/skill-manager` and
+  `Skill Manager.app` in `/Applications`, both reporting 0.6.0.
