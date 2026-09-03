@@ -1,5 +1,5 @@
 export const VIDEO = {
-  revision: 4,
+  revision: 5,
   fps: 30,
   width: 1920,
   height: 1080,
@@ -13,13 +13,14 @@ export const SOCIAL_PREVIEW = {
     product: 'Skill Manager',
     inventory: 'local skill inventory',
     headline: 'Agent Skills, under control.',
-    supporting: 'Claude Code + Codex · local · reversible',
+    supporting: 'Claude Code · Codex · Muse · Grok · local · reversible',
     surfaces: 'macOS app · TUI · CLI',
   },
+  tools: ['claude', 'codex', 'muse', 'grok'],
   rows: [
-    { name: 'release-checklist', accent: 'cyan', claude: 'ON', codex: 'ON' },
-    { name: 'ui-accessibility', accent: 'blue', claude: 'ON', codex: 'OFF' },
-    { name: 'dependency-review', accent: 'orange', claude: 'OFF', codex: 'ON' },
+    { name: 'release-checklist', accent: 'cyan', states: { claude: 'ON', codex: 'ON', muse: 'ON', grok: 'ON' } },
+    { name: 'ui-accessibility', accent: 'blue', states: { claude: 'ON', codex: 'OFF', muse: 'ON', grok: 'OFF' } },
+    { name: 'dependency-review', accent: 'orange', states: { claude: 'OFF', codex: 'ON', muse: 'OFF', grok: 'ON' } },
   ],
   asset: 'appicon.svg',
 } as const
@@ -40,10 +41,12 @@ export const STORYBOARD: readonly StoryScene[] = [
     start: 0,
     end: 84,
     copy: {
-      eyebrow: 'CLAUDE CODE + CODEX',
+      eyebrow: 'CLAUDE CODE · CODEX · MUSE · GROK',
       headline: 'Agent skills, scattered across tools?',
       claudePath: '~/.claude/skills',
       codexPath: '~/.agents/skills',
+      musePath: '~/.config/muse/skills',
+      grokPath: '~/.grok/skills',
       skillNames: ['release-checklist', 'dependency-review', 'ui-accessibility'],
     },
   },
@@ -96,7 +99,7 @@ export const STORYBOARD: readonly StoryScene[] = [
     copy: {
       product: 'Skill Manager',
       headline: 'Keep every skill. Load only what you need.',
-      footer: 'Claude Code + Codex · local · reversible',
+      footer: 'Claude Code · Codex · Muse · Grok · local · reversible',
     },
     assets: ['appicon.svg'],
   },

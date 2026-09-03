@@ -1,10 +1,11 @@
 # Skill Manager README Demo Storyboard
 
-Revision: 4
+Revision: 5
 
 Format: 20 seconds, 1920x1080, 30 fps, silent, seamless dark loop
 
-Audience: Claude Code and Codex users considering the public macOS preview
+Audience: Claude Code, Codex, Muse, and Grok users considering the public
+macOS preview
 
 ## Purpose
 
@@ -26,14 +27,14 @@ Format: static PNG, 1280x640, at most 1 MiB
 
 - Product label: **Skill Manager**
 - Headline: **Agent Skills, under control.**
-- Supporting line: **Claude Code + Codex · local · reversible**
+- Supporting line: **Claude Code · Codex · Muse · Grok · local · reversible**
 - Surface label: **macOS app · TUI · CLI**
 - Visual: the repository-owned app icon beside a compact synthetic skill
   inventory using the same dark canvas, source colors, and state language as
   the desktop interface.
-  - `release-checklist`: Claude ON, Codex ON
-  - `ui-accessibility`: Claude ON, Codex OFF
-  - `dependency-review`: Claude OFF, Codex ON
+  - `release-checklist`: Claude ON, Codex ON, Muse ON, Grok ON
+  - `ui-accessibility`: Claude ON, Codex OFF, Muse ON, Grok OFF
+  - `dependency-review`: Claude OFF, Codex ON, Muse OFF, Grok ON
 - Intent: make the repository purpose readable at normal GitHub card size and
   at a 640x320 reduced preview without suggesting cloud sync, telemetry, or
   unsupported functionality.
@@ -42,8 +43,9 @@ Format: static PNG, 1280x640, at most 1 MiB
 
 ### 1. Scattered skills — 0.0s to 2.8s (frames 0–84)
 
-- Visual: two floating filesystem cards for `~/.claude/skills` and
-  `~/.agents/skills`, with small skill chips spread between them.
+- Visual: four floating filesystem cards for `~/.claude/skills`,
+  `~/.agents/skills`, `~/.config/muse/skills`, and `~/.grok/skills`, with small
+  skill chips beneath the headline.
 - Headline: **Agent skills, scattered across tools?**
 - Motion: cards enter with restrained perspective and settle toward the center.
 - Intent: establish the problem without implying cloud sync or remote control.
@@ -89,7 +91,7 @@ Format: static PNG, 1280x640, at most 1 MiB
 ### 5. Source ownership — 13.7s to 17.3s (frames 411–519)
 
 - Visual: synthetic Sources capture showing a managed Git repository and a
-  linked local folder, with Claude and Codex counts.
+  linked local folder, with Claude, Codex, Muse, and Grok counts.
 - Callout: **Git repositories and linked folders.**
 - Intent: show that installation source and ownership remain explicit.
 
@@ -97,7 +99,7 @@ Format: static PNG, 1280x640, at most 1 MiB
 
 - Visual: Skill Manager app icon and name on the dark canvas.
 - Headline: **Keep every skill. Load only what you need.**
-- Footer: **Claude Code + Codex · local · reversible**
+- Footer: **Claude Code · Codex · Muse · Grok · local · reversible**
 - Motion: the close fades fully to the opening canvas so the GIF loops without
   a flash.
 
@@ -121,6 +123,9 @@ Tracked captures live in `public/ui/` and are made from
 - `skills-pending.png`
 - `skills-after.png`
 - `sources.png`
+
+Every capture must show the four managed tool columns (Claude, Codex, Muse,
+Grok) exposed by the current desktop interface.
 
 The captures must use the demo backend's `example-labs`, `sample-org`, and
 `/Users/example` fixtures. If a capture contains a real username, home path,

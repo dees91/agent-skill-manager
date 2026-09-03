@@ -318,6 +318,8 @@ these values from the same desktop build metadata as the application bundle.
 
 ![Skill Manager dashboard](docs/images/dashboard.png)
 
+![Skills workspace with Claude, Codex, Muse, and Grok columns](docs/images/skills.png)
+
 ![Saved Skill Sets workspace](docs/images/skill-sets.png)
 
 ![Extend managed sources to one tool](docs/images/sources-extend.png)
