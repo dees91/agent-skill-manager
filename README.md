@@ -6,7 +6,7 @@ turn it off without deleting or rewriting it. Turn it back on and Skill
 Manager restores the original directory or symlink.
 
 <p align="center">
-  <a href="https://github.com/dees91/agent-skill-manager/releases/tag/v0.5.0">Download macOS app</a>
+  <a href="https://github.com/dees91/agent-skill-manager/releases/tag/v0.6.0">Download macOS app</a>
   ·
   <a href="#installation-from-source">Install CLI</a>
   ·
@@ -27,7 +27,7 @@ Manager restores the original directory or symlink.
 
 ## Status and compatibility
 
-The current source version is `0.5.0`. It is a public preview, not a stable
+The current source version is `0.6.0`. It is a public preview, not a stable
 release.
 
 - The desktop app supports Apple Silicon Macs running macOS 13 or newer.
@@ -64,19 +64,19 @@ records ownership and restoration data; it does not replace live discovery.
 
 ### GitHub release preview
 
-The [`v0.5.0` prerelease](https://github.com/dees91/agent-skill-manager/releases/tag/v0.5.0)
+The [`v0.6.0` prerelease](https://github.com/dees91/agent-skill-manager/releases/tag/v0.6.0)
 contains two Apple Silicon downloads:
 
-- `skill-manager-desktop-0.5.0-macos-arm64.zip` contains `Skill Manager.app`;
-- `skill-manager-cli-0.5.0-macos-arm64.tar.gz` contains the terminal binary,
+- `skill-manager-desktop-0.6.0-macos-arm64.zip` contains `Skill Manager.app`;
+- `skill-manager-cli-0.6.0-macos-arm64.tar.gz` contains the terminal binary,
   README, license, and third-party notices.
 
 Download the archive you want and `SHA256SUMS.txt`, then compare the archive's
 SHA-256 digest with its line in the manifest:
 
 ```bash
-shasum -a 256 skill-manager-desktop-0.5.0-macos-arm64.zip
-grep 'skill-manager-desktop-0.5.0-macos-arm64.zip' SHA256SUMS.txt
+shasum -a 256 skill-manager-desktop-0.6.0-macos-arm64.zip
+grep 'skill-manager-desktop-0.6.0-macos-arm64.zip' SHA256SUMS.txt
 ```
 
 The hashes must match. This catches an incomplete or changed download; it does
@@ -92,9 +92,9 @@ checksum and source.
 To install the CLI, extract the archive and place the executable on `PATH`:
 
 ```bash
-tar -xzf skill-manager-cli-0.5.0-macos-arm64.tar.gz
+tar -xzf skill-manager-cli-0.6.0-macos-arm64.tar.gz
 install -m 0755 \
-  skill-manager-cli-0.5.0-macos-arm64/skill-manager \
+  skill-manager-cli-0.6.0-macos-arm64/skill-manager \
   "$HOME/.local/bin/skill-manager"
 skill-manager --version
 ```
@@ -325,7 +325,7 @@ these values from the same desktop build metadata as the application bundle.
 ![Extend managed sources to one tool](docs/images/sources-extend.png)
 
 The experimental skills.sh Discover implementation is still under development
-and does not appear in the `v0.5.0` public preview.
+and does not appear in the `v0.6.0` public preview.
 
 Skill toggles remain process-local until you choose Apply. Source operations
 have their own confirmations and cannot run while a toggle batch is pending.

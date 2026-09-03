@@ -494,3 +494,12 @@ intentionally excluded.
   `social-preview.png` (1280x640, 330 KiB); `npm run verify` passes. The social
   preview still has to be uploaded by hand in repository settings.
 - Closes the item deferred in the PR12 follow-up entry above.
+
+## [2026-09-03] release | Prepare v0.6.0 public preview
+
+- Selected a minor prerelease for the completed Muse and Grok managed-tool work
+  while keeping the Apple Silicon, ad-hoc-signed preview limitations.
+- Bumped `desktop/wails.json`, `desktop/frontend/package.json`, its lockfile,
+  and the README download/version guidance to `0.6.0`; added
+  `docs/releases/v0.6.0.md`.
+- Third-party notices regenerated with the documented generator and unchanged.
