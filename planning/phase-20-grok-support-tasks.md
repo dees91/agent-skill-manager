@@ -40,14 +40,14 @@
 
 | ID | Task | Status | Blocked by |
 |---|---|---|---|
-| P20-T01 | Domain core: ToolGrok, paths, scan rows/groups | todo | PR0 merge |
-| P20-T02 | CLI tables, parsing, list JSON, advisor search | todo | P20-T01 |
-| P20-T03 | Install/update/uninstall planner and protected paths | todo | P20-T01 |
-| P20-T04 | TUI fourth column, details, and bulk toggles | todo | P20-T01 |
-| P20-T05 | Context budget Grok estimate and advisor parity | todo | P20-T01 |
-| P20-T06 | GUI backend projections and desktop frontend | todo | P20-T01 |
-| P20-T07 | First-party skill, README, DESIGN, and validation | todo | P20-T02 |
-| P20-T08 | AGENTS.md, wiki synthesis, branch, and PR | todo | P20-T07 |
+| P20-T01 | Domain core: ToolGrok, paths, scan rows/groups | done | PR0 merge |
+| P20-T02 | CLI tables, parsing, list JSON, advisor search | done | P20-T01 |
+| P20-T03 | Install/update/uninstall planner and protected paths | done | P20-T01 |
+| P20-T04 | TUI fourth column, details, and bulk toggles | done | P20-T01 |
+| P20-T05 | Context budget Grok estimate and advisor parity | done | P20-T01 |
+| P20-T06 | GUI backend projections and desktop frontend | done | P20-T01 |
+| P20-T07 | First-party skill, README, DESIGN, AGENTS, wiki | done | P20-T02 |
+| P20-T08 | Full validation, branch, and PR | done | P20-T07 |
 
 ## PR0 Task Definitions
 

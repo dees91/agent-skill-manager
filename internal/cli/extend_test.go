@@ -83,7 +83,7 @@ func TestRunExtendApplyLinksAndMirrorsOff(t *testing.T) {
 	for _, want := range []string{
 		"extended local-pack: created 2 symlink(s); 0 already installed; 1 disabled; 0 skipped",
 		"extended 2 symlink(s) across 1 source(s); 0 already installed; 1 disabled; 0 skipped",
-		"start a new Claude/Codex/Muse session",
+		"start a new Claude/Codex/Muse/Grok session",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("stdout = %q, want %q", output, want)
@@ -193,7 +193,7 @@ func TestRunExtendUsageErrors(t *testing.T) {
 		{"--tool"},
 		{"--tool", "both"},
 		{"--tool", "all"},
-		{"--tool", "grok"},
+		{"--tool", "cursor"},
 		{"--tool", "claude", "extra"},
 		{"--tool", "claude", "--tool", "codex"},
 	}

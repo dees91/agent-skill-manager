@@ -651,6 +651,9 @@ func rowMatchesTextFilter(row domain.SkillRow, filter string) bool {
 	if row.Muse != nil {
 		values = append(values, row.Muse.DisplayName, row.Muse.Description)
 	}
+	if row.Grok != nil {
+		values = append(values, row.Grok.DisplayName, row.Grok.Description)
+	}
 	for _, value := range values {
 		if strings.Contains(strings.ToLower(value), filter) {
 			return true
@@ -677,6 +680,9 @@ func rowHasSource(row domain.SkillRow, source domain.SourceLabel) bool {
 		return true
 	}
 	if row.Muse != nil && row.Muse.Source == source {
+		return true
+	}
+	if row.Grok != nil && row.Grok.Source == source {
 		return true
 	}
 	return false
@@ -712,6 +718,9 @@ func collectSourceChoices(rows []domain.SkillRow) []domain.SourceLabel {
 		}
 		if row.Muse != nil {
 			addSourceChoice(seen, row.Muse.Source)
+		}
+		if row.Grok != nil {
+			addSourceChoice(seen, row.Grok.Source)
 		}
 	}
 

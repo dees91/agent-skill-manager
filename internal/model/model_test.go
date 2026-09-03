@@ -11,6 +11,7 @@ func TestParseTool(t *testing.T) {
 		{value: "claude", want: ToolClaude, ok: true},
 		{value: "codex", want: ToolCodex, ok: true},
 		{value: "muse", want: ToolMuse, ok: true},
+		{value: "grok", want: ToolGrok, ok: true},
 		{value: "other", ok: false},
 		{value: "", ok: false},
 	}

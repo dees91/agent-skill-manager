@@ -51,7 +51,7 @@ fixed Paths
   -> optionally scan read-only system/plugin directories
   -> parse SKILL.md metadata and source evidence
   -> classify Source and Group
-  -> merge Claude/Codex/Muse cells into SkillRow values
+  -> merge Claude/Codex/Muse/Grok cells into SkillRow values
   -> CLI tables or filtered TUI model
 ```
 
@@ -109,7 +109,7 @@ are scan boundaries; filters and staging actions do not rescan.
 ## Saved Skill Set Flow
 
 ```text
-opaque Skill Set ID + explicit Claude/Codex/Muse tool names
+opaque Skill Set ID + explicit Claude/Codex/Muse/Grok tool names
   -> gui.Service resolves saved basenames against current scan rows
   -> staging.ToggleBatch previews against a copy of Pending
   -> confirmed use stages through the same engine in session Pending
@@ -169,7 +169,7 @@ blocked by pending toggles.
 ranking tab/search
   -> skillssh adapter with timeout, validation, and response-size limit
   -> normalized page/detail cache
-  -> gui.Service projects active/OFF/conflict state per Claude/Codex/Muse cell
+  -> gui.Service projects active/OFF/conflict state per Claude/Codex/Muse/Grok cell
   -> React catalog, detail drawer, and explicit safety confirmation
   -> fresh live detail revalidation
   -> fixed GitHub repo identity + exact selected skill/tool cells
@@ -186,7 +186,7 @@ cached.
 
 ```text
 global scan rows + local provider settings
-  -> contextbudget.Analyzer (Claude, Codex, and Muse in parallel; Muse is always a labeled filesystem estimate)
+  -> contextbudget.Analyzer (Claude, Codex, Muse, and Grok in parallel; Muse and Grok are always labeled filesystem estimates)
   -> applied Reports + managed CellKey contributions
   -> gui.Service snapshot
   -> staging action maps pending tool/skill operations to deltas

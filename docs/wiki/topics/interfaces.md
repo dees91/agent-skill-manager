@@ -7,7 +7,7 @@
   or `dev` for an unversioned repository build.
 - `list` shows discovered skill rows and tool states. `list --json` adds the
   stable path-free `apiVersion: 1` inventory. Optional `--available-for
-  claude|codex|muse` keeps only toggleable OFF cells for one host; repeated
+  claude|codex|muse|grok` keeps only toggleable OFF cells for one host; repeated
   case-insensitive `--query` terms preserve the legacy OR-substring match over
   name, description, group, and source.
 - `status` summarizes `ON`, `OFF`, `CONFLICT`, and `RO` cells.
@@ -27,16 +27,16 @@
   tool in manifest order, mirroring ON/OFF state through the shared
   install/audit machinery. It stops at the first blocked source and never
   hardcodes a tool name.
-- `advisor activate --tool claude|codex|muse --skill <name>... [--dry-run]
+- `advisor activate --tool claude|codex|muse|grok --skill <name>... [--dry-run]
   [--json]` preflights 1-5 exact names and creates one opaque receipt for cells
   temporarily enabled or shared.
-- `advisor search --tool claude|codex|muse --query <text> [--limit 1-50] [--json]`
+- `advisor search --tool claude|codex|muse|grok --query <text> [--limit 1-50] [--json]`
   ranks that host's toggleable ON/OFF cells with deterministic local weighted
   BM25F, phrase bonuses, and bounded fuzzy matching. Its path-free result omits
   the query, reasons, and scores; the default limit is 20.
 - `advisor cleanup --receipt <id> [--dry-run] [--json]` releases one exact
   receipt and restores cells whose final lease claim is removed.
-- `advisor status [--tool claude|codex|muse] [--json]` lists outstanding receipts
+- `advisor status [--tool claude|codex|muse|grok] [--json]` lists outstanding receipts
   without exposing filesystem paths. JSON status advertises
   `ranked_search_v1` under API version 1.
 
@@ -58,13 +58,13 @@ Git repositories only.
 - Skills is active-first: `Needs attention` precedes an always-expanded `Active
   now` list, while OFF and opted-in read-only skills use collapsed source-group
   accordions. Search plus state/tool chips stay visible; Group, Source, and Read
-  only live under `Filters`. All three tool columns remain visible while the tool
+  only live under `Filters`. All four tool columns remain visible while the tool
   chip scopes classification and bulk staging. Global bulk covers all filtered
   rows including collapsed results; group bulk covers the complete group.
   Pending rows stay in their applied-state section until Apply/rescan.
 - Skill Sets lists task-oriented recipes independently from source Groups.
   Create/edit stores a name, optional `When to use` description, and
-  tool-agnostic skill names. Every use requires Claude, Codex, Muse, or All, shows a
+  tool-agnostic skill names. Every use requires Claude, Codex, Muse, Grok, or All, shows a
   smart-toggle preview, and stages through Pending. Member detail exposes
   unavailable names and current per-tool state. Pending offers **Save as set**;
   skill details offers **Add to Skill Set…**. Recipe deletion never changes
@@ -75,7 +75,7 @@ Git repositories only.
   Favorite metadata changes are immediate and do not alter Pending.
 - Sources lists only manifest-owned Git/local sources. Install supports Git URL
   inspection or native local-folder selection, then an exact per-skill
-  Claude/Codex/Muse matrix, review, and Apply. One toggle per tool column selects or
+  Claude/Codex/Muse/Grok matrix, review, and Apply. One toggle per tool column selects or
   clears every discovered non-conflict target regardless of the text filter;
   it exposes `ON`, `OFF`, `MIXED`, or `N/A`. Git repositories expose Update
   and Update all; both source kinds expose typed-confirmed whole-source
@@ -87,7 +87,7 @@ Git repositories only.
   Wails binding. Its experimental Go adapter/domain remains in the repository.
 - Dashboard context metrics are filesystem estimates by default; **Run provider
   diagnostics** is the only UI action that executes local Claude/Codex
-  diagnostic subprocesses. Muse is always a labeled filesystem estimate.
+  diagnostic subprocesses. Muse and Grok are always labeled filesystem estimates.
 - Its `Update mode` column explicitly describes `Managed Git` sources as
   updateable and `Linked folder` sources as direct/live links that need no
   update; it does not encode this distinction as generic health states.

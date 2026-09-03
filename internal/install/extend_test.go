@@ -191,7 +191,7 @@ func TestPlanExtendSkips(t *testing.T) {
 
 func TestPlanExtendRejectsUnsupportedTool(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
-	if _, err := PlanExtend(p, state.Manifest{}, model.Tool("grok")); err == nil || !strings.Contains(err.Error(), `unsupported tool "grok"`) {
+	if _, err := PlanExtend(p, state.Manifest{}, model.Tool("cursor")); err == nil || !strings.Contains(err.Error(), `unsupported tool "cursor"`) {
 		t.Fatalf("PlanExtend() error = %v, want unsupported tool", err)
 	}
 }

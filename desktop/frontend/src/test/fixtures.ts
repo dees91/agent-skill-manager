@@ -13,6 +13,7 @@ export function fixtureSnapshot(): Snapshot {
         claude: cell('alpha-skill', 'claude', 'ON'),
         codex: cell('alpha-skill', 'codex', 'OFF'),
         muse: cell('alpha-skill', 'muse', 'OFF'),
+        grok: cell('alpha-skill', 'grok', 'OFF'),
       },
       {
         name: 'codex-helper',
@@ -27,8 +28,8 @@ export function fixtureSnapshot(): Snapshot {
     skillSetsWarning: '',
     favoritesWarning: '',
     groups: [
-      { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), muse: counts(0, 1), sources: ['local'] },
-      { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), muse: counts(0, 0), sources: ['Skills CLI'] },
+      { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), muse: counts(0, 1), grok: counts(0, 1), sources: ['local'] },
+      { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), muse: counts(0, 0), grok: counts(0, 0), sources: ['Skills CLI'] },
     ],
     sources: ['Skills CLI', 'local'],
     managedSources: [
@@ -41,6 +42,7 @@ export function fixtureSnapshot(): Snapshot {
         claudeCount: 2,
         codexCount: 1,
         museCount: 1,
+        grokCount: 1,
         installedAt: '2026-08-11T09:00:00Z',
         commit: '1234567890abcdef',
         canUpdate: true,
@@ -56,6 +58,7 @@ export function fixtureSnapshot(): Snapshot {
         claudeCount: 1,
         codexCount: 1,
         museCount: 1,
+        grokCount: 1,
         installedAt: '2026-08-11T09:00:00Z',
         canUpdate: false,
         updateMode: 'Linked folder',
@@ -68,6 +71,7 @@ export function fixtureSnapshot(): Snapshot {
       claude: counts(1, 0),
       codex: counts(1, 1),
       muse: counts(0, 1),
+      grok: counts(0, 1),
       conflictCells: 0,
     },
     conflicts: [],
@@ -131,12 +135,13 @@ function skillSetFixture() {
     members: [
       {
         name: 'alpha-skill', description: 'Alpha automation skill', group: 'local', source: 'local', available: true,
-        claude: setMemberCell('claude', 'ON'), codex: setMemberCell('codex', 'OFF'), muse: setMemberCell('muse', 'OFF'),
+        claude: setMemberCell('claude', 'ON'), codex: setMemberCell('codex', 'OFF'), muse: setMemberCell('muse', 'OFF'), grok: setMemberCell('grok', 'OFF'),
       },
     ],
     claude: setSummary('claude', 'enabled', 1, 1, 0),
     codex: setSummary('codex', 'disabled', 1, 0, 1),
     muse: setSummary('muse', 'disabled', 1, 0, 1),
+    grok: setSummary('grok', 'disabled', 1, 0, 1),
     unavailable: 0,
     pending: 0,
     createdAt: '2026-08-11T09:00:00Z',
@@ -159,6 +164,7 @@ function candidate(name: string) {
     claude: { tool: 'claude', status: 'available', message: '' },
     codex: { tool: 'codex', status: 'available', message: '' },
     muse: { tool: 'muse', status: 'available', message: '' },
+    grok: { tool: 'grok', status: 'available', message: '' },
   }
 }
 
@@ -167,6 +173,7 @@ function budgetReports(pending: Array<{ tool: string }> = []) {
     claude: budgetReport('claude', 'Claude default', 640, 2000, pending.filter((change) => change.tool === 'claude').length),
     codex: budgetReport('codex', 'gpt-5.6-sol', 930, 5440, pending.filter((change) => change.tool === 'codex').length),
     muse: budgetReport('muse', 'Muse default', 640, 2000, pending.filter((change) => change.tool === 'muse').length),
+    grok: budgetReport('grok', 'Grok default', 640, 2000, pending.filter((change) => change.tool === 'grok').length),
   })
 }
 
@@ -193,10 +200,10 @@ function budgetReport(tool: string, model: string, tokens: number, budgetTokens:
     budgetFraction: tool === 'codex' ? .02 : .01,
     budgetCharacters: budgetTokens * 4,
     budgetTokens,
-    budgetLabel: tool === 'codex' ? '2% of model context' : tool === 'muse' ? '1% of assumed 200,000-token context' : '1.0% of model context',
-    accuracy: tool === 'codex' ? 'measured' : tool === 'muse' ? 'estimated' : 'partial',
+    budgetLabel: tool === 'codex' ? '2% of model context' : tool === 'claude' ? '1.0% of model context' : '1% of assumed 200,000-token context',
+    accuracy: tool === 'codex' ? 'measured' : tool === 'claude' ? 'partial' : 'estimated',
     coverage: 'Global test catalog.',
-    message: tool === 'codex' ? "Measured from Codex's model-visible global catalog." : tool === 'muse' ? 'Filesystem estimate. Muse exposes no supported catalog diagnostic.' : 'Labeled local estimate.',
+    message: tool === 'codex' ? "Measured from Codex's model-visible global catalog." : tool === 'claude' ? 'Labeled local estimate.' : `Filesystem estimate. ${tool === 'grok' ? 'Grok' : 'Muse'} exposes no supported catalog diagnostic.`,
     current: usage(tokens, currentPercent),
     projected: usage(projectedTokens, projectedPercent),
     projectionChanged: pendingCount > 0,

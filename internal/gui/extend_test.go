@@ -258,13 +258,13 @@ func TestExtendSourcePreviewFallsBackToErrorReason(t *testing.T) {
 func TestExtendSourcePreviewRejectsUnknownTool(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	service := New(p)
-	if _, err := service.PreviewExtend("grok"); err == nil {
-		t.Fatal("PreviewExtend(grok) succeeded, want error")
+	if _, err := service.PreviewExtend("cursor"); err == nil {
+		t.Fatal("PreviewExtend(cursor) succeeded, want error")
 	} else if !strings.Contains(err.Error(), "unknown tool") {
 		t.Fatalf("error = %q, want unknown tool", err.Error())
 	}
-	if result := service.ExtendSources("grok", false); result.Failure == nil {
-		t.Fatalf("ExtendSources(grok) = %+v, want failure", result)
+	if result := service.ExtendSources("cursor", false); result.Failure == nil {
+		t.Fatalf("ExtendSources(cursor) = %+v, want failure", result)
 	} else if !strings.Contains(result.Failure.Message, "unknown tool") {
 		t.Fatalf("failure = %q, want unknown tool", result.Failure.Message)
 	}

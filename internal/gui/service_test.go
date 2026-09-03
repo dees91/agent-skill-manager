@@ -262,6 +262,7 @@ func TestToggleGroupAndApplyUsePendingSession(t *testing.T) {
 	writeSkill(t, filepath.Join(p.ClaudeUserSkills, "alpha"), "Alpha")
 	writeSkill(t, filepath.Join(p.CodexUserSkills, "alpha"), "Alpha")
 	writeSkill(t, filepath.Join(p.MuseUserSkills, "alpha"), "Alpha")
+	writeSkill(t, filepath.Join(p.GrokUserSkills, "alpha"), "Alpha")
 
 	service := New(p)
 	snapshot, err := service.GetSnapshot(false)
@@ -273,23 +274,24 @@ func TestToggleGroupAndApplyUsePendingSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(action.Pending) != 3 || service.PendingCount() != 3 {
+	if len(action.Pending) != 4 || service.PendingCount() != 4 {
 		t.Fatalf("action = %#v", action)
 	}
-	if !action.ContextBudgets.Claude.ProjectionChanged || !action.ContextBudgets.Codex.ProjectionChanged || !action.ContextBudgets.Muse.ProjectionChanged {
+	if !action.ContextBudgets.Claude.ProjectionChanged || !action.ContextBudgets.Codex.ProjectionChanged || !action.ContextBudgets.Muse.ProjectionChanged || !action.ContextBudgets.Grok.ProjectionChanged {
 		t.Fatalf("context projections were not marked changed: %#v", action.ContextBudgets)
 	}
 	if action.ContextBudgets.Claude.Projected.RequestedCharacters >= action.ContextBudgets.Claude.Current.RequestedCharacters ||
 		action.ContextBudgets.Codex.Projected.RequestedCharacters >= action.ContextBudgets.Codex.Current.RequestedCharacters ||
-		action.ContextBudgets.Muse.Projected.RequestedCharacters >= action.ContextBudgets.Muse.Current.RequestedCharacters {
+		action.ContextBudgets.Muse.Projected.RequestedCharacters >= action.ContextBudgets.Muse.Current.RequestedCharacters ||
+		action.ContextBudgets.Grok.Projected.RequestedCharacters >= action.ContextBudgets.Grok.Current.RequestedCharacters {
 		t.Fatalf("disable projections did not reduce catalog cost: %#v", action.ContextBudgets)
 	}
 
 	result := service.ApplyPending(false)
-	if result.Failure != nil || len(result.Completed) != 3 || len(result.Snapshot.Pending) != 0 {
+	if result.Failure != nil || len(result.Completed) != 4 || len(result.Snapshot.Pending) != 0 {
 		t.Fatalf("apply = %#v", result)
 	}
-	if result.Snapshot.ContextBudgets.Claude.ProjectionChanged || result.Snapshot.ContextBudgets.Codex.ProjectionChanged || result.Snapshot.ContextBudgets.Muse.ProjectionChanged {
+	if result.Snapshot.ContextBudgets.Claude.ProjectionChanged || result.Snapshot.ContextBudgets.Codex.ProjectionChanged || result.Snapshot.ContextBudgets.Muse.ProjectionChanged || result.Snapshot.ContextBudgets.Grok.ProjectionChanged {
 		t.Fatalf("applied snapshot still has a projection: %#v", result.Snapshot.ContextBudgets)
 	}
 	for _, tool := range model.Tools() {
@@ -400,7 +402,7 @@ func TestToggleBothReportsReadOnlyAndMissingSkips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Counts.SkippedReadOnly != 1 || result.Counts.SkippedMissing != 2 || len(result.Pending) != 0 {
+	if result.Counts.SkippedReadOnly != 1 || result.Counts.SkippedMissing != 3 || len(result.Pending) != 0 {
 		t.Fatalf("result = %#v", result)
 	}
 }

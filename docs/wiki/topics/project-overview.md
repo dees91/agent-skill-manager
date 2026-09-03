@@ -3,7 +3,7 @@
 ## Current Synthesis
 
 - `skill-manager` is a local Go terminal and macOS desktop application for
-  managing globally installed Claude Code, Codex, and Muse skills.
+  managing globally installed Claude Code, Codex, Muse, and Grok skills.
 - `user-confirmed`: the public repository and Go module use
   `github.com/dees91/agent-skill-manager`; the product and binary remain named
   `Skill Manager` and `skill-manager`.
@@ -43,7 +43,7 @@
   install/update/uninstall, and state boundaries as the terminal interfaces.
   The experimental Discover domain is dormant and has no public
   binding/navigation in `v0.5.0`. The Dashboard shows approximate Claude,
-  Codex, and Muse startup catalog cost and runs provider diagnostics only after
+  Codex, Muse, and Grok startup catalog cost and runs provider diagnostics only after
   an explicit action. Skills keeps applied ON rows prominent and collapses the
   much larger OFF catalog by source while preserving pending Apply semantics.
   Favorites keep recurring managed basenames easy to find across ON/OFF state.

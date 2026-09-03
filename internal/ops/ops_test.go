@@ -198,6 +198,46 @@ func TestMuseDirectoryDisableEnableRoundTrip(t *testing.T) {
 	}
 }
 
+func TestGrokDirectoryDisableEnableRoundTrip(t *testing.T) {
+	home := t.TempDir()
+	p := paths.ForHome(home)
+	activePath := filepath.Join(p.GrokUserSkills, "grok-local")
+	mkdirSkill(t, activePath)
+
+	service := New(p)
+	disable, err := service.PlanDisable(model.ToolGrok, "grok-local")
+	if err != nil {
+		t.Fatalf("PlanDisable() error = %v", err)
+	}
+	if disable.EntryType != model.EntryTypeDir || disable.Group != model.GroupLocal {
+		t.Fatalf("disable = %#v, want dir local", disable)
+	}
+
+	result := service.Apply([]model.PlannedOperation{disable})
+	assertApplySuccess(t, result, 1)
+	assertMissing(t, activePath)
+	manifest := loadManifest(t, p)
+	entry, ok := manifest.Get(model.ToolGrok, "grok-local")
+	if !ok {
+		t.Fatal("manifest entry missing after Grok disable")
+	}
+	if entry.OriginalPath != activePath || entry.DisabledPath != disable.ToPath {
+		t.Fatalf("manifest entry = %#v, want Grok restore paths", entry)
+	}
+
+	enable, err := service.PlanEnable(model.ToolGrok, "grok-local")
+	if err != nil {
+		t.Fatalf("PlanEnable() error = %v", err)
+	}
+	result = service.Apply([]model.PlannedOperation{enable})
+	assertApplySuccess(t, result, 1)
+	assertExists(t, filepath.Join(activePath, "SKILL.md"))
+	manifest = loadManifest(t, p)
+	if _, ok := manifest.Get(model.ToolGrok, "grok-local"); ok {
+		t.Fatal("manifest entry still present after Grok enable")
+	}
+}
+
 func TestPlanDisableValidatesDestinationFree(t *testing.T) {
 	home := t.TempDir()
 	p := paths.ForHome(home)

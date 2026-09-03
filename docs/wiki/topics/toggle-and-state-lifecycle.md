@@ -53,7 +53,7 @@ resolution is manual in the current scope.
 - All-visible toggle uses rows after current text, source, group, and read-only
   filters.
 - Skill Set toggle resolves saved basenames against the current rows and uses
-  only the explicitly selected Claude/Codex/Muse scope. Its preview runs the same
+  only the explicitly selected Claude/Codex/Muse/Grok scope. Its preview runs the same
   algorithm against a copy of Pending; confirmation stages the real batch.
 - If every applicable effective cell is `ON`, the batch targets `OFF`.
 - Otherwise, it targets `ON` for effective `OFF` cells.

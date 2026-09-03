@@ -1,15 +1,15 @@
 ---
 name: skill-advisor
-description: Inspect Skill Manager's locally installed Claude Code, Codex, or Muse skills before non-trivial work, report the smallest clearly relevant set already active, temporarily activate relevant inactive skills, load all selected instructions, and clean up any receipt it creates before finishing. Use at the start of implementation, debugging, research, media, document, or other multi-step tasks where a specialized installed skill could materially improve the result; also use when the user asks which skills to enable, invokes $skill-advisor, requests advisor status, or asks to clean up an advisor receipt. Do not use for trivial conversation or one-step factual answers.
+description: Inspect Skill Manager's locally installed Claude Code, Codex, Muse, or Grok skills before non-trivial work, report the smallest clearly relevant set already active, temporarily activate relevant inactive skills, load all selected instructions, and clean up any receipt it creates before finishing. Use at the start of implementation, debugging, research, media, document, or other multi-step tasks where a specialized installed skill could materially improve the result; also use when the user asks which skills to enable, invokes $skill-advisor, requests advisor status, or asks to clean up an advisor receipt. Do not use for trivial conversation or one-step factual answers.
 ---
 
 # Skill Advisor
 
-Identify only specialized local skills that materially improve the current task. Report which selected skills are already active and which need activation. Keep every activation reversible and scoped to the current Claude Code, Codex, or Muse host.
+Identify only specialized local skills that materially improve the current task. Report which selected skills are already active and which need activation. Keep every activation reversible and scoped to the current Claude Code, Codex, Muse, or Grok host.
 
 ## Check compatibility
 
-1. Identify the current host as `claude` for Claude Code, `codex` for Codex, or `muse` for Muse. Do not infer the host from repository files or a tool name mentioned by the user. Stop without mutation if the host is ambiguous.
+1. Identify the current host as `claude` for Claude Code, `codex` for Codex, `muse` for Muse, or `grok` for Grok. Do not infer the host from repository files or a tool name mentioned by the user. Stop without mutation if the host is ambiguous.
 2. Run `skill-manager advisor status --tool <host> --json`.
 3. Require `apiVersion` to equal `1` and `capabilities` to contain `ranked_search_v1`. If the command is unavailable, invalid, or incompatible, ask the user to install or update Skill Manager and continue without activating skills. Do not fall back to `list --json --query`.
 
@@ -20,7 +20,7 @@ Identify only specialized local skills that materially improve the current task.
 
    ```bash
    skill-manager advisor search \
-     --tool <claude|codex|muse> \
+     --tool <claude|codex|muse|grok> \
      --query 'video remotion ffmpeg animation rendering' \
      --limit 20 \
      --json
@@ -43,7 +43,7 @@ Run one command with every selected name, including skills already active. The A
 
 ```bash
 skill-manager advisor activate \
-  --tool <claude|codex|muse> \
+  --tool <claude|codex|muse|grok> \
   --skill <name> [--skill <name> ...] \
   --json
 ```
@@ -57,6 +57,7 @@ After the command succeeds:
    - Claude Code: `~/.claude/skills/<name>/SKILL.md`
    - Codex: `~/.agents/skills/<name>/SKILL.md`
    - Muse: `$XDG_CONFIG_HOME/muse/skills/<name>/SKILL.md`, or `~/.config/muse/skills/<name>/SKILL.md` when `XDG_CONFIG_HOME` is unset
+   - Grok: `~/.grok/skills/<name>/SKILL.md`
 3. Follow each applicable workflow while preserving higher-priority user, repository, and safety instructions.
 
 If activation fails but the structured error contains a `receiptId`, retain it because it may own a completed partial activation. Attempt cleanup of that exact receipt before retrying activation or responding.

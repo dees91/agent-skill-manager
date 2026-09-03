@@ -189,6 +189,8 @@ func searchCell(row model.SkillRow, tool model.Tool) *model.ToolSkill {
 		return row.Codex
 	case model.ToolMuse:
 		return row.Muse
+	case model.ToolGrok:
+		return row.Grok
 	default:
 		return nil
 	}
