@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { MANAGED_TOOLS, toolDisplayName } from '../api'
+import { MANAGED_TOOLS, joinList, toolDisplayName } from '../api'
 import type {
   ActionResult,
   Backend,
@@ -156,7 +156,7 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
   return (
     <section className="page skill-sets-page" aria-labelledby="skill-sets-title">
       <div className="page-heading compact skill-sets-heading">
-        <div><p className="eyebrow">Reusable task recipes</p><h1 id="skill-sets-title">Skill Sets</h1><p>Remember useful combinations and stage them for {joinWithOr(MANAGED_TOOLS.map(toolDisplayName))} when the task returns.</p></div>
+        <div><p className="eyebrow">Reusable task recipes</p><h1 id="skill-sets-title">Skill Sets</h1><p>Remember useful combinations and stage them for {joinList(MANAGED_TOOLS.map(toolDisplayName), 'or')} when the task returns.</p></div>
         <button className="primary-button" onClick={() => openEditor()} disabled={busy || Boolean(snapshot.skillSetsWarning)}><Plus size={16} /> New Skill Set</button>
       </div>
 
@@ -246,7 +246,7 @@ function AddSkillDialog({ skillName, sets, busy, onClose, onNew, onExisting }: {
 function ToggleDialog({ set, choice, preview, previewBusy, busy, error, onChoice, onClose, onConfirm }: { set: SkillSet; choice: ToolChoice; preview: SkillSetTogglePreview | null; previewBusy: boolean; busy: boolean; error: string | null; onChoice: (choice: ToolChoice) => void; onClose: () => void; onConfirm: () => void }) {
   useDialogEscape(onClose, busy || previewBusy)
   const totalSkipped = preview ? preview.counts.skippedMissing + preview.counts.skippedReadOnly + preview.counts.skippedConflict : 0
-  return <SetModal title={`Toggle ${set.name}`} onClose={onClose} busy={busy || previewBusy}><p className="dialog-description">Choose the tool scope for this use. The result is staged in Pending and will not touch files until Apply.</p><div className="set-tool-choice" role="group" aria-label="Tool scope for Skill Set">{([...MANAGED_TOOLS, 'all'] as ToolChoice[]).map((value) => <button key={value} className={choice === value ? 'active' : ''} aria-pressed={choice === value} onClick={() => onChoice(value)} disabled={busy || previewBusy}>{titleCase(value)}</button>)}</div>{previewBusy && <div className="set-preview-loading" role="status">Calculating smart-toggle preview…</div>}{preview && <div className={`set-toggle-preview direction-${preview.direction}`}><ArrowUpDown size={19} /><div><strong>{preview.direction === 'none' ? 'No eligible cells' : `${titleCase(preview.direction)} ${preview.counts.changed + preview.counts.removed} pending change${preview.counts.changed + preview.counts.removed === 1 ? '' : 's'}`}</strong><p>{preview.eligible} eligible cell{preview.eligible === 1 ? '' : 's'} in {preview.tools.map(titleCase).join(' + ')}.</p>{totalSkipped > 0 && <small>{totalSkipped} skipped · {preview.counts.skippedMissing} missing · {preview.counts.skippedReadOnly} read-only · {preview.counts.skippedConflict} conflict</small>}</div></div>}{error && <DialogError message={error} />}<DialogActions onClose={onClose} busy={busy || previewBusy}><button className="primary-button" disabled={busy || previewBusy || !preview || preview.direction === 'none' || preview.counts.changed + preview.counts.removed === 0} onClick={onConfirm}><ArrowUpDown size={15} /> Stage {preview?.direction === 'enable' ? 'enable' : preview?.direction === 'disable' ? 'disable' : 'changes'}</button></DialogActions></SetModal>
+  return <SetModal title={`Toggle ${set.name}`} onClose={onClose} busy={busy || previewBusy}><p className="dialog-description">Choose the tool scope for this use. The result is staged in Pending and will not touch files until Apply.</p><div className="set-tool-choice" role="group" aria-label="Tool scope for Skill Set">{([...MANAGED_TOOLS, 'all'] as ToolChoice[]).map((value) => <button key={value} className={choice === value ? 'active' : ''} aria-pressed={choice === value} onClick={() => onChoice(value)} disabled={busy || previewBusy}>{value === 'all' ? 'All' : value ? toolDisplayName(value) : ''}</button>)}</div>{previewBusy && <div className="set-preview-loading" role="status">Calculating smart-toggle preview…</div>}{preview && <div className={`set-toggle-preview direction-${preview.direction}`}><ArrowUpDown size={19} /><div><strong>{preview.direction === 'none' ? 'No eligible cells' : `${titleCase(preview.direction)} ${preview.counts.changed + preview.counts.removed} pending change${preview.counts.changed + preview.counts.removed === 1 ? '' : 's'}`}</strong><p>{preview.eligible} eligible cell{preview.eligible === 1 ? '' : 's'} in {preview.tools.map(titleCase).join(' + ')}.</p>{totalSkipped > 0 && <small>{totalSkipped} skipped · {preview.counts.skippedMissing} missing · {preview.counts.skippedReadOnly} read-only · {preview.counts.skippedConflict} conflict</small>}</div></div>}{error && <DialogError message={error} />}<DialogActions onClose={onClose} busy={busy || previewBusy}><button className="primary-button" disabled={busy || previewBusy || !preview || preview.direction === 'none' || preview.counts.changed + preview.counts.removed === 0} onClick={onConfirm}><ArrowUpDown size={15} /> Stage {preview?.direction === 'enable' ? 'enable' : preview?.direction === 'disable' ? 'disable' : 'changes'}</button></DialogActions></SetModal>
 }
 
 function ConfirmDeleteDialog({ set, busy, error, onClose, onConfirm }: { set: SkillSet; busy: boolean; error: string | null; onClose: () => void; onConfirm: () => void }) {
@@ -283,7 +283,6 @@ function DialogActions({ onClose, busy, children }: { onClose: () => void; busy:
 function DialogError({ message }: { message: string }) { return <div className="dialog-error" role="alert"><AlertTriangle size={14} /><span>{message}</span></div> }
 function useDialogEscape(onClose: () => void, busy: boolean) { useEffect(() => { const handler = (event: KeyboardEvent) => { if (event.key === 'Escape' && !busy) onClose() }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler) }, [busy, onClose]) }
 function toolsForChoice(choice: ToolChoice): ManagedTool[] { return choice === 'all' ? [...MANAGED_TOOLS] : choice ? [choice] : [] }
-function joinWithOr(values: string[]) { return values.length > 1 ? `${values.slice(0, -1).join(', ')}, or ${values[values.length - 1]}` : values.join('') }
 function titleCase(value: string) { return value ? value[0].toUpperCase() + value.slice(1) : value }
 function statusLabel(value: string) { return value.split('-').map(titleCase).join(' ') }
 function errorMessage(reason: unknown) { return reason instanceof Error ? reason.message : String(reason) }

@@ -51,11 +51,17 @@ export type ExtendPreview = gui.ExtendPreview
 export type ExtendPreviewSource = gui.ExtendPreviewSource
 export const MANAGED_TOOLS = ['claude', 'codex', 'muse'] as const
 export type ManagedTool = (typeof MANAGED_TOOLS)[number]
+const TOOL_DISPLAY_NAMES: Record<ManagedTool, string> = { claude: 'Claude', codex: 'Codex', muse: 'Muse' }
 export function toolDisplayName(tool: ManagedTool): string {
-  return tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
+  return TOOL_DISPLAY_NAMES[tool]
 }
+export function joinList(values: string[], conjunction: 'and' | 'or'): string {
+  if (values.length <= 1) return values.join('')
+  return `${values.slice(0, -1).join(', ')}, ${conjunction} ${values[values.length - 1]}`
+}
+const TOOL_FULL_NAMES: Record<ManagedTool, string> = { claude: 'Claude Code', codex: 'Codex', muse: 'Muse' }
 export function toolFullName(tool: ManagedTool): string {
-  return tool === 'claude' ? 'Claude Code' : toolDisplayName(tool)
+  return TOOL_FULL_NAMES[tool]
 }
 export interface SourceProgress {
   operation: string

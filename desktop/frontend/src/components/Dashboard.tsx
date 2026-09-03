@@ -1,5 +1,5 @@
 import { ArrowRight, Bot, Check, CircleAlert, Gauge, Info, Layers3, Play, ShieldCheck, TerminalSquare } from 'lucide-react'
-import { MANAGED_TOOLS, toolDisplayName, toolFullName, type ContextBudgetToolReport, type ManagedTool, type SkillCell, type Snapshot } from '../api'
+import { MANAGED_TOOLS, joinList, toolDisplayName, toolFullName, type ContextBudgetToolReport, type ManagedTool, type SkillCell, type Snapshot } from '../api'
 
 const TOOL_TONES: Record<ManagedTool, string> = { claude: 'blue', codex: 'orange', muse: 'cyan' }
 const TOOL_ICON: Record<ManagedTool, typeof Bot> = { claude: Bot, codex: TerminalSquare, muse: Bot }
@@ -30,7 +30,7 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
   return (
     <section className="page dashboard-page" aria-labelledby="dashboard-title">
       <div className="page-heading">
-        <div><p className="eyebrow">Operational overview</p><h1 id="dashboard-title">Dashboard</h1><p>Visibility of local agent skills across {joinWithAnd(MANAGED_TOOLS.map(toolFullName))}.</p></div>
+        <div><p className="eyebrow">Operational overview</p><h1 id="dashboard-title">Dashboard</h1><p>Visibility of local agent skills across {joinList(MANAGED_TOOLS.map(toolFullName), 'and')}.</p></div>
         <button className="primary-button" onClick={onBrowseSkills}>Manage skills <ArrowRight size={16} /></button>
       </div>
 
@@ -186,10 +186,6 @@ function effectiveCounts(snapshot: Snapshot, tool: ManagedTool): Counts {
 
 function pendingFor(snapshot: Snapshot, tool: string) {
   return snapshot.pending.filter((change) => change.tool === tool).length
-}
-
-function joinWithAnd(values: string[]) {
-  return values.length > 1 ? `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}` : values.join('')
 }
 
 function percent(value: number, total: number) {

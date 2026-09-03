@@ -139,7 +139,7 @@ export default function SkillsView(props: SkillsViewProps) {
 
       <div className="skills-results-summary">
         <span><strong>{visibleCount}</strong> of {snapshot.rows.length} skills shown</span>
-        <span>Bulk scope: <strong>{toolScope === 'all' ? MANAGED_TOOLS.map(toolDisplayName).join(' + ') : titleCase(toolScope)}</strong></span>
+        <span>Bulk scope: <strong>{toolScope === 'all' ? MANAGED_TOOLS.map(toolDisplayName).join(' + ') : toolDisplayName(toolScope)}</strong></span>
       </div>
 
       <div className="skills-workspace">
@@ -333,7 +333,7 @@ function DetailsDrawer({ row, onClose, onToggleGroup, onAddToSkillSet, onSetFavo
       <dl className="details-summary"><div><dt>Group</dt><dd>{row.group}</dd></div><div><dt>Source</dt><dd>{row.source}</dd></div></dl>
       {favoriteEligible(row) && <button className={`secondary-button details-group-action details-favorite-action ${row.favorite ? 'active' : ''}`} onClick={() => onSetFavorite(row.name, !row.favorite)} disabled={busy || favoritesUnavailable}><Star size={15} fill={row.favorite ? 'currentColor' : 'none'} /> {row.favorite ? 'Remove from favorites' : 'Add to favorites'}</button>}
       <button className="secondary-button details-group-action" onClick={() => onAddToSkillSet(row.name)} disabled={busy || !canSaveToSet} title={canSaveToSet ? undefined : 'Only toggleable user skills can be added'}><BookmarkPlus size={15} /> Add to Skill Set…</button>
-      <button className="secondary-button details-group-action" onClick={() => onToggleGroup(row.group)} disabled={busy}><ArrowUpDown size={15} /> Smart-toggle group · {toolScope === 'all' ? 'All tools' : titleCase(toolScope)}</button>
+      <button className="secondary-button details-group-action" onClick={() => onToggleGroup(row.group)} disabled={busy}><ArrowUpDown size={15} /> Smart-toggle group · {toolScope === 'all' ? 'All tools' : toolDisplayName(toolScope)}</button>
       <div className="detail-cells">
         {MANAGED_TOOLS.map((tool) => {
           const cell = row[tool]

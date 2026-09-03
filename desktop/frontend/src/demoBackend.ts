@@ -1,5 +1,18 @@
 import { MANAGED_TOOLS, favoriteEligible, type ActionResult, type ApplyResult, type Backend, type ManagedTool, type PendingChange, type SkillCell, type SkillRow, type Snapshot } from './api'
 
+interface DemoSource extends Record<`${ManagedTool}Count`, number> {
+  sourceId: string
+  kind: string
+  group: string
+  location: string
+  skillCount: number
+  installedAt: string
+  commit?: string
+  canUpdate: boolean
+  updateMode: string
+  updateHint: string
+}
+
 const seedRows: SkillRow[] = [
   row('release-checklist', 'Prepare a project for a safe release.', 'example-labs/engineering-skills', 'symlink repo', { claude: 'ON', codex: 'ON', muse: 'ON' }),
   row('dependency-review', 'Review dependency and supply-chain changes.', 'example-labs/engineering-skills', 'symlink repo', { claude: 'ON', codex: 'ON', muse: 'OFF' }),
@@ -26,7 +39,7 @@ class DemoBackend implements Backend {
     { setId: 'set:media-demos', name: 'Media demos', description: 'Use when creating an occasional project video.', skills: ['media-compose', 'video-encode'], createdAt: '2026-08-14T09:00:00Z', updatedAt: '2026-08-14T09:00:00Z' },
     { setId: 'set:release-review', name: 'Release review', description: 'Use before publishing a public build.', skills: ['dependency-review', 'release-checklist'], createdAt: '2026-08-13T09:00:00Z', updatedAt: '2026-08-15T09:00:00Z' },
   ]
-  private sources = [
+  private sources: DemoSource[] = [
     { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, museCount: 1, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
     { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, museCount: 1, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
   ]
@@ -223,7 +236,7 @@ class DemoBackend implements Backend {
   async previewUninstall(sourceID: string) {
     const source = this.sources.find((item) => item.sourceId === sourceID)!
     const affectedFavorites = this.rows.filter((row) => row.group === source.group && this.favorites.has(row.name)).map((row) => row.name).sort()
-    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: MANAGED_TOOLS.reduce((total, tool) => total + ((source as unknown as Record<string, number | undefined>)[`${tool}Count`] ?? 0), 0), disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local', affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites, favoriteImpactWarning: '' } as never
+    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: MANAGED_TOOLS.reduce((total, tool) => total + source[`${tool}Count`], 0), disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local', affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites, favoriteImpactWarning: '' } as never
   }
   async uninstallSource(sourceID: string) {
     this.sources = this.sources.filter((source) => source.sourceId !== sourceID)
@@ -312,16 +325,25 @@ function demoCandidates() {
   }))
 }
 
-const DEMO_BUDGET_SPECS: Record<ManagedTool, [string, number, number]> = {
-  claude: ['Claude default', 1680, 2000],
-  codex: ['gpt-5.6-sol', 1951, 5440],
-  muse: ['Muse default', 1680, 2000],
+interface DemoBudgetSpec {
+  model: string
+  tokens: number
+  budgetTokens: number
+  budgetLabel: string
+  accuracy: (measured: boolean) => string
+  message: (measured: boolean) => string
+}
+
+const DEMO_BUDGET_SPECS: Record<ManagedTool, DemoBudgetSpec> = {
+  claude: { model: 'Claude default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1.0% of model context', accuracy: () => 'partial', message: () => 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
+  codex: { model: 'gpt-5.6-sol', tokens: 1951, budgetTokens: 5440, budgetLabel: '2% of model context', accuracy: (measured) => measured ? 'measured' : 'partial', message: (measured) => measured ? "Measured from Codex's model-visible global catalog." : 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
+  muse: { model: 'Muse default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1% of assumed 200,000-token context', accuracy: () => 'estimated', message: () => 'Filesystem estimate. Muse exposes no supported catalog diagnostic.' },
 }
 
 function demoBudgets(pending: PendingChange[], measured: boolean) {
   return Object.fromEntries(MANAGED_TOOLS.map((tool) => {
-    const [model, tokens, budgetTokens] = DEMO_BUDGET_SPECS[tool]
-    return [tool, demoBudget(tool, model, tokens, budgetTokens, pending.filter((change) => change.tool === tool).length, measured)]
+    const spec = DEMO_BUDGET_SPECS[tool]
+    return [tool, demoBudget(tool, spec, pending.filter((change) => change.tool === tool).length, measured)]
   }))
 }
 
@@ -341,22 +363,22 @@ function demoSetSummary(tool: string, cells: ReturnType<typeof demoSetMemberCell
   return { tool, appliedStatus: status(on, off), effectiveStatus: status(effectiveOn, effectiveOff), eligible: eligible.length, on, off, effectiveOn, effectiveOff, pending: cells.filter((cell) => cell.pending).length, missing: cells.filter((cell) => cell.state === '-').length, readOnly: cells.filter((cell) => cell.state === 'RO').length, conflict: cells.filter((cell) => cell.state === 'CONFLICT').length }
 }
 
-function demoBudget(tool: string, model: string, tokens: number, budgetTokens: number, pendingCount: number, measured: boolean) {
-  const projectedTokens = Math.max(0, tokens - pendingCount * 42)
-  const usage = (value: number) => ({ skillCount: 9, requestedCharacters: value * 4, renderedCharacters: Math.min(value, budgetTokens) * 4, estimatedTokens: value, renderedTokens: Math.min(value, budgetTokens), usedPercent: Math.round(value / budgetTokens * 1000) / 10, shortenedDescriptions: 0, omittedSkills: 0, health: value > budgetTokens ? 'over-budget' : value / budgetTokens >= .8 ? 'near-limit' : 'ok' })
+function demoBudget(tool: string, spec: DemoBudgetSpec, pendingCount: number, measured: boolean) {
+  const projectedTokens = Math.max(0, spec.tokens - pendingCount * 42)
+  const usage = (value: number) => ({ skillCount: 9, requestedCharacters: value * 4, renderedCharacters: Math.min(value, spec.budgetTokens) * 4, estimatedTokens: value, renderedTokens: Math.min(value, spec.budgetTokens), usedPercent: Math.round(value / spec.budgetTokens * 1000) / 10, shortenedDescriptions: 0, omittedSkills: 0, health: value > spec.budgetTokens ? 'over-budget' : value / spec.budgetTokens >= .8 ? 'near-limit' : 'ok' })
   return {
     tool,
-    model,
+    model: spec.model,
     contextWindowTokens: tool === 'codex' ? 272000 : 200000,
     contextWindowAssumed: tool !== 'codex',
     budgetFraction: tool === 'codex' ? .02 : .01,
-    budgetCharacters: budgetTokens * 4,
-    budgetTokens,
-    budgetLabel: tool === 'codex' ? '2% of model context' : tool === 'muse' ? '1% of assumed 200,000-token context' : '1.0% of model context',
-    accuracy: tool === 'muse' ? 'estimated' : tool === 'codex' && measured ? 'measured' : 'partial',
+    budgetCharacters: spec.budgetTokens * 4,
+    budgetTokens: spec.budgetTokens,
+    budgetLabel: spec.budgetLabel,
+    accuracy: spec.accuracy(measured),
     coverage: 'Global personal and provider catalogs.',
-    message: tool === 'muse' ? 'Filesystem estimate. Muse exposes no supported catalog diagnostic.' : tool === 'codex' && measured ? "Measured from Codex's model-visible global catalog." : 'Filesystem estimate. Run provider diagnostics for model-visible evidence.',
-    current: usage(tokens),
+    message: spec.message(measured),
+    current: usage(spec.tokens),
     projected: usage(projectedTokens),
     projectionChanged: pendingCount > 0,
   }
