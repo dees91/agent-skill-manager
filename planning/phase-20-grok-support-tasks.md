@@ -47,7 +47,7 @@
 | P20-T05 | Context budget Grok estimate and advisor parity | done | P20-T01 |
 | P20-T06 | GUI backend projections and desktop frontend | done | P20-T01 |
 | P20-T07 | First-party skill, README, DESIGN, AGENTS, wiki | done | P20-T02 |
-| P20-T08 | Full validation, branch, and PR | in-progress | P20-T07 |
+| P20-T08 | Full validation, branch, and PR | done | P20-T07 |
 
 ## PR0 Task Definitions
 
