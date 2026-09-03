@@ -463,3 +463,17 @@ intentionally excluded.
 - Tracked in `planning/phase-20-grok-support-tasks.md`; authoritative docs
   (`AGENTS.md`, `README.md`, `DESIGN.md`, first-party skill) and the wiki
   synthesis updated alongside.
+
+## [2026-09-03] implementation | PR12 follow-up: TUI width, estimate spec, demo specs
+
+- `fixedTableWidthWithoutSkill` now derives cursor/separator/state widths from
+  `len(model.Tools())` (was off by one separator after Grok) with a new
+  `view_test.go` locking the derivation.
+- `analyzeMuse`/`analyzeGrok` bodies merged into `analyzeEstimatedTool` driven
+  by per-tool spec records; a diagnostic-less tool is now one spec entry.
+- Demo budget window/accuracy/label/message live in the shared exported
+  `DEMO_BUDGET_SPECS`; fixtures consume the same record. Sources Targets cell
+  renders all tools from `MANAGED_TOOLS` (Grok counter was missing) with a
+  regression assertion.
+- Deferred on purpose: `docs/images` screenshots still show three tools;
+  refreshing them needs an interactive GUI capture session.

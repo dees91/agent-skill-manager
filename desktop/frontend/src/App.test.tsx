@@ -529,6 +529,7 @@ describe('Skill Manager desktop app', () => {
     render(<App backend={backend} />)
     await screen.findByRole('heading', { name: 'Dashboard' })
     await user.click(screen.getByRole('button', { name: /Sources/ }))
+    expect(within(screen.getByRole('table')).getAllByText('Grok', { exact: false })).toHaveLength(2)
     expect(screen.getByRole('button', { name: 'Extend to tool' })).toBeDisabled()
   })
 

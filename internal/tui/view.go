@@ -287,8 +287,13 @@ func groupColumnWidth(totalWidth, skillWidth int) int {
 	return width
 }
 
+// fixedTableWidthWithoutSkill covers the cursor column (2), one separator per
+// column gap (skill, tools, and group make len(Tools())+2 gaps), and one fixed
+// state column per tool. Derive it from len(Tools()) so adding a tool cannot
+// silently skew the Skill and Group columns.
 func fixedTableWidthWithoutSkill() int {
-	return 2 + 5 + stateColumnWidth + stateColumnWidth + stateColumnWidth + stateColumnWidth
+	tools := len(domain.Tools())
+	return 2 + (tools + 2) + tools*stateColumnWidth
 }
 
 func (m Model) writeDetails(b *strings.Builder) {

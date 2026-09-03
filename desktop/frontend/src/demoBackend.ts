@@ -325,20 +325,23 @@ function demoCandidates() {
   }))
 }
 
-interface DemoBudgetSpec {
+export interface DemoBudgetSpec {
   model: string
   tokens: number
   budgetTokens: number
+  contextWindowTokens: number
+  contextWindowAssumed: boolean
+  budgetFraction: number
   budgetLabel: string
   accuracy: (measured: boolean) => string
   message: (measured: boolean) => string
 }
 
-const DEMO_BUDGET_SPECS: Record<ManagedTool, DemoBudgetSpec> = {
-  claude: { model: 'Claude default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1.0% of model context', accuracy: () => 'partial', message: () => 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
-  codex: { model: 'gpt-5.6-sol', tokens: 1951, budgetTokens: 5440, budgetLabel: '2% of model context', accuracy: (measured) => measured ? 'measured' : 'partial', message: (measured) => measured ? "Measured from Codex's model-visible global catalog." : 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
-  muse: { model: 'Muse default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1% of assumed 200,000-token context', accuracy: () => 'estimated', message: () => 'Filesystem estimate. Muse exposes no supported catalog diagnostic.' },
-  grok: { model: 'Grok default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1% of assumed 200,000-token context', accuracy: () => 'estimated', message: () => 'Filesystem estimate. Grok exposes no supported catalog diagnostic.' },
+export const DEMO_BUDGET_SPECS: Record<ManagedTool, DemoBudgetSpec> = {
+  claude: { model: 'Claude default', tokens: 1680, budgetTokens: 2000, contextWindowTokens: 200000, contextWindowAssumed: true, budgetFraction: .01, budgetLabel: '1.0% of model context', accuracy: () => 'partial', message: () => 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
+  codex: { model: 'gpt-5.6-sol', tokens: 1951, budgetTokens: 5440, contextWindowTokens: 272000, contextWindowAssumed: false, budgetFraction: .02, budgetLabel: '2% of model context', accuracy: (measured) => measured ? 'measured' : 'partial', message: (measured) => measured ? "Measured from Codex's model-visible global catalog." : 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
+  muse: { model: 'Muse default', tokens: 1680, budgetTokens: 2000, contextWindowTokens: 200000, contextWindowAssumed: true, budgetFraction: .01, budgetLabel: '1% of assumed 200,000-token context', accuracy: () => 'estimated', message: () => 'Filesystem estimate. Muse exposes no supported catalog diagnostic.' },
+  grok: { model: 'Grok default', tokens: 1680, budgetTokens: 2000, contextWindowTokens: 200000, contextWindowAssumed: true, budgetFraction: .01, budgetLabel: '1% of assumed 200,000-token context', accuracy: () => 'estimated', message: () => 'Filesystem estimate. Grok exposes no supported catalog diagnostic.' },
 }
 
 function demoBudgets(pending: PendingChange[], measured: boolean) {
@@ -370,9 +373,9 @@ function demoBudget(tool: string, spec: DemoBudgetSpec, pendingCount: number, me
   return {
     tool,
     model: spec.model,
-    contextWindowTokens: tool === 'codex' ? 272000 : 200000,
-    contextWindowAssumed: tool !== 'codex',
-    budgetFraction: tool === 'codex' ? .02 : .01,
+    contextWindowTokens: spec.contextWindowTokens,
+    contextWindowAssumed: spec.contextWindowAssumed,
+    budgetFraction: spec.budgetFraction,
     budgetCharacters: spec.budgetTokens * 4,
     budgetTokens: spec.budgetTokens,
     budgetLabel: spec.budgetLabel,
