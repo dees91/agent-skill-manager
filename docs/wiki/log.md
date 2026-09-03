@@ -370,3 +370,17 @@ intentionally excluded.
   production `paths.Default()` constructor applies the `XDG_CONFIG_HOME`
   override. Rule: path constructors used by tests stay pure functions of
   their arguments.
+
+## [2026-09-03] fix | Review follow-up: desktop layout and Muse estimate contract
+
+- Sized desktop grids for the third tool column (metric cards, skills table,
+  install matrix, skill-set table/member/editor rows, set tool choice) and
+  added the missing `.accuracy-estimated` badge style.
+- Fixture and demo backends now report Muse context as `estimated` with the
+  no-diagnostic message, matching the Go analyzer; the App test asserts one
+  `Partial estimate` and one `Estimated` badge.
+- Deduped `codexLine`/`museLine` into `catalogLine`, renamed the SkillSets
+  `ToolChoice` value `both` to `all`, and cleared Claude-and-Codex leftovers
+  in AGENTS.md, DESIGN.md, README.md, App copy, and wiki sources.
+- Existing `docs/images/*.png` still show two tool columns; regenerating them
+  requires running the desktop app and stays open.
