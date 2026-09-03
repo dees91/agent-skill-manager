@@ -431,3 +431,15 @@ intentionally excluded.
 - The install matrix and its column header now use the shared
   `MANAGED_TOOLS`/`toolDisplayName` from `api.ts`, closing the remaining tool
   list duplication in `SourcesView`.
+
+## [2026-09-03] implementation | PR0 frontend tool lists on MANAGED_TOOLS
+
+- `SkillsView`, `SkillSetsView`, `Dashboard`, `demoBackend`, and the shared
+  `api.ts` helpers (`projectPending`, `favoriteEligible`, additive
+  `toolFullName`) now iterate `MANAGED_TOOLS` instead of hardcoded
+  claude/codex/muse triples. `TOOL_TONES`/`TOOL_ICON`/`DEMO_BUDGET_SPECS`
+  records are keyed by `ManagedTool`, so the next tool is compiler-guided.
+- No visual or behavioral change: frontend typecheck, 28/28 vitest tests,
+  production build, root `go test`/`go vet`, and desktop `go test` all green.
+- Tracked in `planning/phase-20-grok-support-tasks.md` (PR0 done); Grok tool
+  support follows as PR1 after the PR0 merge.

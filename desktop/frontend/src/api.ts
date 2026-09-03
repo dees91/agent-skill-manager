@@ -54,6 +54,9 @@ export type ManagedTool = (typeof MANAGED_TOOLS)[number]
 export function toolDisplayName(tool: ManagedTool): string {
   return tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
 }
+export function toolFullName(tool: ManagedTool): string {
+  return tool === 'claude' ? 'Claude Code' : toolDisplayName(tool)
+}
 export interface SourceProgress {
   operation: string
   phase: string
@@ -170,15 +173,16 @@ export function projectPending(snapshot: Snapshot, pending: PendingChange[], con
     skillSetsWarning,
     rows: snapshot.rows.map((row) => ({
       ...row,
-      claude: projectCell(row.claude, byCell),
-      codex: projectCell(row.codex, byCell),
-      muse: projectCell(row.muse, byCell),
+      ...Object.fromEntries(MANAGED_TOOLS.map((tool) => [tool, projectCell(row[tool], byCell)])),
     })),
   } as Snapshot
 }
 
 export function favoriteEligible(row: SkillRow): boolean {
-  return [row.claude, row.codex, row.muse].some((cell) => Boolean(cell && !cell.readOnly && (cell.conflict || ['ON', 'OFF', 'CONFLICT'].includes(cell.state))))
+  return MANAGED_TOOLS.some((tool) => {
+    const cell = row[tool]
+    return Boolean(cell && !cell.readOnly && (cell.conflict || ['ON', 'OFF', 'CONFLICT'].includes(cell.state)))
+  })
 }
 
 function projectCell(cell: SkillCell | undefined, pending: Map<string, string>): SkillCell | undefined {

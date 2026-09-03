@@ -1,5 +1,13 @@
 import { ArrowRight, Bot, Check, CircleAlert, Gauge, Info, Layers3, Play, ShieldCheck, TerminalSquare } from 'lucide-react'
-import type { ContextBudgetToolReport, SkillCell, Snapshot } from '../api'
+import { MANAGED_TOOLS, toolDisplayName, toolFullName, type ContextBudgetToolReport, type ManagedTool, type SkillCell, type Snapshot } from '../api'
+
+const TOOL_TONES: Record<ManagedTool, string> = { claude: 'blue', codex: 'orange', muse: 'cyan' }
+const TOOL_ICON: Record<ManagedTool, typeof Bot> = { claude: Bot, codex: TerminalSquare, muse: Bot }
+
+function ToolIcon({ tool, size }: { tool: ManagedTool; size?: number }) {
+  const Icon = TOOL_ICON[tool]
+  return <Icon size={size} />
+}
 
 interface DashboardProps {
   snapshot: Snapshot
@@ -9,30 +17,26 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureContext }: DashboardProps) {
-  const claude = effectiveCounts(snapshot, 'claude')
-  const codex = effectiveCounts(snapshot, 'codex')
-  const muse = effectiveCounts(snapshot, 'muse')
-  const all = {
-    on: claude.on + codex.on + muse.on,
-    off: claude.off + codex.off + muse.off,
-    conflict: claude.conflict + codex.conflict + muse.conflict,
-    readOnly: claude.readOnly + codex.readOnly + muse.readOnly,
-  }
+  const perTool = MANAGED_TOOLS.map((tool) => ({ tool, counts: effectiveCounts(snapshot, tool) }))
+  const all = perTool.reduce((total, item) => ({
+    on: total.on + item.counts.on,
+    off: total.off + item.counts.off,
+    conflict: total.conflict + item.counts.conflict,
+    readOnly: total.readOnly + item.counts.readOnly,
+  }), { on: 0, off: 0, conflict: 0, readOnly: 0 })
   const total = all.on + all.off + all.conflict + all.readOnly
   const pending = snapshot.pending.length
 
   return (
     <section className="page dashboard-page" aria-labelledby="dashboard-title">
       <div className="page-heading">
-        <div><p className="eyebrow">Operational overview</p><h1 id="dashboard-title">Dashboard</h1><p>Visibility of local agent skills across Claude Code, Codex, and Muse.</p></div>
+        <div><p className="eyebrow">Operational overview</p><h1 id="dashboard-title">Dashboard</h1><p>Visibility of local agent skills across {joinWithAnd(MANAGED_TOOLS.map(toolFullName))}.</p></div>
         <button className="primary-button" onClick={onBrowseSkills}>Manage skills <ArrowRight size={16} /></button>
       </div>
 
       <div className="metric-grid">
         <MetricCard icon={<Layers3 />} value={snapshot.stats.managedSkills} label="Managed skills" meta={`${snapshot.groups.length} source groups`} tone="cyan" />
-        <MetricCard icon={<Bot />} value={claude.on} label="Claude enabled" meta={`${claude.off} off · ${pendingFor(snapshot, 'claude')} pending`} tone="blue" />
-        <MetricCard icon={<TerminalSquare />} value={codex.on} label="Codex enabled" meta={`${codex.off} off · ${pendingFor(snapshot, 'codex')} pending`} tone="orange" />
-        <MetricCard icon={<Bot />} value={muse.on} label="Muse enabled" meta={`${muse.off} off · ${pendingFor(snapshot, 'muse')} pending`} tone="cyan" />
+        {perTool.map(({ tool, counts }) => <MetricCard key={tool} icon={<ToolIcon tool={tool} />} value={counts.on} label={`${toolDisplayName(tool)} enabled`} meta={`${counts.off} off · ${pendingFor(snapshot, tool)} pending`} tone={TOOL_TONES[tool]} />)}
       </div>
 
       <article className="panel context-budget-panel">
@@ -41,9 +45,7 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
           <div className="context-header-actions"><span className="panel-badge context-token-badge">≈ 1 token / 4 chars</span><button className="secondary-button" onClick={onMeasureContext} disabled={busy}><Play size={13} /> Run provider diagnostics</button></div>
         </div>
         <div className="context-budget-list">
-          <ContextBudgetRow report={snapshot.contextBudgets.claude} icon={<Bot size={17} />} name="Claude Code" />
-          <ContextBudgetRow report={snapshot.contextBudgets.codex} icon={<TerminalSquare size={17} />} name="Codex" />
-          <ContextBudgetRow report={snapshot.contextBudgets.muse} icon={<Bot size={17} />} name="Muse" />
+          {MANAGED_TOOLS.map((tool) => <ContextBudgetRow key={tool} report={snapshot.contextBudgets[tool]} icon={<ToolIcon tool={tool} size={17} />} name={toolFullName(tool)} />)}
         </div>
         <div className="context-budget-note"><Info size={13} /><span>Filesystem estimate by default. Diagnostics run local read-only Codex and Claude commands only when requested; Muse is always a filesystem estimate.</span></div>
       </article>
@@ -63,9 +65,7 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
             </div>
           </div>
           <div className="tool-bars">
-            <ToolBar name="Claude Code" counts={claude} />
-            <ToolBar name="Codex" counts={codex} />
-            <ToolBar name="Muse" counts={muse} />
+            {perTool.map(({ tool, counts }) => <ToolBar key={tool} name={toolFullName(tool)} counts={counts} />)}
           </div>
         </article>
 
@@ -171,10 +171,10 @@ function ToolBar({ name, counts }: { name: string; counts: Counts }) {
 
 type Counts = { on: number; off: number; conflict: number; readOnly: number }
 
-function effectiveCounts(snapshot: Snapshot, tool: 'claude' | 'codex' | 'muse'): Counts {
+function effectiveCounts(snapshot: Snapshot, tool: ManagedTool): Counts {
   const result = { on: 0, off: 0, conflict: 0, readOnly: 0 }
   for (const row of snapshot.rows) {
-    const cell = row[tool] as SkillCell | undefined
+    const cell: SkillCell | undefined = row[tool]
     if (!cell) continue
     if (cell.effectiveState === 'ON') result.on++
     else if (cell.effectiveState === 'OFF') result.off++
@@ -186,6 +186,10 @@ function effectiveCounts(snapshot: Snapshot, tool: 'claude' | 'codex' | 'muse'):
 
 function pendingFor(snapshot: Snapshot, tool: string) {
   return snapshot.pending.filter((change) => change.tool === tool).length
+}
+
+function joinWithAnd(values: string[]) {
+  return values.length > 1 ? `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}` : values.join('')
 }
 
 function percent(value: number, total: number) {
