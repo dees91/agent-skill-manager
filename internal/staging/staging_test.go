@@ -29,7 +29,7 @@ func TestToggleBatchMixedScopeAndSkips(t *testing.T) {
 	}
 
 	result := ToggleBatch(store, rows, model.Tools())
-	if result.Changed != 1 || result.SkippedReadOnly != 1 || result.SkippedConflict != 1 || result.SkippedMissing != 5 {
+	if result.Changed != 1 || result.SkippedReadOnly != 1 || result.SkippedConflict != 1 || result.SkippedMissing != 8 {
 		t.Fatalf("result = %#v", result)
 	}
 	if got := store[Key{Tool: model.ToolCodex, SkillName: "mixed"}]; got != model.OperationEnable {

@@ -16,6 +16,7 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 		"ClaudeUserSkills":  filepath.Join(home, ".claude", "skills"),
 		"CodexUserSkills":   filepath.Join(home, ".agents", "skills"),
 		"MuseUserSkills":    filepath.Join(home, ".config", "muse", "skills"),
+		"GrokUserSkills":    filepath.Join(home, ".grok", "skills"),
 		"CodexSystemSkills": filepath.Join(home, ".codex", "skills", ".system"),
 		"ClaudePluginCache": filepath.Join(home, ".claude", "plugins", "cache"),
 		"AgentsSkillLock":   filepath.Join(home, ".agents", ".skill-lock.json"),
@@ -32,6 +33,7 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 		"ClaudeDisabledDir": filepath.Join(home, ".skill-manager", "disabled", "claude"),
 		"CodexDisabledDir":  filepath.Join(home, ".skill-manager", "disabled", "codex"),
 		"MuseDisabledDir":   filepath.Join(home, ".skill-manager", "disabled", "muse"),
+		"GrokDisabledDir":   filepath.Join(home, ".skill-manager", "disabled", "grok"),
 		"ReposDir":          filepath.Join(home, ".skill-manager", "repos"),
 		"TrashDir":          filepath.Join(home, ".skill-manager", "trash"),
 	}
@@ -47,6 +49,9 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	}
 	if got.MuseUserSkills != want["MuseUserSkills"] {
 		t.Fatalf("MuseUserSkills = %q, want %q", got.MuseUserSkills, want["MuseUserSkills"])
+	}
+	if got.GrokUserSkills != want["GrokUserSkills"] {
+		t.Fatalf("GrokUserSkills = %q, want %q", got.GrokUserSkills, want["GrokUserSkills"])
 	}
 	if got.CodexSystemSkills != want["CodexSystemSkills"] {
 		t.Fatalf("CodexSystemSkills = %q, want %q", got.CodexSystemSkills, want["CodexSystemSkills"])
@@ -96,6 +101,9 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	if got.MuseDisabledDir != want["MuseDisabledDir"] {
 		t.Fatalf("MuseDisabledDir = %q, want %q", got.MuseDisabledDir, want["MuseDisabledDir"])
 	}
+	if got.GrokDisabledDir != want["GrokDisabledDir"] {
+		t.Fatalf("GrokDisabledDir = %q, want %q", got.GrokDisabledDir, want["GrokDisabledDir"])
+	}
 	if got.ReposDir != want["ReposDir"] {
 		t.Fatalf("ReposDir = %q, want %q", got.ReposDir, want["ReposDir"])
 	}
@@ -116,6 +124,9 @@ func TestToolSpecificPathHelpers(t *testing.T) {
 	if got, ok := p.UserSkillsDirFor(model.ToolMuse); !ok || got != p.MuseUserSkills {
 		t.Fatalf("UserSkillsDirFor(muse) = %q, %v; want %q, true", got, ok, p.MuseUserSkills)
 	}
+	if got, ok := p.UserSkillsDirFor(model.ToolGrok); !ok || got != p.GrokUserSkills {
+		t.Fatalf("UserSkillsDirFor(grok) = %q, %v; want %q, true", got, ok, p.GrokUserSkills)
+	}
 	if got, ok := p.UserSkillsDirFor(model.Tool("bad")); ok || got != "" {
 		t.Fatalf("UserSkillsDirFor(bad) = %q, %v; want empty, false", got, ok)
 	}
@@ -128,6 +139,9 @@ func TestToolSpecificPathHelpers(t *testing.T) {
 	}
 	if got, ok := p.DisabledDirFor(model.ToolMuse); !ok || got != p.MuseDisabledDir {
 		t.Fatalf("DisabledDirFor(muse) = %q, %v; want %q, true", got, ok, p.MuseDisabledDir)
+	}
+	if got, ok := p.DisabledDirFor(model.ToolGrok); !ok || got != p.GrokDisabledDir {
+		t.Fatalf("DisabledDirFor(grok) = %q, %v; want %q, true", got, ok, p.GrokDisabledDir)
 	}
 	if got, ok := p.DisabledDirFor(model.Tool("bad")); ok || got != "" {
 		t.Fatalf("DisabledDirFor(bad) = %q, %v; want empty, false", got, ok)

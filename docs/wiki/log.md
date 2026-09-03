@@ -443,3 +443,23 @@ intentionally excluded.
   production build, root `go test`/`go vet`, and desktop `go test` all green.
 - Tracked in `planning/phase-20-grok-support-tasks.md` (PR0 done); Grok tool
   support follows as PR1 after the PR0 merge.
+
+## [2026-09-03] implementation | Grok as fourth managed tool (phase 20)
+
+- Grok user skills live in `~/.grok/skills` (per official xAI docs); disabled
+  entries in `~/.skill-manager/disabled/grok/`. Fourth `ToolGrok` column across
+  scan rows/groups, CLI tables/JSON, TUI, install/update/uninstall/extend
+  planner, Skill Advisor inventory, and GUI projections. Empty/`both`/`all`
+  now target all four tools; `list --json` stays at `apiVersion: 1` with an
+  additive `grok` cell; `state.json` stays at manifest version 2.
+- No provider diagnostic for Grok: the context budget report is always a
+  labeled filesystem estimate (1% of an assumed 200,000-token context), like
+  Muse. `GROK_HOME`, `[skills] paths`, project `.grok/skills`, and Grok plugin
+  skills are out of scope.
+- Frontend tool lists iterate `MANAGED_TOOLS` (PR0 groundwork); Grok adds one
+  list entry, `Record<ManagedTool, ...>` display records, a purple metric tone,
+  and four-column grid sizing. Fixed one missed PR0 site: install-draft
+  initial selections in `SourcesView`.
+- Tracked in `planning/phase-20-grok-support-tasks.md`; authoritative docs
+  (`AGENTS.md`, `README.md`, `DESIGN.md`, first-party skill) and the wiki
+  synthesis updated alongside.

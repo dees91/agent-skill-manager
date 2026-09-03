@@ -91,7 +91,7 @@ none of the catalog methods.
   Source, and Read only filters. Search temporarily opens matching groups.
 - Group expansion lives in React App state for the process lifetime; navigating
   away and back preserves it, while restart clears it.
-- All three tool columns (Claude, Codex, Muse) remain visible. The tool chip scopes
+- All four tool columns (Claude, Codex, Muse, Grok) remain visible. The tool chip scopes
   classification and row/group/results smart-toggle targets.
 - Result bulk includes filtered rows in collapsed groups. Group bulk ignores
   filtering and uses the complete loaded group. Eligible cell counts make both
@@ -130,7 +130,7 @@ none of the catalog methods.
 ## Saved Skill Sets Workspace
 
 - The workspace lists each recipe once with optional `When to use` copy,
-  member count, unavailable count, and applied/effective Claude, Codex, and Muse
+  member count, unavailable count, and applied/effective Claude, Codex, Muse, and Grok
   summaries. Expanded rows show current member source and per-tool state.
 - Create/edit uses one searchable tool-agnostic member list. Existing missing
   members remain editable, while arbitrary new unavailable names are rejected.
@@ -171,7 +171,7 @@ the version.
 
 The Sources screen uses a dense manifest-owned source table and centered
 workflow dialogs. Install includes Git/local selection, discovery, a scrollable
-Claude/Codex/Muse matrix, review, and apply. Each tool column has an explicit bulk
+Claude/Codex/Muse/Grok matrix, review, and apply. Each tool column has an explicit bulk
 selection toggle whose `ON`, `OFF`, `MIXED`, or `N/A` state reflects every
 non-conflict discovered target, independent of the row filter. **Extend to
 tool** offers one tool radio preselected to the first tool with a missing

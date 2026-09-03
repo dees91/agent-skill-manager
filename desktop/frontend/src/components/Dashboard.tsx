@@ -1,8 +1,8 @@
 import { ArrowRight, Bot, Check, CircleAlert, Gauge, Info, Layers3, Play, ShieldCheck, TerminalSquare } from 'lucide-react'
 import { MANAGED_TOOLS, joinList, toolDisplayName, toolFullName, type ContextBudgetToolReport, type ManagedTool, type SkillCell, type Snapshot } from '../api'
 
-const TOOL_TONES: Record<ManagedTool, string> = { claude: 'blue', codex: 'orange', muse: 'cyan' }
-const TOOL_ICON: Record<ManagedTool, typeof Bot> = { claude: Bot, codex: TerminalSquare, muse: Bot }
+const TOOL_TONES: Record<ManagedTool, string> = { claude: 'blue', codex: 'orange', muse: 'cyan', grok: 'purple' }
+const TOOL_ICON: Record<ManagedTool, typeof Bot> = { claude: Bot, codex: TerminalSquare, muse: Bot, grok: Bot }
 
 function ToolIcon({ tool, size }: { tool: ManagedTool; size?: number }) {
   const Icon = TOOL_ICON[tool]
@@ -47,7 +47,7 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
         <div className="context-budget-list">
           {MANAGED_TOOLS.map((tool) => <ContextBudgetRow key={tool} report={snapshot.contextBudgets[tool]} icon={<ToolIcon tool={tool} size={17} />} name={toolFullName(tool)} />)}
         </div>
-        <div className="context-budget-note"><Info size={13} /><span>Filesystem estimate by default. Diagnostics run local read-only Codex and Claude commands only when requested; Muse is always a filesystem estimate.</span></div>
+        <div className="context-budget-note"><Info size={13} /><span>Filesystem estimate by default. Diagnostics run local read-only Codex and Claude commands only when requested; Muse and Grok are always filesystem estimates.</span></div>
       </article>
 
       <div className="dashboard-grid">

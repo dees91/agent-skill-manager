@@ -198,7 +198,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       if (next.cancelled) return
       setDraft(next)
       setReview(null)
-      setSelections(new Set(next.candidates.flatMap((candidate) => [candidate.claude, candidate.codex, candidate.muse].filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
+      setSelections(new Set(next.candidates.flatMap((candidate) => MANAGED_TOOLS.map((tool) => candidate[tool]).filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
       if (next.cloned) onAnnounce('Repository cloned for inspection. The checkout will be retained if you cancel.')
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }

@@ -76,7 +76,7 @@ func (s *Service) favoriteMutationResultLocked(message string) FavoriteMutationR
 }
 
 func favoriteEligible(row model.SkillRow) bool {
-	for _, cell := range []*model.ToolSkill{row.Claude, row.Codex, row.Muse} {
+	for _, cell := range []*model.ToolSkill{row.Claude, row.Codex, row.Muse, row.Grok} {
 		if cell == nil || cell.ReadOnly || cell.State == model.SkillStateReadOnly {
 			continue
 		}

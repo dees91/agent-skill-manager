@@ -49,9 +49,9 @@ export type SourceMutationResult = gui.SourceMutationResult
 export type UninstallPreview = gui.UninstallPreview
 export type ExtendPreview = gui.ExtendPreview
 export type ExtendPreviewSource = gui.ExtendPreviewSource
-export const MANAGED_TOOLS = ['claude', 'codex', 'muse'] as const
+export const MANAGED_TOOLS = ['claude', 'codex', 'muse', 'grok'] as const
 export type ManagedTool = (typeof MANAGED_TOOLS)[number]
-const TOOL_DISPLAY_NAMES: Record<ManagedTool, string> = { claude: 'Claude', codex: 'Codex', muse: 'Muse' }
+const TOOL_DISPLAY_NAMES: Record<ManagedTool, string> = { claude: 'Claude', codex: 'Codex', muse: 'Muse', grok: 'Grok' }
 export function toolDisplayName(tool: ManagedTool): string {
   return TOOL_DISPLAY_NAMES[tool]
 }
@@ -59,7 +59,7 @@ export function joinList(values: string[], conjunction: 'and' | 'or'): string {
   if (values.length <= 1) return values.join('')
   return `${values.slice(0, -1).join(', ')}, ${conjunction} ${values[values.length - 1]}`
 }
-const TOOL_FULL_NAMES: Record<ManagedTool, string> = { claude: 'Claude Code', codex: 'Codex', muse: 'Muse' }
+const TOOL_FULL_NAMES: Record<ManagedTool, string> = { claude: 'Claude Code', codex: 'Codex', muse: 'Muse', grok: 'Grok' }
 export function toolFullName(tool: ManagedTool): string {
   return TOOL_FULL_NAMES[tool]
 }

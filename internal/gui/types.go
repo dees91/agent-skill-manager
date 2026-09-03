@@ -32,6 +32,7 @@ type DiscoverSkill struct {
 	Claude            DiscoverToolState `json:"claude"`
 	Codex             DiscoverToolState `json:"codex"`
 	Muse              DiscoverToolState `json:"muse"`
+	Grok              DiscoverToolState `json:"grok"`
 }
 
 // DiscoverPage is one leaderboard or search result with connection evidence.
@@ -85,6 +86,7 @@ type SkillSet struct {
 	Claude      SkillSetToolSummary `json:"claude"`
 	Codex       SkillSetToolSummary `json:"codex"`
 	Muse        SkillSetToolSummary `json:"muse"`
+	Grok        SkillSetToolSummary `json:"grok"`
 	Unavailable int                 `json:"unavailable"`
 	Pending     int                 `json:"pending"`
 	CreatedAt   string              `json:"createdAt"`
@@ -101,6 +103,7 @@ type SkillSetMember struct {
 	Claude      SkillSetMemberCell `json:"claude"`
 	Codex       SkillSetMemberCell `json:"codex"`
 	Muse        SkillSetMemberCell `json:"muse"`
+	Grok        SkillSetMemberCell `json:"grok"`
 }
 
 // SkillSetMemberCell is the status of one saved name for one tool.
@@ -164,6 +167,7 @@ type ManagedSource struct {
 	ClaudeCount int    `json:"claudeCount"`
 	CodexCount  int    `json:"codexCount"`
 	MuseCount   int    `json:"museCount"`
+	GrokCount   int    `json:"grokCount"`
 	InstalledAt string `json:"installedAt"`
 	Commit      string `json:"commit,omitempty"`
 	CanUpdate   bool   `json:"canUpdate"`
@@ -191,6 +195,7 @@ type InstallCandidate struct {
 	Claude       InstallCandidateCell `json:"claude"`
 	Codex        InstallCandidateCell `json:"codex"`
 	Muse         InstallCandidateCell `json:"muse"`
+	Grok         InstallCandidateCell `json:"grok"`
 }
 
 // InstallDraft is the inspected source and its selectable matrix.
@@ -329,6 +334,7 @@ type SkillRow struct {
 	Claude      *SkillCell `json:"claude,omitempty"`
 	Codex       *SkillCell `json:"codex,omitempty"`
 	Muse        *SkillCell `json:"muse,omitempty"`
+	Grok        *SkillCell `json:"grok,omitempty"`
 }
 
 // SkillCell contains the complete details for one tool-specific entry.
@@ -376,6 +382,7 @@ type DashboardStats struct {
 	Claude         StateCounts `json:"claude"`
 	Codex          StateCounts `json:"codex"`
 	Muse           StateCounts `json:"muse"`
+	Grok           StateCounts `json:"grok"`
 	ConflictCells  int         `json:"conflictCells"`
 }
 
@@ -386,6 +393,7 @@ type GroupSummary struct {
 	Claude  StateCounts `json:"claude"`
 	Codex   StateCounts `json:"codex"`
 	Muse    StateCounts `json:"muse"`
+	Grok    StateCounts `json:"grok"`
 	Sources []string    `json:"sources"`
 }
 
@@ -458,6 +466,7 @@ func projectRow(row model.SkillRow, pending staging.Memory, favorite bool) Skill
 		Claude:      projectCell(row.Claude, pending),
 		Codex:       projectCell(row.Codex, pending),
 		Muse:        projectCell(row.Muse, pending),
+		Grok:        projectCell(row.Grok, pending),
 	}
 }
 
@@ -509,6 +518,7 @@ func projectGroups(groups []model.GroupSummary) []GroupSummary {
 			Claude:  projectCounts(group.Claude),
 			Codex:   projectCounts(group.Codex),
 			Muse:    projectCounts(group.Muse),
+			Grok:    projectCounts(group.Grok),
 			Sources: sources,
 		})
 	}
@@ -530,7 +540,7 @@ func summarize(rows []model.SkillRow) (DashboardStats, []ConflictSummary) {
 	conflicts := []ConflictSummary{}
 	for _, row := range rows {
 		managed := false
-		for _, cell := range []*model.ToolSkill{row.Claude, row.Codex, row.Muse} {
+		for _, cell := range []*model.ToolSkill{row.Claude, row.Codex, row.Muse, row.Grok} {
 			if cell == nil {
 				continue
 			}
@@ -540,6 +550,8 @@ func summarize(rows []model.SkillRow) (DashboardStats, []ConflictSummary) {
 				counts = &stats.Codex
 			case model.ToolMuse:
 				counts = &stats.Muse
+			case model.ToolGrok:
+				counts = &stats.Grok
 			}
 			switch cell.State {
 			case model.SkillStateOn:
@@ -580,7 +592,7 @@ func summarize(rows []model.SkillRow) (DashboardStats, []ConflictSummary) {
 func collectSources(rows []model.SkillRow) []string {
 	seen := make(map[string]struct{})
 	for _, row := range rows {
-		for _, cell := range []*model.ToolSkill{row.Claude, row.Codex, row.Muse} {
+		for _, cell := range []*model.ToolSkill{row.Claude, row.Codex, row.Muse, row.Grok} {
 			if cell != nil && cell.Source != "" {
 				seen[cell.Source.String()] = struct{}{}
 			}

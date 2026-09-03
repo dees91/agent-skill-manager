@@ -60,11 +60,12 @@ type ToolReport struct {
 	ProjectionChanged    bool     `json:"projectionChanged"`
 }
 
-// Reports contains the three provider rows shown by the Dashboard.
+// Reports contains the provider rows shown by the Dashboard.
 type Reports struct {
 	Claude ToolReport `json:"claude"`
 	Codex  ToolReport `json:"codex"`
 	Muse   ToolReport `json:"muse"`
+	Grok   ToolReport `json:"grok"`
 }
 
 // CellKey is a path-free managed skill cell identity.
@@ -99,6 +100,8 @@ func (r Result) Project(pending map[CellKey]model.OperationKind) Reports {
 			report = &reports.Codex
 		case model.ToolMuse:
 			report = &reports.Muse
+		case model.ToolGrok:
+			report = &reports.Grok
 		}
 		switch operation {
 		case model.OperationDisable:
@@ -118,6 +121,7 @@ func (r Result) Project(pending map[CellKey]model.OperationKind) Reports {
 	recalculateProjected(&reports.Claude)
 	recalculateProjected(&reports.Codex)
 	recalculateProjected(&reports.Muse)
+	recalculateProjected(&reports.Grok)
 	return reports
 }
 

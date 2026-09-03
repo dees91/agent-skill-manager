@@ -41,7 +41,7 @@ func (m Model) View() string {
 
 	b.WriteString(titleStyle.Render("Skill Manager"))
 	b.WriteString("\n")
-	b.WriteString(subtleStyle.Render(fmt.Sprintf("Active column: %s | Rows: %d | Tab switches Claude/Codex/Muse", toolTitle(m.activeTool), len(m.rows))))
+	b.WriteString(subtleStyle.Render(fmt.Sprintf("Active column: %s | Rows: %d | Tab switches Claude/Codex/Muse/Grok", toolTitle(m.activeTool), len(m.rows))))
 	b.WriteString("\n\n")
 
 	skillWidth := skillColumnWidth(m.width)
@@ -60,12 +60,13 @@ func (m Model) View() string {
 				cursor = ">>"
 			}
 			line := fmt.Sprintf(
-				"%s %s %s %s %s %s",
+				"%s %s %s %s %s %s %s",
 				cursorStyle.Width(2).Render(cursor),
 				nameStyle.Width(skillWidth).Render(truncate(row.Name, skillWidth)),
 				formatCell(domain.ToolClaude, row.Name, row.Claude, m.activeTool, i == m.cursor, m.pending),
 				formatCell(domain.ToolCodex, row.Name, row.Codex, m.activeTool, i == m.cursor, m.pending),
 				formatCell(domain.ToolMuse, row.Name, row.Muse, m.activeTool, i == m.cursor, m.pending),
+				formatCell(domain.ToolGrok, row.Name, row.Grok, m.activeTool, i == m.cursor, m.pending),
 				truncate(row.Group.String(), groupWidth),
 			)
 			b.WriteString(line)
@@ -162,13 +163,15 @@ func formatHeader(activeTool domain.Tool, skillWidth int) string {
 	claude := headerCell("Claude", activeTool == domain.ToolClaude)
 	codex := headerCell("Codex", activeTool == domain.ToolCodex)
 	muse := headerCell("Muse", activeTool == domain.ToolMuse)
+	grok := headerCell("Grok", activeTool == domain.ToolGrok)
 	return fmt.Sprintf(
-		"%s %s %s %s %s %s",
+		"%s %s %s %s %s %s %s",
 		headerStyle.Width(2).Render(""),
 		headerStyle.Width(skillWidth).Render("Skill"),
 		claude,
 		codex,
 		muse,
+		grok,
 		headerStyle.Render("Group"),
 	)
 }
@@ -188,6 +191,8 @@ func toolTitle(tool domain.Tool) string {
 		return "Codex"
 	case domain.ToolMuse:
 		return "Muse"
+	case domain.ToolGrok:
+		return "Grok"
 	default:
 		return tool.String()
 	}
@@ -283,7 +288,7 @@ func groupColumnWidth(totalWidth, skillWidth int) int {
 }
 
 func fixedTableWidthWithoutSkill() int {
-	return 2 + 5 + stateColumnWidth + stateColumnWidth + stateColumnWidth
+	return 2 + 5 + stateColumnWidth + stateColumnWidth + stateColumnWidth + stateColumnWidth
 }
 
 func (m Model) writeDetails(b *strings.Builder) {
@@ -304,6 +309,7 @@ func (m Model) writeDetails(b *strings.Builder) {
 	writeToolDetails(b, "Claude", domain.ToolClaude, row.Name, row.Claude, m.pending)
 	writeToolDetails(b, "Codex", domain.ToolCodex, row.Name, row.Codex, m.pending)
 	writeToolDetails(b, "Muse", domain.ToolMuse, row.Name, row.Muse, m.pending)
+	writeToolDetails(b, "Grok", domain.ToolGrok, row.Name, row.Grok, m.pending)
 }
 
 func rowDescription(row domain.SkillRow) string {
@@ -318,6 +324,9 @@ func rowDescription(row domain.SkillRow) string {
 	}
 	if row.Muse != nil && row.Muse.Description != "" {
 		return row.Muse.Description
+	}
+	if row.Grok != nil && row.Grok.Description != "" {
+		return row.Grok.Description
 	}
 	return ""
 }

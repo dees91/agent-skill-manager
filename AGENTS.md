@@ -2,7 +2,7 @@
 
 ## Project Intent
 
-`skill-manager` is a local tool for managing globally installed agent skills for Claude Code, Codex, and Muse. Its established terminal interfaces remain the primary source-management surface, with a macOS desktop interface for visibility and reversible toggles.
+`skill-manager` is a local tool for managing globally installed agent skills for Claude Code, Codex, Muse, and Grok. Its established terminal interfaces remain the primary source-management surface, with a macOS desktop interface for visibility and reversible toggles.
 
 The first version is a local, simple, reversible TUI plus a minimal CLI. It must make it easy to see which skills are enabled for each tool and toggle them off and on without losing their original installation method.
 
@@ -30,6 +30,7 @@ global skill layout:
 - Claude Code user skills: `~/.claude/skills`
 - Codex user skills: `~/.agents/skills`
 - Muse user skills: `~/.config/muse/skills` (`$XDG_CONFIG_HOME/muse/skills` when set)
+- Grok user skills: `~/.grok/skills`
 - Codex system skills: `~/.codex/skills/.system`
 - Claude plugin cache: `~/.claude/plugins/cache`
 - Skill Manager state: `~/.skill-manager`
@@ -48,7 +49,7 @@ repositories, skill names, and counts.
 
 ### Toggle Semantics
 
-Disable means the skill disappears from the directory scanned by Claude Code, Codex, or Muse.
+Disable means the skill disappears from the directory scanned by Claude Code, Codex, Muse, or Grok.
 
 Enable means the exact previous entry is restored.
 
@@ -74,6 +75,7 @@ Managed and toggleable in MVP:
 - Claude Code user skills in `~/.claude/skills`
 - Codex user skills in `~/.agents/skills`
 - Muse user skills in `~/.config/muse/skills` (`$XDG_CONFIG_HOME/muse/skills` when set)
+- Grok user skills in `~/.grok/skills`
 
 Read-only in MVP:
 
@@ -147,7 +149,7 @@ Install source and layout:
 
 - `skill-manager install <git-url>` clones Git repositories into `~/.skill-manager/repos/<host>/<repo-path>`.
 - Example: `https://github.com/addyosmani/agent-skills` clones into `~/.skill-manager/repos/github.com/addyosmani/agent-skills`.
-- Installed skills are represented in Claude/Codex/Muse user skill directories as symlinks to skill directories inside the managed checkout.
+- Installed skills are represented in Claude/Codex/Muse/Grok user skill directories as symlinks to skill directories inside the managed checkout.
 - Moving or toggling those symlinks must not modify the managed checkout.
 
 Supported repository inputs for Iteration 3:
@@ -173,7 +175,7 @@ Future repository-management work is planned but intentionally deferred:
 Tool targeting:
 
 - Default target is every supported tool. Empty, `both`, and `all` are equivalent.
-- `--tool claude`, `--tool codex`, `--tool muse`, `--tool both`, and `--tool all` are accepted. Empty, `both`, and `all` all target every supported tool.
+- `--tool claude`, `--tool codex`, `--tool muse`, `--tool grok`, `--tool both`, and `--tool all` are accepted. Empty, `both`, and `all` all target every supported tool.
 - `--skill <name>` may be repeated to install selected skills only.
 - If no `--skill` is provided, install all valid skills discovered in the repository.
 
@@ -225,8 +227,8 @@ State and lockfiles:
 
 Runtime visibility:
 
-- `install` changes filesystem state for future Claude/Codex/Muse runs.
-- Already running Claude/Codex/Muse sessions may not see newly installed skills. Documentation should tell users to start a new session for guaranteed detection.
+- `install` changes filesystem state for future Claude/Codex/Muse/Grok runs.
+- Already running Claude/Codex/Muse/Grok sessions may not see newly installed skills. Documentation should tell users to start a new session for guaranteed detection.
 
 ### Repository Update and Uninstall (Iteration 4)
 
@@ -257,7 +259,7 @@ Uninstall commands and safety:
 - Stage symlinks and checkout under `~/.skill-manager/trash/`, save state, then delete staging. Roll back paths when a failure happens before state save; report any post-save cleanup residue explicitly.
 - Do not add `--force`, uninstall-all, checkout archival, or a separate `repo remove` command. Whole-repository `uninstall` supersedes `repo remove`.
 - Update and uninstall dry-runs must not mutate checkout, symlinks, Git refs, or `state.json`.
-- Already running Claude/Codex/Muse sessions may retain old skill visibility; recommend a new session after update or uninstall.
+- Already running Claude/Codex/Muse/Grok sessions may retain old skill visibility; recommend a new session after update or uninstall.
 
 ### Local Path Install and Uninstall (Iteration 5)
 
@@ -265,12 +267,12 @@ Iteration 5 adds CLI-first link-in-place installation from local folders. Do not
 
 Local install commands and discovery:
 
-- `skill-manager install <local-path> [--tool claude|codex|muse|both|all] [--skill name...] [--dry-run]`
+- `skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]`
 - Accept absolute paths, explicit relative paths (`./` and `../`), `~/` paths resolved from `$HOME`, and bare relative paths only when they currently exist.
 - Resolve the source to a canonical absolute directory path. A root containing a regular, non-symlinked `SKILL.md` is exactly one skill; otherwise recursively discover skills with the existing ignored-directory and duplicate-name rules.
 - Use link-in-place symlinks directly to skill directories. Never copy, move, edit, update, or delete the local source.
 - Reuse Git install tool targeting, skill selection, all-or-nothing preflight, idempotency, blocker handling, apply rollback, and strict dry-run semantics.
-- Reject local roots that overlap in either direction with Skill Manager state, Claude/Codex/Muse user skill paths, disabled paths, Codex system skills, or Claude plugin cache paths.
+- Reject local roots that overlap in either direction with Skill Manager state, Claude/Codex/Muse/Grok user skill paths, disabled paths, Codex system skills, or Claude plugin cache paths.
 - Use source label `local path` and the canonical source root basename as Group.
 - Treat canonical source path as identity. Reinstalling the same source may add newly discovered skills, but existing recorded ownership drift blocks the operation.
 - A tool/skill cell may be owned by only one Skill Manager Git or local source. An exact matching unmanaged symlink may be adopted.
@@ -283,7 +285,7 @@ Local uninstall and update behavior:
 - Stage owned links under `~/.skill-manager/trash/`, save state, then delete staging. Roll back before-save failures and retain/report recovery data after incomplete rollback.
 - Update-all processes only Git repositories. `skill-manager update <local-path>` reports that link-in-place sources are live and do not require update.
 - `repos` remains a Git repository summary. Do not add a local-source summary command in this iteration.
-- Already running Claude/Codex/Muse sessions may retain old skill visibility; recommend a new session after local install or uninstall.
+- Already running Claude/Codex/Muse/Grok sessions may retain old skill visibility; recommend a new session after local install or uninstall.
 
 ### State Location
 
@@ -302,6 +304,8 @@ Use a global state directory:
       <skill-name>
     muse/
       <skill-name>
+    grok/
+      <skill-name>
   repos/
     <host>/
       <owner-or-path>/
@@ -312,7 +316,7 @@ Use a global state directory:
 
 `state.json` stores enough information to restore disabled entries:
 
-- tool: `claude` or `codex`
+- tool: `claude`, `codex`, `muse`, or `grok`
 - skill name
 - original path
 - disabled path
@@ -414,22 +418,22 @@ If a batch operation fails, stop the batch, keep already completed operations re
 
 Build the TUI in Go using Bubble Tea.
 
-The main view is one row per skill, with separate Claude, Codex, and Muse state columns.
+The main view is one row per skill, with separate Claude, Codex, Muse, and Grok state columns.
 
 Example:
 
 ```text
-Skill                                      Claude  Codex  Muse  Group
-release-checklist                          ON      ON     ON    example-labs/engineering-skills
-catalog-search                             -       ON     -     Skills CLI
-local-only-skill                           ON      -      -     local
-imagegen                                   RO      RO     -     Codex system
-codex-cli-runtime                          RO      -      -     Claude plugin
+Skill                                      Claude  Codex  Muse  Grok  Group
+release-checklist                          ON      ON     ON    ON    example-labs/engineering-skills
+catalog-search                             -       ON     -     -     Skills CLI
+local-only-skill                           ON      -      -     -     local
+imagegen                                   RO      RO     -     -     Codex system
+codex-cli-runtime                          RO      -      -     -     Claude plugin
 ```
 
 Default view:
 
-- Show only toggleable skills from `~/.claude/skills`, `~/.agents/skills`, and the Muse user skills directory.
+- Show only toggleable skills from `~/.claude/skills`, `~/.agents/skills`, the Muse user skills directory, and `~/.grok/skills`.
 - Hide read-only skills by default.
 
 Read-only view:
@@ -439,7 +443,7 @@ Read-only view:
 
 Expected controls:
 
-- `Tab`: switch active tool column between Claude, Codex, and Muse
+- `Tab`: switch active tool column between Claude, Codex, Muse, and Grok
 - `Space`: toggle pending state for the active cell
 - `b`: toggle all tool cells in the row where possible
 - `g`: smart-toggle the selected row's group for all tools
@@ -477,8 +481,8 @@ Group and all-visible toggles must use the same pending-change safety model as s
 
 Keys:
 
-- `g`: smart-toggle every toggleable cell in the selected row's group, across Claude, Codex, and Muse.
-- `A`: smart-toggle every visible toggleable cell across Claude, Codex, and Muse.
+- `g`: smart-toggle every toggleable cell in the selected row's group, across Claude, Codex, Muse, and Grok.
+- `A`: smart-toggle every visible toggleable cell across Claude, Codex, Muse, and Grok.
 - `G`: cycle group filter for the current table.
 
 Scope:
@@ -525,12 +529,12 @@ skill-manager disable --tool claude release-checklist --dry-run
 
 `--dry-run` support is required for CLI mutating commands. It prints the planned filesystem operations without moving anything.
 
-`skill-manager groups` is a read-only command that summarizes group labels, row counts, sources, and Claude/Codex/Muse state counts. Do not add mutating group/all CLI commands in Iteration 2.
+`skill-manager groups` is a read-only command that summarizes group labels, row counts, sources, and Claude/Codex/Muse/Grok state counts. Do not add mutating group/all CLI commands in Iteration 2.
 
 Iteration 3 repository install commands:
 
 ```bash
-skill-manager install <git-url> [--tool claude|codex|muse|both|all] [--skill name...] [--dry-run]
+skill-manager install <git-url> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]
 skill-manager repos
 ```
 
@@ -550,7 +554,7 @@ skill-manager uninstall <git-url> [--dry-run]
 Iteration 5 local path commands:
 
 ```bash
-skill-manager install <local-path> [--tool claude|codex|muse|both|all] [--skill name...] [--dry-run]
+skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]
 skill-manager uninstall <local-path> [--dry-run]
 ```
 
@@ -563,8 +567,8 @@ skill-manager extend --tool <tool> [--dry-run]
 ```
 
 `extend` links every recorded Git and local source to one more tool without
-reinstalling each source. The tool is a parameter (`claude`, `codex`, or
-`muse`); no step hardcodes a tool name. Selection reuses the install
+reinstalling each source. The tool is a parameter (`claude`, `codex`, `muse`, or
+`grok`); no step hardcodes a tool name. Selection reuses the install
 discovery and preflight rules per source with a cross-source claim map.
 Apply walks sources in manifest order (Git, then local), mirrors OFF state
 for skills that are OFF for every other recorded tool, and stops at the
@@ -625,7 +629,7 @@ preserving the CLI contracts and the ownership/safety rules above.
   clone a missing managed checkout; cancelling after that point retains the
   clean unrecorded checkout for a cheaper retry. Local sources are selected
   through the native macOS directory picker.
-- Installation selection is a per-skill Claude/Codex/Muse matrix. Extend the shared
+- Installation selection is a per-skill Claude/Codex/Muse/Grok matrix. Extend the shared
   domain planner to accept exact cells while preserving the existing CLI
   `--tool` and `--skill` expansion semantics.
 - Each install-matrix tool column has one explicit bulk-selection toggle. It
@@ -703,8 +707,7 @@ filesystem, state, and Apply semantics remain unchanged.
 - Determine section placement from applied state. A pending enable or disable
   remains in its current section and shows its transition until successful
   Apply/rescan.
-- Keep global search plus `All / Active / Available` and `All tools / Claude /
-  Codex` chips visible. Move Group, Source, and Read only controls into an
+- Keep global search plus `All / Active / Available` and `All tools / Claude / Codex / Muse / Grok` chips visible. Move Group, Source, and Read only controls into an
   advanced `Filters` disclosure.
 - Keep all tool columns visible. A selected tool chip changes classification
   and limits row, group, and filtered-result smart-toggle actions to that tool.
@@ -806,7 +809,7 @@ changing CLI, TUI, source ownership, or filesystem toggle semantics.
 - A `Skill Set` has a stable opaque identifier, a unique user-facing name, an
   optional `When to use` description, and a sorted unique list of skill
   basenames. It is distinct from the automatically detected source `Group`.
-- Membership is tool-agnostic. Each use explicitly selects Claude, Codex, Muse, or
+- Membership is tool-agnostic. Each use explicitly selects Claude, Codex, Muse, Grok, or
   both and stages changes through the existing Pending/Apply workflow.
 - A set uses the existing smart-toggle rule: all eligible effective cells ON
   targets OFF; otherwise eligible OFF cells target ON. Sets may overlap and do
@@ -837,11 +840,11 @@ semantics.
   optional and is installed through the existing Git/local `install` command;
   do not embed or auto-install it and do not depend on a private skill source.
 - `list --json` exposes path-free `apiVersion: 1` inventory data: skill name,
-  description, group, source, and explicit Claude/Codex/Muse state plus toggleable
-  status. `--available-for claude|codex|muse` and repeated case-insensitive
+  description, group, source, and explicit Claude/Codex/Muse/Grok state plus toggleable
+  status. `--available-for claude|codex|muse|grok` and repeated case-insensitive
   `--query` filters provide a bounded candidate view without external JSON
   tooling. Human `list` output remains unchanged.
-- Add `advisor activate --tool claude|codex|muse --skill <name>...`, `advisor
+- Add `advisor activate --tool claude|codex|muse|grok --skill <name>...`, `advisor
   cleanup --receipt <id>`, and `advisor status`. Mutating advisor commands
   support strict dry-run and all advisor commands support structured JSON.
 - One activation accepts 1-5 unique skill names for exactly one tool and fully
@@ -924,12 +927,12 @@ Iteration 18 replaces the first-party Skill Advisor's substring candidate
 lookup with an additive CLI-only ranked retrieval surface. Existing `list
 --json --query` behavior remains unchanged.
 
-- Add `skill-manager advisor search --tool claude|codex|muse --query <text>
+- Add `skill-manager advisor search --tool claude|codex|muse|grok --query <text>
   [--limit <n>] [--json]`. Require exactly one tool and one bounded query;
   default the result limit to 20 and accept values from 1 through 50.
 - Search only toggleable `ON` and `OFF` cells for the requested tool. Continue
   to return path-free name, description, group, source, and explicit
-  Claude/Codex/Muse state metadata in ranked order.
+  Claude/Codex/Muse/Grok state metadata in ranked order.
 - Rank locally and deterministically with weighted BM25F over name,
   description, group, and source plus bounded token-level fuzzy matching and
   phrase bonuses. Do not add a model, network call, persisted index, cache, or
@@ -952,7 +955,7 @@ lookup with an additive CLI-only ranked retrieval surface. Existing `list
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
 It does not change toggle, install, update, uninstall, CLI, or TUI semantics.
 
-- Show separate Claude Code, Codex, and Muse global skill-catalog reports.
+- Show separate Claude Code, Codex, Muse, and Grok global skill-catalog reports.
 - Measure the startup catalog metadata, not full `SKILL.md` bodies. Full skill
   instructions remain an on-demand cost after invocation.
 - Estimate catalog tokens as `ceil(characters / 4)` and label token values as
@@ -970,6 +973,9 @@ It does not change toggle, install, update, uninstall, CLI, or TUI semantics.
   character fallback budget.
 - Muse has no supported provider diagnostic. Always report it as a labeled
   filesystem estimate over managed Muse user skills, using a 1% budget of an
+  assumed 200,000-token context.
+- Grok has no supported provider diagnostic. Always report it as a labeled
+  filesystem estimate over managed Grok user skills, using a 1% budget of an
   assumed 200,000-token context.
 - Show both the applied report and a projected `After Apply` report when pending
   GUI toggles change the catalog.
@@ -1078,6 +1084,8 @@ Keep [planning/phase-17-desktop-about-tasks.md](./planning/phase-17-desktop-abou
 Keep [planning/phase-18-advisor-search-tasks.md](./planning/phase-18-advisor-search-tasks.md) as the source of truth for Iteration 18 ranked Skill Advisor search task status.
 
 Keep [planning/phase-19-muse-support-tasks.md](./planning/phase-19-muse-support-tasks.md) as the source of truth for Iteration 19 Muse tool support task status.
+
+Keep [planning/phase-20-grok-support-tasks.md](./planning/phase-20-grok-support-tasks.md) as the source of truth for Iteration 20 Grok tool support task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

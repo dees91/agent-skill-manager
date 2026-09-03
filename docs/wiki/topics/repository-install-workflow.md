@@ -62,7 +62,7 @@ renamed, or deleted to make room.
 ## Desktop Workflow
 
 The Sources screen accepts a Git URL and performs checkout plus discovery
-before showing an exact Claude/Codex/Muse matrix. A missing checkout may therefore
+before showing an exact Claude/Codex/Muse/Grok matrix. A missing checkout may therefore
 be cloned before final Apply; cancelling retains that clean unrecorded checkout
 for retry. Review and Apply use opaque session IDs and re-run discovery and
 preflight in Go. Per-repository Update and deterministic Update all call the

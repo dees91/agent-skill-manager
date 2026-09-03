@@ -92,6 +92,8 @@ func (s *Service) InstallDiscoverSkill(skillID string, toolNames []string, inclu
 				toolState = projected.Codex
 			case model.ToolMuse:
 				toolState = projected.Muse
+			case model.ToolGrok:
+				toolState = projected.Grok
 			}
 			if toolState.Status != "available" {
 				return fmt.Errorf("%s is not available for %s: %s", skill.Name, tool.String(), toolState.Status)
@@ -193,6 +195,7 @@ func projectDiscoverSkillWithState(skill skillssh.Skill, rows []model.SkillRow, 
 	projected.Claude = discoverToolState(rows, manifest, skill, model.ToolClaude)
 	projected.Codex = discoverToolState(rows, manifest, skill, model.ToolCodex)
 	projected.Muse = discoverToolState(rows, manifest, skill, model.ToolMuse)
+	projected.Grok = discoverToolState(rows, manifest, skill, model.ToolGrok)
 	return projected
 }
 
@@ -210,6 +213,8 @@ func discoverToolState(rows []model.SkillRow, manifest state.Manifest, skill ski
 			cell = rows[index].Codex
 		case model.ToolMuse:
 			cell = rows[index].Muse
+		case model.ToolGrok:
+			cell = rows[index].Grok
 		}
 		break
 	}

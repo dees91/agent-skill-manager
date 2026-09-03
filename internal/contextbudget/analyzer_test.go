@@ -20,11 +20,12 @@ func TestAnalyzeFilesystemFallbackAndClaudeVisibilityRules(t *testing.T) {
 	claudePath := writeTestSkill(t, filepath.Join(p.ClaudeUserSkills, "alpha"), "Alpha helper", "")
 	codexPath := writeTestSkill(t, filepath.Join(p.CodexUserSkills, "alpha"), "Alpha helper", "")
 	musePath := writeTestSkill(t, filepath.Join(p.MuseUserSkills, "alpha"), "Alpha helper", "")
+	grokPath := writeTestSkill(t, filepath.Join(p.GrokUserSkills, "alpha"), "Alpha helper", "")
 	writeTestSkill(t, filepath.Join(p.CodexSystemSkills, "system"), "System helper", "")
 	hiddenPath := writeTestSkill(t, filepath.Join(p.ClaudeUserSkills, "manual-only"), "Manual helper", "disable-model-invocation: true\n")
 
 	rows := []model.SkillRow{
-		{Name: "alpha", Claude: testCell(model.ToolClaude, "alpha", claudePath, model.SkillStateOn), Codex: testCell(model.ToolCodex, "alpha", codexPath, model.SkillStateOn), Muse: testCell(model.ToolMuse, "alpha", musePath, model.SkillStateOn)},
+		{Name: "alpha", Claude: testCell(model.ToolClaude, "alpha", claudePath, model.SkillStateOn), Codex: testCell(model.ToolCodex, "alpha", codexPath, model.SkillStateOn), Muse: testCell(model.ToolMuse, "alpha", musePath, model.SkillStateOn), Grok: testCell(model.ToolGrok, "alpha", grokPath, model.SkillStateOn)},
 		{Name: "manual-only", Claude: testCell(model.ToolClaude, "manual-only", hiddenPath, model.SkillStateOn)},
 	}
 	reports := New(p).Estimate(rows).Reports
@@ -38,6 +39,9 @@ func TestAnalyzeFilesystemFallbackAndClaudeVisibilityRules(t *testing.T) {
 	if reports.Muse.Current.SkillCount != 1 {
 		t.Fatalf("Muse skill count = %d, want 1", reports.Muse.Current.SkillCount)
 	}
+	if reports.Grok.Current.SkillCount != 1 {
+		t.Fatalf("Grok skill count = %d, want 1", reports.Grok.Current.SkillCount)
+	}
 	if reports.Claude.BudgetTokens != 2000 || reports.Claude.BudgetFraction != .01 {
 		t.Fatalf("Claude budget = %#v", reports.Claude)
 	}
@@ -47,11 +51,17 @@ func TestAnalyzeFilesystemFallbackAndClaudeVisibilityRules(t *testing.T) {
 	if reports.Muse.BudgetTokens != 2000 || reports.Muse.BudgetFraction != .01 {
 		t.Fatalf("Muse fallback budget = %#v", reports.Muse)
 	}
+	if reports.Grok.BudgetTokens != 2000 || reports.Grok.BudgetFraction != .01 {
+		t.Fatalf("Grok fallback budget = %#v", reports.Grok)
+	}
 	if reports.Claude.Accuracy != AccuracyPartial || reports.Codex.Accuracy != AccuracyPartial {
 		t.Fatalf("accuracy = Claude %q, Codex %q", reports.Claude.Accuracy, reports.Codex.Accuracy)
 	}
 	if reports.Muse.Accuracy != AccuracyEstimated || !reports.Muse.ContextWindowAssumed {
 		t.Fatalf("Muse report = %#v, want labeled estimate", reports.Muse)
+	}
+	if reports.Grok.Accuracy != AccuracyEstimated || !reports.Grok.ContextWindowAssumed {
+		t.Fatalf("Grok report = %#v, want labeled estimate", reports.Grok)
 	}
 }
 
@@ -98,11 +108,12 @@ func TestProjectPendingUpdatesEachToolIndependently(t *testing.T) {
 	finalizeUsage(&base.Current, base.BudgetCharacters)
 	base.Projected = base.Current
 	result := Result{
-		Reports: Reports{Claude: base, Codex: base, Muse: base},
+		Reports: Reports{Claude: base, Codex: base, Muse: base, Grok: base},
 		contributions: map[CellKey]contribution{
 			{Tool: model.ToolClaude, SkillName: "on"}: {Characters: 40, Included: true},
 			{Tool: model.ToolCodex, SkillName: "off"}: {Characters: 80, Included: false},
 			{Tool: model.ToolMuse, SkillName: "on"}:   {Characters: 40, Included: true},
+			{Tool: model.ToolGrok, SkillName: "on"}:   {Characters: 40, Included: true},
 		},
 	}
 
@@ -110,6 +121,7 @@ func TestProjectPendingUpdatesEachToolIndependently(t *testing.T) {
 		{Tool: model.ToolClaude, SkillName: "on"}: model.OperationDisable,
 		{Tool: model.ToolCodex, SkillName: "off"}: model.OperationEnable,
 		{Tool: model.ToolMuse, SkillName: "on"}:   model.OperationDisable,
+		{Tool: model.ToolGrok, SkillName: "on"}:   model.OperationDisable,
 	})
 
 	if projected.Claude.Projected.RequestedCharacters != 160 || projected.Claude.Projected.SkillCount != 1 || projected.Claude.Projected.UsedPercent != 40 {
@@ -120,6 +132,9 @@ func TestProjectPendingUpdatesEachToolIndependently(t *testing.T) {
 	}
 	if projected.Muse.Projected.RequestedCharacters != 160 || projected.Muse.Projected.SkillCount != 1 || projected.Muse.Projected.UsedPercent != 40 {
 		t.Fatalf("Muse projection = %#v", projected.Muse.Projected)
+	}
+	if projected.Grok.Projected.RequestedCharacters != 160 || projected.Grok.Projected.SkillCount != 1 || projected.Grok.Projected.UsedPercent != 40 {
+		t.Fatalf("Grok projection = %#v", projected.Grok.Projected)
 	}
 }
 

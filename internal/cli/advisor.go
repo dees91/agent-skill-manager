@@ -140,7 +140,7 @@ func parseAdvisorSearchArgs(args []string) (advisorSearchOptions, error) {
 		switch args[index] {
 		case "--tool":
 			if toolSeen || index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
-				return advisorSearchOptions{}, fmt.Errorf("advisor search requires one --tool <claude|codex|muse>")
+				return advisorSearchOptions{}, fmt.Errorf("advisor search requires one --tool <claude|codex|muse|grok>")
 			}
 			tool, ok := model.ParseTool(args[index+1])
 			if !ok {
@@ -177,7 +177,7 @@ func parseAdvisorSearchArgs(args []string) (advisorSearchOptions, error) {
 		}
 	}
 	if !toolSeen {
-		return advisorSearchOptions{}, fmt.Errorf("advisor search requires --tool <claude|codex|muse>")
+		return advisorSearchOptions{}, fmt.Errorf("advisor search requires --tool <claude|codex|muse|grok>")
 	}
 	if !querySeen {
 		return advisorSearchOptions{}, fmt.Errorf("advisor search requires --query <text>")
@@ -192,7 +192,7 @@ func parseAdvisorActivateArgs(args []string) (advisorActivateOptions, error) {
 		switch args[index] {
 		case "--tool":
 			if toolSeen || index+1 >= len(args) {
-				return advisorActivateOptions{}, fmt.Errorf("advisor activate requires one --tool <claude|codex|muse>")
+				return advisorActivateOptions{}, fmt.Errorf("advisor activate requires one --tool <claude|codex|muse|grok>")
 			}
 			tool, ok := model.ParseTool(args[index+1])
 			if !ok {
@@ -222,7 +222,7 @@ func parseAdvisorActivateArgs(args []string) (advisorActivateOptions, error) {
 		}
 	}
 	if !toolSeen {
-		return advisorActivateOptions{}, fmt.Errorf("advisor activate requires --tool <claude|codex|muse>")
+		return advisorActivateOptions{}, fmt.Errorf("advisor activate requires --tool <claude|codex|muse|grok>")
 	}
 	if len(options.SkillNames) == 0 {
 		return advisorActivateOptions{}, fmt.Errorf("advisor activate requires at least one --skill")
@@ -356,6 +356,8 @@ func searchResultCell(row model.SkillRow, tool model.Tool) *model.ToolSkill {
 		return row.Codex
 	case model.ToolMuse:
 		return row.Muse
+	case model.ToolGrok:
+		return row.Grok
 	default:
 		return nil
 	}

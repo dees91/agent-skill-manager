@@ -93,7 +93,7 @@ to seed the wiki. It summarizes their roles; it does not replace them.
 
 ## Stable Product Invariants
 
-- User skills for Claude, Codex, and Muse are toggleable; Codex system and
+- User skills for Claude, Codex, Muse, and Grok are toggleable; Codex system and
   Claude plugin skills are read-only in the current product.
 - Disable/enable moves the original entry and never edits the skill source.
 - The exact entry type and symlink target must survive a round trip.

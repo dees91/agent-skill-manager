@@ -173,7 +173,7 @@ func (a App) runUninstall(stdout, stderr io.Writer, args []string) int {
 	fmt.Fprintf(stdout, "removed %d disabled symlink(s)\n", len(result.RemovedDisabled))
 	fmt.Fprintf(stdout, "removed checkout: %s\n", result.RemovedCheckout)
 	fmt.Fprintf(stdout, "uninstalled %s\n", repositoryGroup(repository))
-	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse session for guaranteed skill detection")
+	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	return 0
 }
 
@@ -218,7 +218,7 @@ func (a App) runLocalUninstall(stdout, stderr io.Writer, manifest state.Manifest
 	fmt.Fprintf(stdout, "removed %d disabled symlink(s)\n", len(result.RemovedDisabled))
 	fmt.Fprintf(stdout, "preserved source: %s\n", result.Source.CanonicalPath)
 	fmt.Fprintf(stdout, "uninstalled local source %s\n", result.Source.Group)
-	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse session for guaranteed skill detection")
+	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	return 0
 }
 
@@ -299,7 +299,7 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 	}
 	fmt.Fprintf(stdout, "updated %d repository(s); %d up-to-date\n", updated, upToDate)
 	if updated > 0 {
-		fmt.Fprintln(stdout, "start a new Claude/Codex/Muse session for guaranteed skill detection")
+		fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	}
 	return 0
 }
@@ -382,7 +382,7 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 	}
 	fmt.Fprintf(stdout, "installed %d skill(s)\n", len(result.Source.InstalledSkills))
 	fmt.Fprintf(stdout, "source remains in place: %s\n", result.Source.CanonicalPath)
-	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse session for guaranteed skill detection")
+	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	return 0
 }
 
@@ -424,7 +424,7 @@ func (a App) runInstallApply(stdout, stderr io.Writer, options installCLIOptions
 		printAlreadyInstalled(stdout, already)
 	}
 	fmt.Fprintf(stdout, "installed %d skill(s)\n", len(applyResult.Repository.InstalledSkills))
-	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse session for guaranteed skill detection")
+	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	return 0
 }
 
@@ -508,9 +508,9 @@ func (a App) runList(stdout, stderr io.Writer) int {
 	}
 
 	writer := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(writer, "Skill\tClaude\tCodex\tMuse\tSource")
+	fmt.Fprintln(writer, "Skill\tClaude\tCodex\tMuse\tGrok\tSource")
 	for _, row := range rows {
-		fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\n", row.Name, cellState(row.Claude), cellState(row.Codex), cellState(row.Muse), row.Source)
+		fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\n", row.Name, cellState(row.Claude), cellState(row.Codex), cellState(row.Muse), cellState(row.Grok), row.Source)
 	}
 	_ = writer.Flush()
 	return 0
@@ -528,6 +528,7 @@ func (a App) runStatus(stdout, stderr io.Writer) int {
 		countCell(row.Claude, &counts)
 		countCell(row.Codex, &counts)
 		countCell(row.Muse, &counts)
+		countCell(row.Grok, &counts)
 	}
 
 	fmt.Fprintf(stdout, "ON: %d\n", counts.on)
@@ -545,16 +546,17 @@ func (a App) runGroups(stdout, stderr io.Writer) int {
 	}
 
 	writer := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(writer, "Group\tRows\tClaude\tCodex\tMuse\tSources")
+	fmt.Fprintln(writer, "Group\tRows\tClaude\tCodex\tMuse\tGrok\tSources")
 	for _, summary := range scan.GroupSummaries(rows) {
 		fmt.Fprintf(
 			writer,
-			"%s\t%d\t%s\t%s\t%s\t%s\n",
+			"%s\t%d\t%s\t%s\t%s\t%s\t%s\n",
 			summary.Group.String(),
 			summary.Rows,
 			formatToolCounts(summary.Claude),
 			formatToolCounts(summary.Codex),
 			formatToolCounts(summary.Muse),
+			formatToolCounts(summary.Grok),
 			groupSources(summary),
 		)
 	}
@@ -669,15 +671,15 @@ func (a App) rejectReadOnly(tool model.Tool, skillName string) error {
 
 func parseMutationArgs(args []string) (model.Tool, string, bool, error) {
 	if len(args) != 3 && len(args) != 4 {
-		return "", "", false, fmt.Errorf("expected --tool <claude|codex|muse> <skill> [--dry-run]")
+		return "", "", false, fmt.Errorf("expected --tool <claude|codex|muse|grok> <skill> [--dry-run]")
 	}
 	if args[0] != "--tool" {
-		return "", "", false, fmt.Errorf("expected --tool <claude|codex|muse> <skill> [--dry-run]")
+		return "", "", false, fmt.Errorf("expected --tool <claude|codex|muse|grok> <skill> [--dry-run]")
 	}
 	dryRun := false
 	if len(args) == 4 {
 		if args[3] != "--dry-run" {
-			return "", "", false, fmt.Errorf("expected --tool <claude|codex|muse> <skill> [--dry-run]")
+			return "", "", false, fmt.Errorf("expected --tool <claude|codex|muse|grok> <skill> [--dry-run]")
 		}
 		dryRun = true
 	}
@@ -784,10 +786,10 @@ func findLocalSource(manifest state.Manifest, lookup install.LocalSourceLookup) 
 
 func parseInstallArgs(args []string) (installCLIOptions, error) {
 	if len(args) == 0 {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|both|all] [--skill name...] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]")
 	}
 	if strings.HasPrefix(args[0], "-") {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|both|all] [--skill name...] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]")
 	}
 	options := installCLIOptions{GitURL: strings.TrimSpace(args[0])}
 	if options.GitURL == "" {
@@ -1044,6 +1046,7 @@ Tools:
   claude
   codex
   muse
+  grok
   both (all tools)
   all (all tools)
 `)

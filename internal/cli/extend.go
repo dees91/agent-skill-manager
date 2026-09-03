@@ -83,7 +83,7 @@ func (a App) runExtend(stdout, stderr io.Writer, args []string) int {
 	fmt.Fprintf(stdout, "extended %d symlink(s) across %d source(s); %d already installed; %d disabled; %d skipped\n",
 		created, ready, already, disabled, skipped)
 	if created > 0 {
-		fmt.Fprintln(stdout, "start a new Claude/Codex/Muse session for guaranteed skill detection")
+		fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	}
 	return 0
 }

@@ -1,5 +1,5 @@
 export namespace contextbudget {
-
+	
 	export class Usage {
 	    skillCount: number;
 	    requestedCharacters: number;
@@ -10,11 +10,11 @@ export namespace contextbudget {
 	    shortenedDescriptions: number;
 	    omittedSkills: number;
 	    health: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new Usage(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.skillCount = source["skillCount"];
@@ -43,11 +43,11 @@ export namespace contextbudget {
 	    current: Usage;
 	    projected: Usage;
 	    projectionChanged: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ToolReport(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -65,7 +65,7 @@ export namespace contextbudget {
 	        this.projected = this.convertValues(source["projected"], Usage);
 	        this.projectionChanged = source["projectionChanged"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -88,18 +88,20 @@ export namespace contextbudget {
 	    claude: ToolReport;
 	    codex: ToolReport;
 	    muse: ToolReport;
-
+	    grok: ToolReport;
+	
 	    static createFrom(source: any = {}) {
 	        return new Reports(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.claude = this.convertValues(source["claude"], ToolReport);
 	        this.codex = this.convertValues(source["codex"], ToolReport);
 	        this.muse = this.convertValues(source["muse"], ToolReport);
+	        this.grok = this.convertValues(source["grok"], ToolReport);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -118,23 +120,23 @@ export namespace contextbudget {
 		    return a;
 		}
 	}
-
+	
 
 }
 
 export namespace gui {
-
+	
 	export class ActionCounts {
 	    changed: number;
 	    removed: number;
 	    skippedReadOnly: number;
 	    skippedMissing: number;
 	    skippedConflict: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ActionCounts(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.changed = source["changed"];
@@ -157,11 +159,11 @@ export namespace gui {
 	    missing: number;
 	    readOnly: number;
 	    conflict: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillSetToolSummary(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -185,11 +187,11 @@ export namespace gui {
 	    pending?: string;
 	    eligible: boolean;
 	    reason?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillSetMemberCell(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -209,11 +211,12 @@ export namespace gui {
 	    claude: SkillSetMemberCell;
 	    codex: SkillSetMemberCell;
 	    muse: SkillSetMemberCell;
-
+	    grok: SkillSetMemberCell;
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillSetMember(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -224,8 +227,9 @@ export namespace gui {
 	        this.claude = this.convertValues(source["claude"], SkillSetMemberCell);
 	        this.codex = this.convertValues(source["codex"], SkillSetMemberCell);
 	        this.muse = this.convertValues(source["muse"], SkillSetMemberCell);
+	        this.grok = this.convertValues(source["grok"], SkillSetMemberCell);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -252,15 +256,16 @@ export namespace gui {
 	    claude: SkillSetToolSummary;
 	    codex: SkillSetToolSummary;
 	    muse: SkillSetToolSummary;
+	    grok: SkillSetToolSummary;
 	    unavailable: number;
 	    pending: number;
 	    createdAt: string;
 	    updatedAt: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillSet(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.setId = source["setId"];
@@ -270,12 +275,13 @@ export namespace gui {
 	        this.claude = this.convertValues(source["claude"], SkillSetToolSummary);
 	        this.codex = this.convertValues(source["codex"], SkillSetToolSummary);
 	        this.muse = this.convertValues(source["muse"], SkillSetToolSummary);
+	        this.grok = this.convertValues(source["grok"], SkillSetToolSummary);
 	        this.unavailable = source["unavailable"];
 	        this.pending = source["pending"];
 	        this.createdAt = source["createdAt"];
 	        this.updatedAt = source["updatedAt"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -298,11 +304,11 @@ export namespace gui {
 	    tool: string;
 	    skillName: string;
 	    operation: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new PendingChange(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -317,11 +323,11 @@ export namespace gui {
 	    contextBudgets: contextbudget.Reports;
 	    skillSets: SkillSet[];
 	    skillSetsWarning?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ActionResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.message = source["message"];
@@ -331,7 +337,7 @@ export namespace gui {
 	        this.skillSets = this.convertValues(source["skillSets"], SkillSet);
 	        this.skillSetsWarning = source["skillSetsWarning"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -354,11 +360,11 @@ export namespace gui {
 	    tool: string;
 	    skillName: string;
 	    operation: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AppliedChange(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -372,11 +378,11 @@ export namespace gui {
 	    skillName?: string;
 	    operation?: string;
 	    message: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ApplyFailure(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.stage = source["stage"];
@@ -392,11 +398,11 @@ export namespace gui {
 	    group: string;
 	    blockerPath: string;
 	    message: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ConflictSummary(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -412,12 +418,13 @@ export namespace gui {
 	    claude: StateCounts;
 	    codex: StateCounts;
 	    muse: StateCounts;
+	    grok: StateCounts;
 	    conflictCells: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DashboardStats(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.managedSkills = source["managedSkills"];
@@ -425,9 +432,10 @@ export namespace gui {
 	        this.claude = this.convertValues(source["claude"], StateCounts);
 	        this.codex = this.convertValues(source["codex"], StateCounts);
 	        this.muse = this.convertValues(source["muse"], StateCounts);
+	        this.grok = this.convertValues(source["grok"], StateCounts);
 	        this.conflictCells = source["conflictCells"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -455,16 +463,17 @@ export namespace gui {
 	    claudeCount: number;
 	    codexCount: number;
 	    museCount: number;
+	    grokCount: number;
 	    installedAt: string;
 	    commit?: string;
 	    canUpdate: boolean;
 	    updateMode: string;
 	    updateHint: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ManagedSource(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.sourceId = source["sourceId"];
@@ -475,6 +484,7 @@ export namespace gui {
 	        this.claudeCount = source["claudeCount"];
 	        this.codexCount = source["codexCount"];
 	        this.museCount = source["museCount"];
+	        this.grokCount = source["grokCount"];
 	        this.installedAt = source["installedAt"];
 	        this.commit = source["commit"];
 	        this.canUpdate = source["canUpdate"];
@@ -487,11 +497,11 @@ export namespace gui {
 	    off: number;
 	    conflict: number;
 	    readOnly: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new StateCounts(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.on = source["on"];
@@ -506,12 +516,13 @@ export namespace gui {
 	    claude: StateCounts;
 	    codex: StateCounts;
 	    muse: StateCounts;
+	    grok: StateCounts;
 	    sources: string[];
-
+	
 	    static createFrom(source: any = {}) {
 	        return new GroupSummary(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.group = source["group"];
@@ -519,9 +530,10 @@ export namespace gui {
 	        this.claude = this.convertValues(source["claude"], StateCounts);
 	        this.codex = this.convertValues(source["codex"], StateCounts);
 	        this.muse = this.convertValues(source["muse"], StateCounts);
+	        this.grok = this.convertValues(source["grok"], StateCounts);
 	        this.sources = source["sources"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -545,11 +557,11 @@ export namespace gui {
 	    disabledPath: string;
 	    blockerPath: string;
 	    message: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new Conflict(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.originalPath = source["originalPath"];
@@ -577,11 +589,11 @@ export namespace gui {
 	    repoCommit: string;
 	    readOnly: boolean;
 	    conflict?: Conflict;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillCell(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -603,7 +615,7 @@ export namespace gui {
 	        this.readOnly = source["readOnly"];
 	        this.conflict = this.convertValues(source["conflict"], Conflict);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -631,11 +643,12 @@ export namespace gui {
 	    claude?: SkillCell;
 	    codex?: SkillCell;
 	    muse?: SkillCell;
-
+	    grok?: SkillCell;
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillRow(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -646,8 +659,9 @@ export namespace gui {
 	        this.claude = this.convertValues(source["claude"], SkillCell);
 	        this.codex = this.convertValues(source["codex"], SkillCell);
 	        this.muse = this.convertValues(source["muse"], SkillCell);
+	        this.grok = this.convertValues(source["grok"], SkillCell);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -680,11 +694,11 @@ export namespace gui {
 	    pending: PendingChange[];
 	    includeReadOnly: boolean;
 	    scannedAt: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new Snapshot(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.rows = this.convertValues(source["rows"], SkillRow);
@@ -701,7 +715,7 @@ export namespace gui {
 	        this.includeReadOnly = source["includeReadOnly"];
 	        this.scannedAt = source["scannedAt"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -725,11 +739,11 @@ export namespace gui {
 	    failure?: ApplyFailure;
 	    message: string;
 	    snapshot: Snapshot;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ApplyResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.completed = this.convertValues(source["completed"], AppliedChange);
@@ -737,7 +751,7 @@ export namespace gui {
 	        this.message = source["message"];
 	        this.snapshot = this.convertValues(source["snapshot"], Snapshot);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -756,19 +770,19 @@ export namespace gui {
 		    return a;
 		}
 	}
-
-
-
+	
+	
+	
 	export class InstallConflict {
 	    skillName: string;
 	    tool: string;
 	    reason: string;
 	    path?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new InstallConflict(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.skillName = source["skillName"];
@@ -780,11 +794,11 @@ export namespace gui {
 	export class ExtendSkip {
 	    skillName: string;
 	    reason: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ExtendSkip(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.skillName = source["skillName"];
@@ -803,11 +817,11 @@ export namespace gui {
 	    reason?: string;
 	    skipped: ExtendSkip[];
 	    conflicts: InstallConflict[];
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ExtendPreviewSource(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.kind = source["kind"];
@@ -822,7 +836,7 @@ export namespace gui {
 	        this.skipped = this.convertValues(source["skipped"], ExtendSkip);
 	        this.conflicts = this.convertValues(source["conflicts"], InstallConflict);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -846,11 +860,11 @@ export namespace gui {
 	    sources: ExtendPreviewSource[];
 	    createCount: number;
 	    blockedCount: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ExtendPreview(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -858,7 +872,7 @@ export namespace gui {
 	        this.createCount = source["createCount"];
 	        this.blockedCount = source["blockedCount"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -877,17 +891,17 @@ export namespace gui {
 		    return a;
 		}
 	}
-
-
+	
+	
 	export class FavoriteMutationResult {
 	    message: string;
 	    favorites: string[];
 	    warning?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new FavoriteMutationResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.message = source["message"];
@@ -895,16 +909,16 @@ export namespace gui {
 	        this.warning = source["warning"];
 	    }
 	}
-
+	
 	export class InstallCandidateCell {
 	    tool: string;
 	    status: string;
 	    message?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new InstallCandidateCell(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tool = source["tool"];
@@ -918,11 +932,12 @@ export namespace gui {
 	    claude: InstallCandidateCell;
 	    codex: InstallCandidateCell;
 	    muse: InstallCandidateCell;
-
+	    grok: InstallCandidateCell;
+	
 	    static createFrom(source: any = {}) {
 	        return new InstallCandidate(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -930,8 +945,9 @@ export namespace gui {
 	        this.claude = this.convertValues(source["claude"], InstallCandidateCell);
 	        this.codex = this.convertValues(source["codex"], InstallCandidateCell);
 	        this.muse = this.convertValues(source["muse"], InstallCandidateCell);
+	        this.grok = this.convertValues(source["grok"], InstallCandidateCell);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -950,22 +966,22 @@ export namespace gui {
 		    return a;
 		}
 	}
-
+	
 	export class InstallCellRequest {
 	    skillName: string;
 	    tool: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new InstallCellRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.skillName = source["skillName"];
 	        this.tool = source["tool"];
 	    }
 	}
-
+	
 	export class InstallDraft {
 	    draftId: string;
 	    kind: string;
@@ -976,11 +992,11 @@ export namespace gui {
 	    reused: boolean;
 	    retainedClone: boolean;
 	    cancelled: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new InstallDraft(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.draftId = source["draftId"];
@@ -993,7 +1009,7 @@ export namespace gui {
 	        this.retainedClone = source["retainedClone"];
 	        this.cancelled = source["cancelled"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1022,11 +1038,11 @@ export namespace gui {
 	    alreadyOffCount: number;
 	    conflicts: InstallConflict[];
 	    ready: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new InstallReview(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.reviewId = source["reviewId"];
@@ -1039,7 +1055,7 @@ export namespace gui {
 	        this.conflicts = this.convertValues(source["conflicts"], InstallConflict);
 	        this.ready = source["ready"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1058,20 +1074,20 @@ export namespace gui {
 		    return a;
 		}
 	}
-
-
-
-
-
+	
+	
+	
+	
+	
 	export class SkillSetImpact {
 	    setId: string;
 	    name: string;
 	    skills: string[];
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillSetImpact(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.setId = source["setId"];
@@ -1079,24 +1095,24 @@ export namespace gui {
 	        this.skills = source["skills"];
 	    }
 	}
-
-
+	
+	
 	export class SkillSetMutationResult {
 	    message: string;
 	    skillSets: SkillSet[];
 	    warning?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillSetMutationResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.message = source["message"];
 	        this.skillSets = this.convertValues(source["skillSets"], SkillSet);
 	        this.warning = source["warning"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1122,11 +1138,11 @@ export namespace gui {
 	    direction: string;
 	    eligible: number;
 	    counts: ActionCounts;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SkillSetTogglePreview(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.setId = source["setId"];
@@ -1136,7 +1152,7 @@ export namespace gui {
 	        this.eligible = source["eligible"];
 	        this.counts = this.convertValues(source["counts"], ActionCounts);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1155,19 +1171,19 @@ export namespace gui {
 		    return a;
 		}
 	}
-
-
+	
+	
 	export class SourceMutationFailure {
 	    stage: string;
 	    group?: string;
 	    message: string;
 	    rolledBack?: number;
 	    cleanupPending?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SourceMutationFailure(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.stage = source["stage"];
@@ -1183,11 +1199,11 @@ export namespace gui {
 	    status: string;
 	    before?: string;
 	    after?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SourceMutationItem(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.sourceId = source["sourceId"];
@@ -1206,11 +1222,11 @@ export namespace gui {
 	    removedActive?: number;
 	    removedDisabled?: number;
 	    snapshot: Snapshot;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SourceMutationResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.message = source["message"];
@@ -1222,7 +1238,7 @@ export namespace gui {
 	        this.removedDisabled = source["removedDisabled"];
 	        this.snapshot = this.convertValues(source["snapshot"], Snapshot);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1241,7 +1257,7 @@ export namespace gui {
 		    return a;
 		}
 	}
-
+	
 	export class UninstallPreview {
 	    sourceId: string;
 	    kind: string;
@@ -1255,11 +1271,11 @@ export namespace gui {
 	    skillSetImpactWarning?: string;
 	    affectedFavorites: string[];
 	    favoriteImpactWarning?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UninstallPreview(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.sourceId = source["sourceId"];
@@ -1275,7 +1291,7 @@ export namespace gui {
 	        this.affectedFavorites = source["affectedFavorites"];
 	        this.favoriteImpactWarning = source["favoriteImpactWarning"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;

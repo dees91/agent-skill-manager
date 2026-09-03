@@ -20,6 +20,7 @@ const (
 	ToolTargetClaude ToolTarget = "claude"
 	ToolTargetCodex  ToolTarget = "codex"
 	ToolTargetMuse   ToolTarget = "muse"
+	ToolTargetGrok   ToolTarget = "grok"
 	ToolTargetBoth   ToolTarget = "both"
 	ToolTargetAll    ToolTarget = "all"
 )
@@ -40,6 +41,8 @@ func ParseToolTarget(value string) ([]model.Tool, error) {
 		return []model.Tool{model.ToolCodex}, nil
 	case ToolTargetMuse:
 		return []model.Tool{model.ToolMuse}, nil
+	case ToolTargetGrok:
+		return []model.Tool{model.ToolGrok}, nil
 	default:
 		return nil, fmt.Errorf("invalid tool target %q", value)
 	}

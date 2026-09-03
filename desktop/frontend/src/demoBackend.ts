@@ -40,8 +40,8 @@ class DemoBackend implements Backend {
     { setId: 'set:release-review', name: 'Release review', description: 'Use before publishing a public build.', skills: ['dependency-review', 'release-checklist'], createdAt: '2026-08-13T09:00:00Z', updatedAt: '2026-08-15T09:00:00Z' },
   ]
   private sources: DemoSource[] = [
-    { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, museCount: 1, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
-    { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, museCount: 1, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
+    { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, museCount: 1, grokCount: 0, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
+    { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, museCount: 1, grokCount: 0, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
   ]
 
   async getSnapshot(includeReadOnly: boolean) { return this.snapshot(includeReadOnly) }
@@ -338,6 +338,7 @@ const DEMO_BUDGET_SPECS: Record<ManagedTool, DemoBudgetSpec> = {
   claude: { model: 'Claude default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1.0% of model context', accuracy: () => 'partial', message: () => 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
   codex: { model: 'gpt-5.6-sol', tokens: 1951, budgetTokens: 5440, budgetLabel: '2% of model context', accuracy: (measured) => measured ? 'measured' : 'partial', message: (measured) => measured ? "Measured from Codex's model-visible global catalog." : 'Filesystem estimate. Run provider diagnostics for model-visible evidence.' },
   muse: { model: 'Muse default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1% of assumed 200,000-token context', accuracy: () => 'estimated', message: () => 'Filesystem estimate. Muse exposes no supported catalog diagnostic.' },
+  grok: { model: 'Grok default', tokens: 1680, budgetTokens: 2000, budgetLabel: '1% of assumed 200,000-token context', accuracy: () => 'estimated', message: () => 'Filesystem estimate. Grok exposes no supported catalog diagnostic.' },
 }
 
 function demoBudgets(pending: PendingChange[], measured: boolean) {

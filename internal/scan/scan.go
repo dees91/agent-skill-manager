@@ -692,6 +692,8 @@ func RowsFromSkillsWithOptions(skills []model.ToolSkill, options RowOptions) []m
 			row.Codex = preferredCell(row.Codex, &skills[i])
 		case model.ToolMuse:
 			row.Muse = preferredCell(row.Muse, &skills[i])
+		case model.ToolGrok:
+			row.Grok = preferredCell(row.Grok, &skills[i])
 		}
 	}
 
@@ -738,7 +740,7 @@ func cellPriority(skill *model.ToolSkill) int {
 }
 
 func rowHasToggleableCell(row model.SkillRow) bool {
-	return (row.Claude != nil && row.Claude.Toggleable()) || (row.Codex != nil && row.Codex.Toggleable()) || (row.Muse != nil && row.Muse.Toggleable())
+	return (row.Claude != nil && row.Claude.Toggleable()) || (row.Codex != nil && row.Codex.Toggleable()) || (row.Muse != nil && row.Muse.Toggleable()) || (row.Grok != nil && row.Grok.Toggleable())
 }
 
 func rowSource(row model.SkillRow) model.SourceLabel {
@@ -751,6 +753,9 @@ func rowSource(row model.SkillRow) model.SourceLabel {
 	}
 	if row.Muse != nil {
 		source = mergeSource(source, row.Muse.Source)
+	}
+	if row.Grok != nil {
+		source = mergeSource(source, row.Grok.Source)
 	}
 	return source
 }
@@ -765,6 +770,9 @@ func rowGroup(row model.SkillRow) model.GroupLabel {
 	}
 	if row.Muse != nil {
 		group = mergeGroup(group, row.Muse.Group)
+	}
+	if row.Grok != nil {
+		group = mergeGroup(group, row.Grok.Group)
 	}
 	return group
 }

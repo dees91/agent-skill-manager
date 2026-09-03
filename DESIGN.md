@@ -108,7 +108,7 @@ in public documentation.
 - **Saved Skill Sets:** task-oriented recipes show member count, applied and
   post-Apply state per tool, unavailable members, and expandable member detail.
   Create/edit supports one tool-agnostic member selection plus an optional
-  `When to use` note; every toggle opens an explicit Claude/Codex/Muse/All preview.
+  `When to use` note; every toggle opens an explicit Claude/Codex/Muse/Grok/All preview.
 - **Managed Sources:** Git repositories and linked folders with unambiguous
   update modes, counts, locations, and separately confirmed lifecycle actions.
 - **Install workflow:** inspect, matrix selection, review, and apply. Tool-column
@@ -126,8 +126,8 @@ in public documentation.
 
 The desktop layout combines a fixed navigation rail with a vertically scrolling
 content region. Dashboard summaries use a multi-column grid, while operational
-tables span the available width. The Skills screen keeps Claude, Codex, and
-Muse columns stable while filters change scope.
+tables span the available width. The Skills screen keeps Claude, Codex, Muse,
+and Grok columns stable while filters change scope.
 
 At narrower supported widths, summary grids wrap before tables lose essential
 columns. Tables and matrices may scroll horizontally inside their own panels.

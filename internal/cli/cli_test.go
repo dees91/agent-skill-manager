@@ -197,7 +197,7 @@ func TestRunInstallLocalPathAndListClassification(t *testing.T) {
 	if code != 0 || stderr.Len() != 0 {
 		t.Fatalf("local install code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 	}
-	for _, want := range []string{"install local source:", "group: sample-pack", "created 3 symlink(s)", "source remains in place:"} {
+	for _, want := range []string{"install local source:", "group: sample-pack", "created 4 symlink(s)", "source remains in place:"} {
 		if !strings.Contains(stdout.String(), want) {
 			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 		}
@@ -881,9 +881,9 @@ func TestRunInstallClonesMissingCheckoutAndInstallsAllSkills(t *testing.T) {
 	for _, want := range []string{
 		"install: https://github.com/addyosmani/agent-skills.git",
 		"cloned https://github.com/addyosmani/agent-skills.git",
-		"created 6 symlink(s)",
+		"created 8 symlink(s)",
 		"installed 2 skill(s)",
-		"start a new Claude/Codex/Muse session",
+		"start a new Claude/Codex/Muse/Grok session",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("stdout = %q, want %q", output, want)
@@ -896,9 +896,11 @@ func TestRunInstallClonesMissingCheckoutAndInstallsAllSkills(t *testing.T) {
 		filepath.Join(p.ClaudeUserSkills, "alpha"),
 		filepath.Join(p.CodexUserSkills, "alpha"),
 		filepath.Join(p.MuseUserSkills, "alpha"),
+		filepath.Join(p.GrokUserSkills, "alpha"),
 		filepath.Join(p.ClaudeUserSkills, "beta"),
 		filepath.Join(p.CodexUserSkills, "beta"),
 		filepath.Join(p.MuseUserSkills, "beta"),
+		filepath.Join(p.GrokUserSkills, "beta"),
 	} {
 		assertSymlink(t, path)
 	}
@@ -1076,7 +1078,7 @@ func TestRunListPrintsSkillRows(t *testing.T) {
 		t.Fatalf("RunWithPaths(list) code = %d stderr=%q", code, stderr.String())
 	}
 	output := stdout.String()
-	for _, want := range []string{"Skill", "Claude", "Codex", "Muse", "Source", "active-claude", "ON", "imagegen", "RO", "off-skill", "OFF", "conflict-skill", "CONFLICT"} {
+	for _, want := range []string{"Skill", "Claude", "Codex", "Muse", "Grok", "Source", "active-claude", "ON", "imagegen", "RO", "off-skill", "OFF", "conflict-skill", "CONFLICT"} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("list output = %q, want %q", output, want)
 		}
@@ -1112,6 +1114,10 @@ func TestRunListJSONReturnsVersionedPathFreeInventory(t *testing.T) {
 					State      string `json:"state"`
 					Toggleable bool   `json:"toggleable"`
 				} `json:"muse"`
+				Grok struct {
+					State      string `json:"state"`
+					Toggleable bool   `json:"toggleable"`
+				} `json:"grok"`
 			} `json:"tools"`
 		} `json:"skills"`
 	}
@@ -1128,6 +1134,8 @@ func TestRunListJSONReturnsVersionedPathFreeInventory(t *testing.T) {
 		CodexToggleable  bool
 		MuseState        string
 		MuseToggleable   bool
+		GrokState        string
+		GrokToggleable   bool
 	}{}
 	for _, skill := range output.Skills {
 		byName[skill.Name] = struct {
@@ -1137,9 +1145,11 @@ func TestRunListJSONReturnsVersionedPathFreeInventory(t *testing.T) {
 			CodexToggleable  bool
 			MuseState        string
 			MuseToggleable   bool
-		}{skill.Tools.Claude.State, skill.Tools.Claude.Toggleable, skill.Tools.Codex.State, skill.Tools.Codex.Toggleable, skill.Tools.Muse.State, skill.Tools.Muse.Toggleable}
+			GrokState        string
+			GrokToggleable   bool
+		}{skill.Tools.Claude.State, skill.Tools.Claude.Toggleable, skill.Tools.Codex.State, skill.Tools.Codex.Toggleable, skill.Tools.Muse.State, skill.Tools.Muse.Toggleable, skill.Tools.Grok.State, skill.Tools.Grok.Toggleable}
 	}
-	if got := byName["off-skill"]; got.ClaudeState != "off" || !got.ClaudeToggleable || got.CodexState != "missing" || got.MuseState != "missing" || got.MuseToggleable {
+	if got := byName["off-skill"]; got.ClaudeState != "off" || !got.ClaudeToggleable || got.CodexState != "missing" || got.MuseState != "missing" || got.MuseToggleable || got.GrokState != "missing" || got.GrokToggleable {
 		t.Fatalf("off-skill JSON = %#v", got)
 	}
 	if got := byName["imagegen"]; got.CodexState != "read_only" || got.CodexToggleable {
@@ -1389,7 +1399,7 @@ func TestRunGroupsSummarizesRepoSkillsCLIAndDisabledGroups(t *testing.T) {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
 	output := stdout.String()
-	for _, want := range []string{"Group", "Rows", "Claude", "Codex", "Muse", "Sources"} {
+	for _, want := range []string{"Group", "Rows", "Claude", "Codex", "Muse", "Grok", "Sources"} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("groups output = %q, want %q", output, want)
 		}
@@ -1398,9 +1408,9 @@ func TestRunGroupsSummarizesRepoSkillsCLIAndDisabledGroups(t *testing.T) {
 	if len(groupRows) != 3 {
 		t.Fatalf("group row count = %d (%#v), want exactly 3", len(groupRows), groupRows)
 	}
-	assertGroupRow(t, groupRows, "android/skills", "1", "ON:1 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "symlink repo")
-	assertGroupRow(t, groupRows, "Skills CLI", "1", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:1 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "Skills CLI")
-	assertGroupRow(t, groupRows, "stored/custom", "1", "ON:0 OFF:1 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "local")
+	assertGroupRow(t, groupRows, "android/skills", "1", "ON:1 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "symlink repo")
+	assertGroupRow(t, groupRows, "Skills CLI", "1", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:1 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "Skills CLI")
+	assertGroupRow(t, groupRows, "stored/custom", "1", "ON:0 OFF:1 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "ON:0 OFF:0 CONFLICT:0 RO:0", "local")
 	afterState := readFile(t, p.StateFile)
 	if string(afterState) != string(beforeState) {
 		t.Fatalf("state changed during groups\nafter=%s\nbefore=%s", afterState, beforeState)
@@ -2108,7 +2118,7 @@ func groupsByName(t *testing.T, output string) map[string]string {
 	return rows
 }
 
-func assertGroupRow(t *testing.T, rows map[string]string, group, rowCount, claudeCounts, codexCounts, museCounts, source string) {
+func assertGroupRow(t *testing.T, rows map[string]string, group, rowCount, claudeCounts, codexCounts, museCounts, grokCounts, source string) {
 	t.Helper()
 	row, ok := rows[group]
 	if !ok {
@@ -2116,7 +2126,7 @@ func assertGroupRow(t *testing.T, rows map[string]string, group, rowCount, claud
 	}
 	remainder := strings.TrimSpace(strings.TrimPrefix(row, group))
 	fields := strings.Fields(remainder)
-	if len(fields) < 14 {
+	if len(fields) < 18 {
 		t.Fatalf("group row %q fields = %#v, want count, counts, and source", row, fields)
 	}
 	if fields[0] != rowCount {
@@ -2131,7 +2141,10 @@ func assertGroupRow(t *testing.T, rows map[string]string, group, rowCount, claud
 	if got := strings.Join(fields[9:13], " "); got != museCounts {
 		t.Fatalf("group row %q Muse counts = %q, want %q", row, got, museCounts)
 	}
-	if got := strings.Join(fields[13:], " "); got != source {
+	if got := strings.Join(fields[13:17], " "); got != grokCounts {
+		t.Fatalf("group row %q Grok counts = %q, want %q", row, got, grokCounts)
+	}
+	if got := strings.Join(fields[17:], " "); got != source {
 		t.Fatalf("group row %q source = %q, want %q", row, got, source)
 	}
 }

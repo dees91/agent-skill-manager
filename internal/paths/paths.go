@@ -15,6 +15,7 @@ type Paths struct {
 	ClaudeUserSkills  string
 	CodexUserSkills   string
 	MuseUserSkills    string
+	GrokUserSkills    string
 	CodexSystemSkills string
 	ClaudePluginCache string
 	AgentsSkillLock   string
@@ -31,6 +32,7 @@ type Paths struct {
 	ClaudeDisabledDir string
 	CodexDisabledDir  string
 	MuseDisabledDir   string
+	GrokDisabledDir   string
 	ReposDir          string
 	TrashDir          string
 }
@@ -63,6 +65,7 @@ func ForHome(home string) Paths {
 		ClaudeUserSkills:  filepath.Join(home, ".claude", "skills"),
 		CodexUserSkills:   filepath.Join(home, ".agents", "skills"),
 		MuseUserSkills:    museUserSkillsDir(home),
+		GrokUserSkills:    filepath.Join(home, ".grok", "skills"),
 		CodexSystemSkills: filepath.Join(home, ".codex", "skills", ".system"),
 		ClaudePluginCache: filepath.Join(home, ".claude", "plugins", "cache"),
 		AgentsSkillLock:   filepath.Join(home, ".agents", ".skill-lock.json"),
@@ -79,6 +82,7 @@ func ForHome(home string) Paths {
 		ClaudeDisabledDir: filepath.Join(disabledDir, model.ToolClaude.String()),
 		CodexDisabledDir:  filepath.Join(disabledDir, model.ToolCodex.String()),
 		MuseDisabledDir:   filepath.Join(disabledDir, model.ToolMuse.String()),
+		GrokDisabledDir:   filepath.Join(disabledDir, model.ToolGrok.String()),
 		ReposDir:          filepath.Join(stateDir, "repos"),
 		TrashDir:          filepath.Join(stateDir, "trash"),
 	}
@@ -99,6 +103,8 @@ func (p Paths) UserSkillsDirFor(tool model.Tool) (string, bool) {
 		return p.CodexUserSkills, true
 	case model.ToolMuse:
 		return p.MuseUserSkills, true
+	case model.ToolGrok:
+		return p.GrokUserSkills, true
 	default:
 		return "", false
 	}
@@ -113,6 +119,8 @@ func (p Paths) DisabledDirFor(tool model.Tool) (string, bool) {
 		return p.CodexDisabledDir, true
 	case model.ToolMuse:
 		return p.MuseDisabledDir, true
+	case model.ToolGrok:
+		return p.GrokDisabledDir, true
 	default:
 		return "", false
 	}
