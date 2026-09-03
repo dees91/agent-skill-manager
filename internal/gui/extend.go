@@ -139,6 +139,9 @@ func projectExtendPreview(plan install.ExtendPlan) ExtendPreview {
 			projected.Skipped = append(projected.Skipped, ExtendSkip{SkillName: skipped.SkillName, Reason: skipped.Reason})
 		}
 		projected.Conflicts = extendPlanConflicts(source.Err)
+		if source.Err != nil && len(projected.Conflicts) == 0 && projected.Reason == "" {
+			projected.Reason = source.Err.Error()
+		}
 		preview.Sources = append(preview.Sources, projected)
 		preview.CreateCount += projected.Created
 		if source.Status == install.ExtendStatusBlocked {

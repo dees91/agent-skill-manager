@@ -279,7 +279,7 @@ function InstallMatrix({ draft, selections, busy, onToggle, onSetToolSelection }
   const visible = useMemo(() => draft.candidates.filter((candidate) => candidate.name.toLowerCase().includes(query.toLowerCase()) || candidate.relativePath.toLowerCase().includes(query.toLowerCase())), [draft, query])
   return <div className="install-matrix-wrap">
     <label className="search-field install-search"><Search size={14} /><input aria-label="Filter discovered skills" value={query} disabled={busy} onChange={(event) => setQuery(event.target.value)} placeholder="Filter discovered skills…" /></label>
-    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{(['claude', 'codex', 'muse'] as const).map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong><code>{candidate.relativePath}</code></td>{(['claude', 'codex', 'muse'] as const).map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict'} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{cell.status.replace('-', ' ')}</small></label></td> })}</tr>)}</tbody></table></div>
+    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{MANAGED_TOOLS.map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong><code>{candidate.relativePath}</code></td>{MANAGED_TOOLS.map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict'} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{cell.status.replace('-', ' ')}</small></label></td> })}</tr>)}</tbody></table></div>
   </div>
 }
 
@@ -293,7 +293,7 @@ function InstallColumnHeader({ tool, draft, selections, busy, onSetToolSelection
   const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict')
   const selectedCount = applicable.filter((candidate) => selections.has(key(candidate.name, tool))).length
   const state: ColumnSelectionState = applicable.length === 0 ? 'N/A' : selectedCount === 0 ? 'OFF' : selectedCount === applicable.length ? 'ON' : 'MIXED'
-  const name = tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
+  const name = toolDisplayName(tool)
   const count = applicable.length === 0 ? 'no available targets' : `${selectedCount} of ${applicable.length} selected`
   const selectAll = state !== 'ON'
   return <th scope="col">

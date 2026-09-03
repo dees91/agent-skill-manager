@@ -421,3 +421,13 @@ intentionally excluded.
   `git rev-parse`; documented why in the test.
 - Updated AGENTS.md (CLI extend contract, Sources extend action), the
   local-path install wiki topic, and this log.
+
+## [2026-09-03] fix | Extend blocked preview reason fallback
+
+- `projectExtendPreview` now falls back to `source.Err.Error()` when a blocked
+  source carries no mappable plan conflicts, so claim-map collisions, local
+  drift, moved sources, and repo identity errors show a reason instead of a
+  bare `blocked` status. Covered by a claim-collision GUI test.
+- The install matrix and its column header now use the shared
+  `MANAGED_TOOLS`/`toolDisplayName` from `api.ts`, closing the remaining tool
+  list duplication in `SourcesView`.

@@ -208,6 +208,53 @@ func TestExtendSourcePreviewSurfacesBlockedSource(t *testing.T) {
 	}
 }
 
+func TestExtendSourcePreviewFallsBackToErrorReason(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	extendLocalSourceFixture(t, p, "shop-a", "shared")
+	secondRaw := filepath.Join(p.Home, "workspace", "shop-b")
+	writeSkill(t, filepath.Join(secondRaw, "skills", "shared"), "shared description")
+	resolved, err := install.ResolveLocalSource(p, p.Home, secondRaw)
+	if err != nil {
+		t.Fatalf("ResolveLocalSource() error = %v", err)
+	}
+	manifest, err := state.New(p).Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	// Record the same skill name for the second source without touching the
+	// occupied Claude target path, so the claim map blocks it with a plain
+	// error instead of a PlanError.
+	manifest.UpsertLocalSource(state.LocalSourceEntry{
+		OriginalPath: resolved.OriginalPath, CanonicalPath: resolved.CanonicalPath, Group: resolved.Group,
+		InstalledSkills: []state.InstalledSkillEntry{{Name: "shared", RelativePath: "skills/shared", Tools: []model.Tool{model.ToolClaude}}},
+	})
+	if err := state.New(p).Save(manifest); err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+	service := New(p)
+
+	preview, err := service.PreviewExtend("muse")
+	if err != nil {
+		t.Fatalf("PreviewExtend() error = %v", err)
+	}
+	if len(preview.Sources) != 2 {
+		t.Fatalf("sources = %d, want 2", len(preview.Sources))
+	}
+	blocked := preview.Sources[1]
+	if blocked.Status != "blocked" {
+		t.Fatalf("status = %q, want blocked", blocked.Status)
+	}
+	if len(blocked.Conflicts) != 0 {
+		t.Fatalf("source = %+v, want no plan conflicts", blocked)
+	}
+	if !strings.Contains(blocked.Reason, "is planned for shop-a") {
+		t.Fatalf("reason = %q, want claim-map collision", blocked.Reason)
+	}
+	if preview.BlockedCount != 1 {
+		t.Fatalf("preview = %+v, want 1 blocked", preview)
+	}
+}
+
 func TestExtendSourcePreviewRejectsUnknownTool(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	service := New(p)
