@@ -101,9 +101,9 @@ from the tracked PNG under repository settings.
   requests.
 - Context-budget suites use temporary homes and fake provider diagnostics to
   cover fallback discovery, Claude visibility/budget rules, Codex
-  shortening/omission measurement, token math, pending deltas, and subprocess
-  home isolation, argument allowlisting, secret/proxy omission, and the
-  no-subprocess default estimate.
+  shortening/omission measurement, the Muse labeled filesystem estimate, token
+  math, pending deltas, and subprocess home isolation, argument allowlisting,
+  secret/proxy omission, and the no-subprocess default estimate.
 - Vitest and Testing Library cover dashboard loading, local filtering, staging
   versus explicit Apply, read-only scan opt-in, effective-state projection,
   context accuracy labels, `After Apply` rendering, managed source actions,
@@ -191,6 +191,9 @@ from the tracked PNG under repository settings.
 - Phase 18: additive deterministic local `advisor search` ranking with weighted
   BM25F, phrase bonuses, bounded fuzzy matching, path-free capability-gated
   results, legacy list compatibility, and first-party skill migration.
+- Phase 19: Muse as a third managed tool across CLI, TUI, install/update/
+  uninstall, Skill Advisor, labeled filesystem context estimate, macOS GUI,
+  first-party skill, and documentation with manifest version 2 unchanged.
 
 All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.

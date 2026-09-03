@@ -91,7 +91,7 @@ none of the catalog methods.
   Source, and Read only filters. Search temporarily opens matching groups.
 - Group expansion lives in React App state for the process lifetime; navigating
   away and back preserves it, while restart clears it.
-- Both Claude and Codex columns remain visible. The tool chip scopes
+- All three tool columns (Claude, Codex, Muse) remain visible. The tool chip scopes
   classification and row/group/results smart-toggle targets.
 - Result bulk includes filtered rows in collapsed groups. Group bulk ignores
   filtering and uses the complete loaded group. Eligible cell counts make both
@@ -130,11 +130,11 @@ none of the catalog methods.
 ## Saved Skill Sets Workspace
 
 - The workspace lists each recipe once with optional `When to use` copy,
-  member count, unavailable count, and applied/effective Claude and Codex
+  member count, unavailable count, and applied/effective Claude, Codex, and Muse
   summaries. Expanded rows show current member source and per-tool state.
 - Create/edit uses one searchable tool-agnostic member list. Existing missing
   members remain editable, while arbitrary new unavailable names are rejected.
-- Toggle always requires an explicit Claude, Codex, or Both selection and a
+- Toggle always requires an explicit Claude, Codex, Muse, or All selection and a
   read-only impact preview before staging. Apply remains the only skill-state
   filesystem mutation.
 - **Save as set** seeds unique skill names from Pending. Skill details expose
@@ -151,8 +151,8 @@ a separate non-blocking impact.
 ## Visual Contract
 
 [`../../../DESIGN.md`](../../../DESIGN.md) describes the implemented interface
-and points to repository-owned Dashboard, Skill Sets, and dormant Discover
-screenshots generated from synthetic demo data. The visual system uses a dark
+and points to repository-owned Dashboard, Skill Sets, Sources extend, and
+dormant Discover screenshots generated from synthetic demo data. The visual system uses a dark
 palette, flat panel hierarchy, persistent sidebar, dense tables, cyan
 informational accents, and one warm primary action per region.
 
@@ -171,11 +171,16 @@ the version.
 
 The Sources screen uses a dense manifest-owned source table and centered
 workflow dialogs. Install includes Git/local selection, discovery, a scrollable
-Claude/Codex matrix, review, and apply. Each tool column has an explicit bulk
+Claude/Codex/Muse matrix, review, and apply. Each tool column has an explicit bulk
 selection toggle whose `ON`, `OFF`, `MIXED`, or `N/A` state reflects every
-non-conflict discovered target, independent of the row filter. Dialogs trap and
-restore focus, announce progress/errors, remain usable at the 1024×720
-minimum, and use typed confirmation for destructive removal.
+non-conflict discovered target, independent of the row filter. **Extend to
+tool** offers one tool radio preselected to the first tool with a missing
+cell, a per-source link preview, and a confirm that stays disabled until the
+preview succeeds; the apply stops at the first failure. The synthetic 1440×960
+capture is
+[`../../images/sources-extend.png`](../../images/sources-extend.png).
+Dialogs trap and restore focus, announce progress/errors, remain usable at
+the 1024×720 minimum, and use typed confirmation for destructive removal.
 
 The Skill Sets screen uses the same compact table language, expandable member
 detail, and centered dialogs. Dialog focus is contained, action scope is named

@@ -7,7 +7,7 @@
   or `dev` for an unversioned repository build.
 - `list` shows discovered skill rows and tool states. `list --json` adds the
   stable path-free `apiVersion: 1` inventory. Optional `--available-for
-  claude|codex` keeps only toggleable OFF cells for one host; repeated
+  claude|codex|muse` keeps only toggleable OFF cells for one host; repeated
   case-insensitive `--query` terms preserve the legacy OR-substring match over
   name, description, group, and source.
 - `status` summarizes `ON`, `OFF`, `CONFLICT`, and `RO` cells.
@@ -23,16 +23,20 @@
 - `uninstall <git-url|local-path> [--dry-run]` removes one complete audited
   installation and always requires an explicit source. Local source data is
   preserved.
-- `advisor activate --tool claude|codex --skill <name>... [--dry-run]
+- `extend --tool <tool> [--dry-run]` links every managed source to one more
+  tool in manifest order, mirroring ON/OFF state through the shared
+  install/audit machinery. It stops at the first blocked source and never
+  hardcodes a tool name.
+- `advisor activate --tool claude|codex|muse --skill <name>... [--dry-run]
   [--json]` preflights 1-5 exact names and creates one opaque receipt for cells
   temporarily enabled or shared.
-- `advisor search --tool claude|codex --query <text> [--limit 1-50] [--json]`
+- `advisor search --tool claude|codex|muse --query <text> [--limit 1-50] [--json]`
   ranks that host's toggleable ON/OFF cells with deterministic local weighted
   BM25F, phrase bonuses, and bounded fuzzy matching. Its path-free result omits
   the query, reasons, and scores; the default limit is 20.
 - `advisor cleanup --receipt <id> [--dry-run] [--json]` releases one exact
   receipt and restores cells whose final lease claim is removed.
-- `advisor status [--tool claude|codex] [--json]` lists outstanding receipts
+- `advisor status [--tool claude|codex|muse] [--json]` lists outstanding receipts
   without exposing filesystem paths. JSON status advertises
   `ranked_search_v1` under API version 1.
 
@@ -54,13 +58,13 @@ Git repositories only.
 - Skills is active-first: `Needs attention` precedes an always-expanded `Active
   now` list, while OFF and opted-in read-only skills use collapsed source-group
   accordions. Search plus state/tool chips stay visible; Group, Source, and Read
-  only live under `Filters`. Both tool columns remain visible while the tool
+  only live under `Filters`. All three tool columns remain visible while the tool
   chip scopes classification and bulk staging. Global bulk covers all filtered
   rows including collapsed results; group bulk covers the complete group.
   Pending rows stay in their applied-state section until Apply/rescan.
 - Skill Sets lists task-oriented recipes independently from source Groups.
   Create/edit stores a name, optional `When to use` description, and
-  tool-agnostic skill names. Every use requires Claude, Codex, or Both, shows a
+  tool-agnostic skill names. Every use requires Claude, Codex, Muse, or All, shows a
   smart-toggle preview, and stages through Pending. Member detail exposes
   unavailable names and current per-tool state. Pending offers **Save as set**;
   skill details offers **Add to Skill Set…**. Recipe deletion never changes
@@ -71,16 +75,19 @@ Git repositories only.
   Favorite metadata changes are immediate and do not alter Pending.
 - Sources lists only manifest-owned Git/local sources. Install supports Git URL
   inspection or native local-folder selection, then an exact per-skill
-  Claude/Codex matrix, review, and Apply. One toggle per tool column selects or
+  Claude/Codex/Muse matrix, review, and Apply. One toggle per tool column selects or
   clears every discovered non-conflict target regardless of the text filter;
   it exposes `ON`, `OFF`, `MIXED`, or `N/A`. Git repositories expose Update
   and Update all; both source kinds expose typed-confirmed whole-source
-  Uninstall.
+  Uninstall. **Extend to tool** links every recorded source to one tool radio
+  after a per-source link preview that surfaces blocked sources; confirm
+  stays disabled while any source is blocked or no new links are planned,
+  and the batch stops at the first failure with a fresh snapshot.
 - Discover is excluded from the `v0.5.0` public preview navigation and public
   Wails binding. Its experimental Go adapter/domain remains in the repository.
 - Dashboard context metrics are filesystem estimates by default; **Run provider
   diagnostics** is the only UI action that executes local Claude/Codex
-  diagnostic subprocesses.
+  diagnostic subprocesses. Muse is always a labeled filesystem estimate.
 - Its `Update mode` column explicitly describes `Managed Git` sources as
   updateable and `Linked folder` sources as direct/live links that need no
   update; it does not encode this distinction as generic health states.
@@ -129,8 +136,8 @@ search capability.
 - `Tab`: change active tool column.
 - `Up`/`Down` or `k`/`j`: move the selected row.
 - `Space`: stage/unstage the active cell.
-- `b`: stage/unstage both existing toggleable cells in the row.
-- `g`: smart-toggle the selected group across both tools.
+- `b`: stage/unstage every existing toggleable cell in the row.
+- `g`: smart-toggle the selected group across all tools.
 - `A`: smart-toggle all currently visible toggleable rows.
 - `a` or `Enter`: plan and apply pending changes.
 - `u` / `U`: remove the active pending change / clear all pending changes.

@@ -235,7 +235,7 @@ func (s *Service) hasManagedSkillLocked(name string) bool {
 		if row.Name != name {
 			continue
 		}
-		for _, cell := range []*model.ToolSkill{row.Claude, row.Codex} {
+		for _, cell := range []*model.ToolSkill{row.Claude, row.Codex, row.Muse} {
 			if cell != nil && !cell.ReadOnly && (cell.State == model.SkillStateOn || cell.State == model.SkillStateOff) {
 				return true
 			}
@@ -315,7 +315,11 @@ func (s *Service) projectSkillSetLocked(set skillsets.Set) SkillSet {
 		member := SkillSetMember{Name: row.Name, Description: row.Description, Group: normalizedGroup(row.Group).String(), Source: row.Source.String()}
 		member.Claude = projectSkillSetMemberCell(row.Claude, model.ToolClaude, s.pending)
 		member.Codex = projectSkillSetMemberCell(row.Codex, model.ToolCodex, s.pending)
-		member.Available = member.Claude.Eligible || member.Codex.Eligible || member.Claude.State == model.SkillStateConflict.String() || member.Codex.State == model.SkillStateConflict.String()
+		member.Muse = projectSkillSetMemberCell(row.Muse, model.ToolMuse, s.pending)
+		member.Available = member.Claude.Eligible || member.Codex.Eligible || member.Muse.Eligible ||
+			member.Claude.State == model.SkillStateConflict.String() ||
+			member.Codex.State == model.SkillStateConflict.String() ||
+			member.Muse.State == model.SkillStateConflict.String()
 		if !member.Available {
 			projected.Unavailable++
 		}
@@ -325,10 +329,14 @@ func (s *Service) projectSkillSetLocked(set skillsets.Set) SkillSet {
 		if member.Codex.Pending != "" {
 			projected.Pending++
 		}
+		if member.Muse.Pending != "" {
+			projected.Pending++
+		}
 		projected.Members = append(projected.Members, member)
 	}
 	projected.Claude = summarizeSkillSetTool(projected.Members, model.ToolClaude)
 	projected.Codex = summarizeSkillSetTool(projected.Members, model.ToolCodex)
+	projected.Muse = summarizeSkillSetTool(projected.Members, model.ToolMuse)
 	return projected
 }
 
@@ -369,8 +377,11 @@ func summarizeSkillSetTool(members []SkillSetMember, tool model.Tool) SkillSetTo
 	summary := SkillSetToolSummary{Tool: tool.String()}
 	for _, member := range members {
 		cell := member.Claude
-		if tool == model.ToolCodex {
+		switch tool {
+		case model.ToolCodex:
 			cell = member.Codex
+		case model.ToolMuse:
+			cell = member.Muse
 		}
 		switch cell.State {
 		case model.SkillStateOn.String():

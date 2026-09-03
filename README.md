@@ -1,9 +1,9 @@
 # Skill Manager
 
-Skill Manager gives Claude Code and Codex users one local inventory for Agent
-Skills. You can install skills, see where each one came from, and turn it off
-without deleting or rewriting it. Turn it back on and Skill Manager restores
-the original directory or symlink.
+Skill Manager gives Claude Code, Codex, and Muse users one local inventory
+for Agent Skills. You can install skills, see where each one came from, and
+turn it off without deleting or rewriting it. Turn it back on and Skill
+Manager restores the original directory or symlink.
 
 <p align="center">
   <a href="https://github.com/dees91/agent-skill-manager/releases/tag/v0.5.0">Download macOS app</a>
@@ -14,12 +14,12 @@ the original directory or symlink.
 </p>
 
 <p align="center">
-  <img src=".github/assets/demo.gif" width="960" alt="Skill Manager demo showing local skill inventory, reversible visibility toggles, and managed sources for Claude Code and Codex">
+  <img src=".github/assets/demo.gif" width="960" alt="Skill Manager demo showing local skill inventory, reversible visibility toggles, and managed sources for Claude Code, Codex, and Muse">
 </p>
 
 ## What Skill Manager does
 
-- Scans Claude Code and Codex to build one live skill inventory.
+- Scans Claude Code, Codex, and Muse to build one live skill inventory.
 - Moves the exact original skill entry when you turn a skill off or on.
 - Leaves Git repositories, linked folders, lockfiles, and skill contents alone.
 - Uses the same safety rules in the macOS app, TUI, and CLI.
@@ -34,7 +34,8 @@ release.
 - The Go CLI and TUI can compile on other platforms, but the release contract
   does not yet cover filesystem behavior outside macOS.
 - Skill Manager uses fixed provider paths under the current user's home
-  directory. This version cannot use custom Claude or Codex skill roots.
+  directory. This version cannot use custom Claude, Codex, or Muse skill
+  roots.
 - Release downloads are built for Apple Silicon and ad-hoc signed. They are not
   Developer ID signed or notarized.
 - The preview does not include universal macOS binaries, DMG installers,
@@ -48,6 +49,7 @@ Skill Manager derives these paths from the current OS user's home directory:
 |---|---|---|
 | Claude user skills | `~/.claude/skills` | Toggleable |
 | Codex user skills | `~/.agents/skills` | Toggleable |
+| Muse user skills | `~/.config/muse/skills` (`$XDG_CONFIG_HOME/muse/skills` when set) | Toggleable |
 | Codex system skills | `~/.codex/skills/.system` | Read-only |
 | Claude plugin cache | `~/.claude/plugins/cache` | Read-only |
 | Skills CLI metadata | `~/.agents/.skill-lock.json` | Read-only source label |
@@ -195,18 +197,31 @@ path sources are live links, so they do not need an update operation. Uninstall
 removes a complete recorded source; Skill Manager does not uninstall one skill
 from a source at a time.
 
+Link every recorded source to one more tool, mirroring ON/OFF state, without
+reinstalling each source:
+
+```bash
+skill-manager extend --tool muse --dry-run
+skill-manager extend --tool muse
+```
+
+Extend processes sources in manifest order and stops at the first failure,
+keeping earlier sources extended. The desktop Sources screen offers the same
+bulk action as "Extend to tool". Start a new session afterwards so the added
+tool picks up the new skills.
+
 ### First-party Skill Advisor
 
 The current source build includes the optional
 [`skill-advisor`](skills/skill-advisor/SKILL.md). Before a non-trivial task, it
 can inspect locally installed skills and report the smallest clearly relevant
 set in two groups: already active and needing activation. It selects at most
-five total for the current Claude Code or Codex host, activates the OFF skills,
-and returns an opaque receipt when it owns or shares a lease. The agent cleans
-that exact receipt itself before its final response. It needs no plugin or
-provider hook.
+five total for the current Claude Code, Codex, or Muse host, activates the OFF
+skills, and returns an opaque receipt when it owns or shares a lease. The
+agent cleans that exact receipt itself before its final response. It needs no
+plugin or provider hook.
 
-After reviewing the skill instructions, install it for both tools from the
+After reviewing the skill instructions, install it for all tools from the
 public repository:
 
 ```bash
@@ -268,7 +283,7 @@ message; the skill does not fall back to substring lookup.
 | `Tab` | Switch active tool column |
 | `Up`/`Down` or `k`/`j` | Move selection |
 | `Space` | Stage or unstage the active-cell toggle |
-| `b` | Smart-toggle both cells in the row |
+| `b` | Smart-toggle all tool cells in the row |
 | `g` | Smart-toggle the selected source group |
 | `A` | Smart-toggle all visible eligible cells |
 | `G` | Cycle group filter |
@@ -291,9 +306,10 @@ has four views:
 - **Skills** keeps active skills open, groups inactive skills by source, stores
   favorite managed skills, and stages reversible toggles for review and Apply.
 - **Skill Sets** stores task-oriented combinations with an optional **When to
-  use** note, then stages them for Claude, Codex, or both.
-- **Sources** installs exact Claude/Codex skill cells and updates or uninstalls
-  complete Git and local sources recorded in the manifest.
+  use** note, then stages them for Claude, Codex, Muse, or all tools.
+- **Sources** installs exact Claude/Codex/Muse skill cells, extends every
+  recorded source to one more tool, and updates or uninstalls complete Git
+  and local sources recorded in the manifest.
 
 Open **Skill Manager → About Skill Manager** in the macOS application menu to
 see the app icon, current build version, and product description. The app reads
@@ -302,6 +318,8 @@ these values from the same desktop build metadata as the application bundle.
 ![Skill Manager dashboard](docs/images/dashboard.png)
 
 ![Saved Skill Sets workspace](docs/images/skill-sets.png)
+
+![Extend managed sources to one tool](docs/images/sources-extend.png)
 
 The experimental skills.sh Discover implementation is still under development
 and does not appear in the `v0.5.0` public preview.
@@ -337,6 +355,7 @@ Skill Manager keeps its state under `~/.skill-manager/`:
   cache/skills-sh/catalog-v1.json
   disabled/claude/
   disabled/codex/
+  disabled/muse/
   repos/
   trash/
 ```
@@ -384,7 +403,8 @@ polling. It accesses the network only during an explicit Git source operation:
 - The Dashboard estimates context use from the filesystem by default. Its
   explicit **Run provider diagnostics** action may invoke installed `claude`
   and `codex` binaries with fixed, read-only arguments. If either command fails,
-  the Dashboard keeps using an estimate.
+  the Dashboard keeps using an estimate. Muse has no provider diagnostic and
+  is always a labeled filesystem estimate.
 
 Read [PRIVACY.md](PRIVACY.md) for the full data flow and [SECURITY.md](SECURITY.md)
 for vulnerability reporting.

@@ -68,6 +68,29 @@ func TestManagedScansSymlinkAndDirectorySkills(t *testing.T) {
 	}
 }
 
+func TestManagedScansMuseUserSkills(t *testing.T) {
+	home := t.TempDir()
+	p := paths.ForHome(home)
+	mkdirSkill(t, filepath.Join(p.MuseUserSkills, "muse-only"))
+
+	got, err := New(p).Managed()
+	if err != nil {
+		t.Fatalf("Managed() error = %v", err)
+	}
+	skill := findSkill(t, got, model.ToolMuse, "muse-only")
+	if skill.EntryType != model.EntryTypeDir || skill.Source != model.SourceLocal || skill.Group != model.GroupLocal {
+		t.Fatalf("muse skill = %#v, want dir local/local", skill)
+	}
+	if skill.State != model.SkillStateOn || skill.ReadOnly {
+		t.Fatalf("muse state/readonly = %q/%v, want ON/false", skill.State, skill.ReadOnly)
+	}
+
+	rows := RowsFromSkills(got)
+	if len(rows) != 1 || rows[0].Muse == nil || rows[0].Claude != nil || rows[0].Codex != nil {
+		t.Fatalf("rows = %#v, want one Muse-only row", rows)
+	}
+}
+
 func TestManagedClassifiesManifestOwnedLocalPathLinks(t *testing.T) {
 	home := t.TempDir()
 	p := paths.ForHome(home)

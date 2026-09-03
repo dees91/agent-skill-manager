@@ -19,20 +19,27 @@ type ToolTarget string
 const (
 	ToolTargetClaude ToolTarget = "claude"
 	ToolTargetCodex  ToolTarget = "codex"
+	ToolTargetMuse   ToolTarget = "muse"
 	ToolTargetBoth   ToolTarget = "both"
+	ToolTargetAll    ToolTarget = "all"
 )
 
-// ParseToolTarget expands an install target into concrete tools. Empty defaults to both.
+// ParseToolTarget expands an install target into concrete tools. Empty, both,
+// and all default to every supported tool.
 func ParseToolTarget(value string) ([]model.Tool, error) {
 	switch ToolTarget(strings.TrimSpace(value)) {
 	case "":
 		return model.Tools(), nil
 	case ToolTargetBoth:
 		return model.Tools(), nil
+	case ToolTargetAll:
+		return model.Tools(), nil
 	case ToolTargetClaude:
 		return []model.Tool{model.ToolClaude}, nil
 	case ToolTargetCodex:
 		return []model.Tool{model.ToolCodex}, nil
+	case ToolTargetMuse:
+		return []model.Tool{model.ToolMuse}, nil
 	default:
 		return nil, fmt.Errorf("invalid tool target %q", value)
 	}

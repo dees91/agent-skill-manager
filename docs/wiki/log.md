@@ -344,3 +344,90 @@ intentionally excluded.
 - Live read-only smoke testing advertised `ranked_search_v1`, ranked the ADR and
   quality-review skills first for the target query, preserved legacy list
   ordering, completed in under half a second, and left `state.json` unchanged.
+
+## [2026-09-03] implementation | Add Muse as a third managed tool
+
+- Added `muse` as an independent managed tool alongside Claude Code and Codex:
+  `~/.config/muse/skills` (`$XDG_CONFIG_HOME/muse/skills` when set) plus
+  `~/.skill-manager/disabled/muse/`, with no shared ownership of
+  `~/.agents/skills`.
+- Extended domain scan/staging, CLI tables and `--tool` targets (`muse`,
+  `both`, `all`), install/update/uninstall planning, TUI third column,
+  advisor search/activate/status, and an always-estimated Muse context report
+  at manifest version 2.
+- Projected Muse cells through the GUI backend and desktop frontend (Skills
+  column, install matrix, Dashboard, Skill Sets, bindings, fixtures) and
+  taught the first-party `skill-advisor` skill the `muse` host and path.
+- Updated README, DESIGN, AGENTS.md, planning/phase-19 tasks, and wiki
+  synthesis; backend, desktop, and frontend suites pass on synthetic homes.
+
+## [2026-09-03] fix | Keep ForHome hermetic for the Muse path
+
+- `paths.ForHome` read ambient `XDG_CONFIG_HOME`, so the Muse directory
+  escaped synthetic test homes and leaked state into the real
+  `~/.config/muse/skills` on CI (green locally, red in the Root Go job).
+- `ForHome` now always derives `MuseUserSkills` from the given home; only the
+  production `paths.Default()` constructor applies the `XDG_CONFIG_HOME`
+  override. Rule: path constructors used by tests stay pure functions of
+  their arguments.
+
+## [2026-09-03] fix | Review follow-up: desktop layout and Muse estimate contract
+
+- Sized desktop grids for the third tool column (metric cards, skills table,
+  install matrix, skill-set table/member/editor rows, set tool choice) and
+  added the missing `.accuracy-estimated` badge style.
+- Fixture and demo backends now report Muse context as `estimated` with the
+  no-diagnostic message, matching the Go analyzer; the App test asserts one
+  `Partial estimate` and one `Estimated` badge.
+- Deduped `codexLine`/`museLine` into `catalogLine`, renamed the SkillSets
+  `ToolChoice` value `both` to `all`, and cleared Claude-and-Codex leftovers
+  in AGENTS.md, DESIGN.md, README.md, App copy, and wiki sources.
+- Existing `docs/images/*.png` still show two tool columns; regenerating them
+  requires running the desktop app and stays open.
+
+## [2026-09-03] implementation | Extend managed sources to a tool
+
+- Added `skill-manager extend --tool <tool> [--dry-run]` (P19-T09): generic
+  `PlanExtend`/apply over `model.Tool` walks Git then local sources in
+  manifest order, reuses install discovery/preflight plus a cross-source
+  claim map, mirrors OFF state through the shared disable path, and stops at
+  the first failure with an `extend --tool <tool> failed for source <group>`
+  error. Nothing hardcodes `muse`.
+- Added `PreviewExtend`/`ExtendSources` GUI methods and desktop bindings plus
+  a Sources "Extend to tool" dialog (tool radio, per-source preview,
+  stop-at-first-failure finish), with `docs/images/sources-extend.png`
+  captured from synthetic demo data at 1440x960 and registered in DESIGN.md.
+- Covered by domain, CLI, GUI, and frontend tests; documented in README,
+  planning/phase-19-muse-support-tasks.md, and the repository/local-path
+  install, interfaces, and desktop-gui topic pages.
+
+## [2026-09-03] fix | Extend review follow-up: result-only GUI mutation
+
+- Changed `ExtendSources` to the sibling result-only contract
+  `(toolName, includeReadOnly) SourceMutationResult`: partial-failure results
+  now reach the frontend with a fresh snapshot instead of being dropped by a
+  rejected Wails promise; the previous resolved-with-failure frontend mock is
+  now the real contract.
+- Replaced the hardcoding `ExtendPreview.MuseCount` with generic
+  `CreateCount`/`BlockedCount`; preview sources now surface status, reason,
+  skipped skills, and plan conflicts, and the dialog confirm stays disabled
+  while any source is blocked or no new links are planned.
+- Fixed the GUI success message double punctuation, threaded the source kind
+  through extend disable failures, single-passed the CLI summary totals, and
+  aligned the dry-run blocked error with the
+  `extend --tool <tool> failed for source <group>` format.
+- Verified the `gitInitCheckout` fixture is required: the extend test reaches
+  `AuditRepositoryReferences`/`UninstallService.Plan`, which shell out to
+  `git rev-parse`; documented why in the test.
+- Updated AGENTS.md (CLI extend contract, Sources extend action), the
+  local-path install wiki topic, and this log.
+
+## [2026-09-03] fix | Extend blocked preview reason fallback
+
+- `projectExtendPreview` now falls back to `source.Err.Error()` when a blocked
+  source carries no mappable plan conflicts, so claim-map collisions, local
+  drift, moved sources, and repo identity errors show a reason instead of a
+  bare `blocked` status. Covered by a claim-collision GUI test.
+- The install matrix and its column header now use the shared
+  `MANAGED_TOOLS`/`toolDisplayName` from `api.ts`, closing the remaining tool
+  list duplication in `SourcesView`.

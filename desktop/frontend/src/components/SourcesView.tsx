@@ -15,14 +15,18 @@ import {
 } from 'lucide-react'
 import type {
   Backend,
+  ExtendPreview,
+  ExtendPreviewSource,
   InstallCellRequest,
   InstallDraft,
   InstallReview,
   ManagedSource,
+  ManagedTool,
   SourceMutationResult,
   SourceProgress,
   UninstallPreview,
 } from '../api'
+import { MANAGED_TOOLS, toolDisplayName } from '../api'
 
 interface SourcesViewProps {
   sources: ManagedSource[]
@@ -37,8 +41,7 @@ interface SourcesViewProps {
 }
 
 type InstallMode = 'git' | 'local'
-type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | null
-type InstallTool = 'claude' | 'codex'
+type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | null
 type ColumnSelectionState = 'ON' | 'OFF' | 'MIXED' | 'N/A'
 
 export default function SourcesView(props: SourcesViewProps) {
@@ -108,6 +111,9 @@ export default function SourcesView(props: SourcesViewProps) {
           <p>Install and maintain repositories and link-in-place folders owned by Skill Manager.</p>
         </div>
         <div className="source-heading-actions">
+          <button className="secondary-button" disabled={busy || pendingCount > 0 || !canExtendSources(sources)} onClick={() => openDialog('extend')}>
+            <PackagePlus size={14} /> Extend to tool
+          </button>
           <button className="secondary-button" disabled={busy || pendingCount > 0 || !sources.some((source) => source.canUpdate)} onClick={() => openDialog('update-all')}>
             <RefreshCw size={14} /> Update all
           </button>
@@ -142,7 +148,7 @@ export default function SourcesView(props: SourcesViewProps) {
                 <tr key={source.sourceId}>
                   <td><div className="source-identity"><span>{source.kind === 'git' ? <GitBranch size={15} /> : <HardDrive size={15} />}</span><div><strong>{source.group}</strong><code>{source.location}</code></div></div></td>
                   <td><strong className="source-count">{source.skillCount}</strong></td>
-                  <td><div className="target-counts"><span>Claude {source.claudeCount}</span><span>Codex {source.codexCount}</span></div></td>
+                  <td><div className="target-counts"><span>Claude {source.claudeCount}</span><span>Codex {source.codexCount}</span><span>Muse {source.museCount}</span></div></td>
                   <td><div className="source-update-mode"><span className={source.canUpdate ? 'status-dot git' : 'status-dot'} /><div><strong>{source.updateMode}</strong><small>{source.updateHint}</small>{source.commit && <code>Commit {shortCommit(source.commit)}</code>}</div></div></td>
                   <td><div className="source-row-actions">
                     {source.canUpdate && <button aria-label={`Update ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('update-one', source)}><RefreshCw size={12} /> Update</button>}
@@ -163,6 +169,9 @@ export default function SourcesView(props: SourcesViewProps) {
       )}
       {dialog === 'uninstall' && selectedSource && (
         <UninstallDialog source={selectedSource} preview={uninstallPreview} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={(confirmation) => void runMutation(() => backend.uninstallSource(selectedSource.sourceId, confirmation, includeReadOnly))} />
+      )}
+      {dialog === 'extend' && (
+        <ExtendDialog sources={sources} backend={backend} busy={busy} progress={progress} includeReadOnly={includeReadOnly} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} />
       )}
     </section>
   )
@@ -189,7 +198,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       if (next.cancelled) return
       setDraft(next)
       setReview(null)
-      setSelections(new Set(next.candidates.flatMap((candidate) => [candidate.claude, candidate.codex].filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
+      setSelections(new Set(next.candidates.flatMap((candidate) => [candidate.claude, candidate.codex, candidate.muse].filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
       if (next.cloned) onAnnounce('Repository cloned for inspection. The checkout will be retained if you cancel.')
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -219,7 +228,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
     setSelections((current) => { const next = new Set(current); const cell = key(skill, tool); next.has(cell) ? next.delete(cell) : next.add(cell); return next })
   }
 
-  const setToolSelection = (tool: InstallTool, selected: boolean) => {
+  const setToolSelection = (tool: ManagedTool, selected: boolean) => {
     if (!draft) return
     setReview(null)
     setSelections((current) => {
@@ -264,27 +273,27 @@ function InstallMatrix({ draft, selections, busy, onToggle, onSetToolSelection }
   selections: Set<string>
   busy: boolean
   onToggle: (skill: string, tool: string) => void
-  onSetToolSelection: (tool: InstallTool, selected: boolean) => void
+  onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
   const [query, setQuery] = useState('')
   const visible = useMemo(() => draft.candidates.filter((candidate) => candidate.name.toLowerCase().includes(query.toLowerCase()) || candidate.relativePath.toLowerCase().includes(query.toLowerCase())), [draft, query])
   return <div className="install-matrix-wrap">
     <label className="search-field install-search"><Search size={14} /><input aria-label="Filter discovered skills" value={query} disabled={busy} onChange={(event) => setQuery(event.target.value)} placeholder="Filter discovered skills…" /></label>
-    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{(['claude', 'codex'] as const).map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong><code>{candidate.relativePath}</code></td>{(['claude', 'codex'] as const).map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict'} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{cell.status.replace('-', ' ')}</small></label></td> })}</tr>)}</tbody></table></div>
+    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{MANAGED_TOOLS.map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong><code>{candidate.relativePath}</code></td>{MANAGED_TOOLS.map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict'} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{cell.status.replace('-', ' ')}</small></label></td> })}</tr>)}</tbody></table></div>
   </div>
 }
 
 function InstallColumnHeader({ tool, draft, selections, busy, onSetToolSelection }: {
-  tool: InstallTool
+  tool: ManagedTool
   draft: InstallDraft
   selections: Set<string>
   busy: boolean
-  onSetToolSelection: (tool: InstallTool, selected: boolean) => void
+  onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
   const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict')
   const selectedCount = applicable.filter((candidate) => selections.has(key(candidate.name, tool))).length
   const state: ColumnSelectionState = applicable.length === 0 ? 'N/A' : selectedCount === 0 ? 'OFF' : selectedCount === applicable.length ? 'ON' : 'MIXED'
-  const name = tool === 'claude' ? 'Claude' : 'Codex'
+  const name = toolDisplayName(tool)
   const count = applicable.length === 0 ? 'no available targets' : `${selectedCount} of ${applicable.length} selected`
   const selectAll = state !== 'ON'
   return <th scope="col">
@@ -307,6 +316,100 @@ function ReviewSummary({ review }: { review: InstallReview }) {
     <strong>{review.ready ? 'Ready to install' : `${review.conflicts.length} conflict${review.conflicts.length === 1 ? '' : 's'}`}</strong>
     {review.ready ? <p>{review.createCount} new links · {review.alreadyOnCount} already ON · {review.alreadyOffCount} already OFF</p> : review.conflicts.map((conflict) => <p key={`${conflict.skillName}:${conflict.tool}`}>{conflict.skillName} {conflict.tool}: {conflict.reason}</p>)}
   </div>
+}
+
+function toolSourceCount(source: ManagedSource, tool: ManagedTool): number {
+  return tool === 'claude' ? source.claudeCount : tool === 'codex' ? source.codexCount : source.museCount
+}
+
+function canExtendSources(sources: ManagedSource[]): boolean {
+  return sources.length > 0 && sources.some((source) => MANAGED_TOOLS.some((tool) => toolSourceCount(source, tool) < source.skillCount))
+}
+
+function defaultExtendTool(sources: ManagedSource[]): ManagedTool {
+  for (const tool of MANAGED_TOOLS) {
+    if (sources.some((source) => toolSourceCount(source, tool) < source.skillCount)) return tool
+  }
+  return 'muse'
+}
+
+function ExtendDialog({ sources, backend, busy, progress, includeReadOnly, error, onBusy, onResult, onError, onClose }: {
+  sources: ManagedSource[]; backend: Backend; busy: boolean; progress: SourceProgress | null; includeReadOnly: boolean; error: string | null
+  onBusy: (busy: boolean) => void; onResult: (result: SourceMutationResult) => void; onError: (error: string | null) => void; onClose: () => void
+}) {
+  const fallbackTool = useMemo(() => defaultExtendTool(sources), [sources])
+  const [tool, setTool] = useState<ManagedTool>(fallbackTool)
+  const [preview, setPreview] = useState<ExtendPreview | null>(null)
+  useDialogEscape(onClose, busy)
+
+  const loadPreview = async (next: ManagedTool) => {
+    onBusy(true); onError(null)
+    try {
+      setPreview(await backend.previewExtend(next))
+    } catch (reason) { setPreview(null); onError(errorMessage(reason)) } finally { onBusy(false) }
+  }
+
+  useEffect(() => { void loadPreview(fallbackTool) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectTool = (next: ManagedTool) => {
+    if (next === tool) return
+    setTool(next)
+    setPreview(null)
+    void loadPreview(next)
+  }
+
+  const resetTool = () => {
+    onError(null)
+    setPreview(null)
+    setTool(fallbackTool)
+    void loadPreview(fallbackTool)
+  }
+
+  const confirm = async () => {
+    if (!preview || busy || !canConfirmExtend(preview)) return
+    onBusy(true); onError(null)
+    try {
+      const result = await backend.extendSources(tool, includeReadOnly)
+      onResult(result)
+      if (!result.failure) onClose()
+      else onError(result.failure.message)
+    } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
+  }
+
+  const created = preview?.sources.reduce((total, source) => total + source.created, 0) ?? 0
+  const already = preview?.sources.reduce((total, source) => total + source.alreadyInstalled, 0) ?? 0
+  const disabled = preview?.sources.reduce((total, source) => total + source.disabledAfter, 0) ?? 0
+  const showReset = error !== null && /unknown tool/i.test(error)
+  const confirmBlocked = !preview || !canConfirmExtend(preview)
+
+  return <Modal title={`Extend sources to ${toolDisplayName(tool)}?`} onClose={onClose} busy={busy}>
+    <p className="dialog-description">Missing {toolDisplayName(tool)} links are created for every managed source and mirrored OFF where the skill is OFF everywhere else. The batch stops at the first failure.</p>
+    <div className="extend-tool-radio" role="radiogroup" aria-label="Target tool">
+      {MANAGED_TOOLS.map((option) => (
+        <label key={option} className={tool === option ? 'active' : ''}><input type="radio" name="extend-tool" checked={tool === option} disabled={busy} onChange={() => selectTool(option)} /> {toolDisplayName(option)}</label>
+      ))}
+    </div>
+    {preview && <div className={preview.blockedCount > 0 ? 'install-review conflict' : 'install-review ready'}>
+      <strong>{preview.blockedCount > 0 ? `${preview.blockedCount} blocked source${preview.blockedCount === 1 ? '' : 's'}` : 'Ready to extend'}</strong>
+      <p>{created} new link{created === 1 ? '' : 's'} · {already} already installed · {disabled} disabled after</p>
+      {preview.sources.map((source) => <p key={`${source.kind}:${source.group}`}>{source.group} ({source.kind}): {source.status === 'ready' ? `${source.created} new · ${source.alreadyInstalled} already · ${source.disabledAfter} OFF after` : extendSourceBlockage(source)}</p>)}
+    </div>}
+    {error && <DialogError message={error} />}
+    {showReset && <div className="dialog-actions"><button className="secondary-button" disabled={busy} onClick={resetTool}>Reset tool</button></div>}
+    {busy && <ProgressState progress={progress} />}
+    <DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy || confirmBlocked} onClick={() => void confirm()}>Extend to {toolDisplayName(tool)}</button></DialogActions>
+  </Modal>
+}
+
+function canConfirmExtend(preview: ExtendPreview): boolean {
+  return preview.blockedCount === 0 && preview.createCount > 0
+}
+
+function extendSourceBlockage(source: ExtendPreviewSource): string {
+  const details = source.conflicts.map((conflict) => `${conflict.skillName}: ${conflict.reason}`)
+  for (const skipped of source.skipped) details.push(`${skipped.skillName}: ${skipped.reason}`)
+  if (source.reason) details.unshift(source.reason)
+  return `${source.status}${details.length > 0 ? ` — ${details.join('; ')}` : ''}`
 }
 
 function ConfirmDialog({ title, description, confirmLabel, busy, progress, error, onClose, onConfirm }: { title: string; description: string; confirmLabel: string; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: () => void }) {

@@ -4,7 +4,7 @@
 
 - `implemented`: Phase 16 adds tool-agnostic favorites to the macOS Skills
   workspace for finding recurring skills in large local catalogs.
-- Identity is the skill basename. A favorite applies across Claude and Codex
+- Identity is the skill basename. A favorite applies across Claude, Codex, and Muse
   and remains independent from ON/OFF state, Pending, Apply, source ownership,
   Groups, and Skill Sets.
 - Managed user rows are eligible while ON, OFF, or conflicted. Read-only-only

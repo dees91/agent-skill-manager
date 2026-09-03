@@ -190,9 +190,9 @@ func (s *Service) ToggleBoth(skillName string) (ActionResult, error) {
 	return s.actionResultLocked(message, counts), nil
 }
 
-// ToggleGroup smart-toggles every loaded row in a group across both tools.
+// ToggleGroup smart-toggles every loaded row in a group across all tools.
 func (s *Service) ToggleGroup(groupName string) (ActionResult, error) {
-	return s.ToggleGroupScope(groupName, []string{model.ToolClaude.String(), model.ToolCodex.String()})
+	return s.ToggleGroupScope(groupName, allToolNames())
 }
 
 // ToggleGroupScope smart-toggles every loaded row in a group for the selected tools.
@@ -230,7 +230,17 @@ func (s *Service) ToggleGroupScope(groupName string, toolNames []string) (Action
 
 // ToggleVisible smart-toggles the exact visible row names supplied by the UI.
 func (s *Service) ToggleVisible(skillNames []string) (ActionResult, error) {
-	return s.ToggleSkillScope(skillNames, []string{model.ToolClaude.String(), model.ToolCodex.String()})
+	return s.ToggleSkillScope(skillNames, allToolNames())
+}
+
+// allToolNames returns every supported tool name in deterministic order.
+func allToolNames() []string {
+	tools := model.Tools()
+	names := make([]string, 0, len(tools))
+	for _, tool := range tools {
+		names = append(names, tool.String())
+	}
+	return names
 }
 
 // ToggleSkillScope smart-toggles exact skill names for the selected tools.

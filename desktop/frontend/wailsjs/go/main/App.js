@@ -26,6 +26,10 @@ export function DeleteSkillSet(arg1) {
   return window['go']['main']['App']['DeleteSkillSet'](arg1);
 }
 
+export function ExtendSources(arg1, arg2) {
+  return window['go']['main']['App']['ExtendSources'](arg1, arg2);
+}
+
 export function GetSnapshot(arg1) {
   return window['go']['main']['App']['GetSnapshot'](arg1);
 }
@@ -36,6 +40,10 @@ export function MeasureContextBudgets() {
 
 export function PrepareGitInstall(arg1) {
   return window['go']['main']['App']['PrepareGitInstall'](arg1);
+}
+
+export function PreviewExtend(arg1) {
+  return window['go']['main']['App']['PreviewExtend'](arg1);
 }
 
 export function PreviewSkillSetToggle(arg1, arg2) {

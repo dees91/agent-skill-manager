@@ -62,7 +62,7 @@ renamed, or deleted to make room.
 ## Desktop Workflow
 
 The Sources screen accepts a Git URL and performs checkout plus discovery
-before showing an exact Claude/Codex matrix. A missing checkout may therefore
+before showing an exact Claude/Codex/Muse matrix. A missing checkout may therefore
 be cloned before final Apply; cancelling retains that clean unrecorded checkout
 for retry. Review and Apply use opaque session IDs and re-run discovery and
 preflight in Go. Per-repository Update and deterministic Update all call the
@@ -110,6 +110,31 @@ same ownership audit and transactional removal service.
   successful state save is reported with the staging path instead of implying
   rollback.
 - Whole-repository `uninstall` supersedes the earlier `repo remove` idea.
+
+## Extend To One Tool
+
+- `implemented`: `skill-manager extend --tool <tool> [--dry-run]` links every
+  managed Git and local source to one more tool without reinstalling each
+  source. The tool is a parameter; no step hardcodes `muse`.
+- Selection reuses the install discovery and preflight rules per source:
+  only skills that lack the target tool are candidates, already-installed
+  cells are idempotent, and a cross-source claim map blocks two sources from
+  claiming the same tool/skill cell. Each source plans as ready, unchanged,
+  skipped (for example a missing checkout), or blocked.
+- Apply walks sources in manifest order (Git, then local) and stops at the
+  first failure with an `extend --tool <tool> failed for source <group>`
+  error, keeping the completed prefix in state. Successful links for skills
+  that are OFF for every other recorded tool are mirrored OFF through the
+  same disable path as freshly installed OFF skills.
+- Strict dry-run prints per-source link/already/disabled/skipped counts and
+  never clones, links, or writes `state.json`.
+- The desktop Sources screen exposes the same action as **Extend to tool**
+  through `PreviewExtend`/`ExtendSources` bindings: a tool radio (preselected
+  to the first tool with a missing cell), a per-source preview that surfaces
+  blocked/skipped sources with their conflicts, and a confirm that stays
+  disabled until the preview succeeds with zero blocked sources and at least
+  one new link. The mutation returns only the result, so a stop-at-first-failure
+  finish still delivers the completed prefix with a fresh snapshot.
 
 ## Deferred Repository Management
 

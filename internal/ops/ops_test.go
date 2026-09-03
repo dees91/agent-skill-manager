@@ -158,6 +158,46 @@ func TestDirectoryDisableEnableRoundTrip(t *testing.T) {
 	}
 }
 
+func TestMuseDirectoryDisableEnableRoundTrip(t *testing.T) {
+	home := t.TempDir()
+	p := paths.ForHome(home)
+	activePath := filepath.Join(p.MuseUserSkills, "muse-local")
+	mkdirSkill(t, activePath)
+
+	service := New(p)
+	disable, err := service.PlanDisable(model.ToolMuse, "muse-local")
+	if err != nil {
+		t.Fatalf("PlanDisable() error = %v", err)
+	}
+	if disable.EntryType != model.EntryTypeDir || disable.Group != model.GroupLocal {
+		t.Fatalf("disable = %#v, want dir local", disable)
+	}
+
+	result := service.Apply([]model.PlannedOperation{disable})
+	assertApplySuccess(t, result, 1)
+	assertMissing(t, activePath)
+	manifest := loadManifest(t, p)
+	entry, ok := manifest.Get(model.ToolMuse, "muse-local")
+	if !ok {
+		t.Fatal("manifest entry missing after Muse disable")
+	}
+	if entry.OriginalPath != activePath || entry.DisabledPath != disable.ToPath {
+		t.Fatalf("manifest entry = %#v, want Muse restore paths", entry)
+	}
+
+	enable, err := service.PlanEnable(model.ToolMuse, "muse-local")
+	if err != nil {
+		t.Fatalf("PlanEnable() error = %v", err)
+	}
+	result = service.Apply([]model.PlannedOperation{enable})
+	assertApplySuccess(t, result, 1)
+	assertExists(t, filepath.Join(activePath, "SKILL.md"))
+	manifest = loadManifest(t, p)
+	if _, ok := manifest.Get(model.ToolMuse, "muse-local"); ok {
+		t.Fatal("manifest entry still present after Muse enable")
+	}
+}
+
 func TestPlanDisableValidatesDestinationFree(t *testing.T) {
 	home := t.TempDir()
 	p := paths.ForHome(home)

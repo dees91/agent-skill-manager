@@ -11,11 +11,12 @@ interface DashboardProps {
 export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureContext }: DashboardProps) {
   const claude = effectiveCounts(snapshot, 'claude')
   const codex = effectiveCounts(snapshot, 'codex')
+  const muse = effectiveCounts(snapshot, 'muse')
   const all = {
-    on: claude.on + codex.on,
-    off: claude.off + codex.off,
-    conflict: claude.conflict + codex.conflict,
-    readOnly: claude.readOnly + codex.readOnly,
+    on: claude.on + codex.on + muse.on,
+    off: claude.off + codex.off + muse.off,
+    conflict: claude.conflict + codex.conflict + muse.conflict,
+    readOnly: claude.readOnly + codex.readOnly + muse.readOnly,
   }
   const total = all.on + all.off + all.conflict + all.readOnly
   const pending = snapshot.pending.length
@@ -23,7 +24,7 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
   return (
     <section className="page dashboard-page" aria-labelledby="dashboard-title">
       <div className="page-heading">
-        <div><p className="eyebrow">Operational overview</p><h1 id="dashboard-title">Dashboard</h1><p>Visibility of local agent skills across Claude Code and Codex.</p></div>
+        <div><p className="eyebrow">Operational overview</p><h1 id="dashboard-title">Dashboard</h1><p>Visibility of local agent skills across Claude Code, Codex, and Muse.</p></div>
         <button className="primary-button" onClick={onBrowseSkills}>Manage skills <ArrowRight size={16} /></button>
       </div>
 
@@ -31,6 +32,7 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
         <MetricCard icon={<Layers3 />} value={snapshot.stats.managedSkills} label="Managed skills" meta={`${snapshot.groups.length} source groups`} tone="cyan" />
         <MetricCard icon={<Bot />} value={claude.on} label="Claude enabled" meta={`${claude.off} off · ${pendingFor(snapshot, 'claude')} pending`} tone="blue" />
         <MetricCard icon={<TerminalSquare />} value={codex.on} label="Codex enabled" meta={`${codex.off} off · ${pendingFor(snapshot, 'codex')} pending`} tone="orange" />
+        <MetricCard icon={<Bot />} value={muse.on} label="Muse enabled" meta={`${muse.off} off · ${pendingFor(snapshot, 'muse')} pending`} tone="cyan" />
       </div>
 
       <article className="panel context-budget-panel">
@@ -41,8 +43,9 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
         <div className="context-budget-list">
           <ContextBudgetRow report={snapshot.contextBudgets.claude} icon={<Bot size={17} />} name="Claude Code" />
           <ContextBudgetRow report={snapshot.contextBudgets.codex} icon={<TerminalSquare size={17} />} name="Codex" />
+          <ContextBudgetRow report={snapshot.contextBudgets.muse} icon={<Bot size={17} />} name="Muse" />
         </div>
-        <div className="context-budget-note"><Info size={13} /><span>Filesystem estimate by default. Diagnostics run local read-only Codex and Claude commands only when requested.</span></div>
+        <div className="context-budget-note"><Info size={13} /><span>Filesystem estimate by default. Diagnostics run local read-only Codex and Claude commands only when requested; Muse is always a filesystem estimate.</span></div>
       </article>
 
       <div className="dashboard-grid">
@@ -62,6 +65,7 @@ export default function Dashboard({ snapshot, busy, onBrowseSkills, onMeasureCon
           <div className="tool-bars">
             <ToolBar name="Claude Code" counts={claude} />
             <ToolBar name="Codex" counts={codex} />
+            <ToolBar name="Muse" counts={muse} />
           </div>
         </article>
 
@@ -167,7 +171,7 @@ function ToolBar({ name, counts }: { name: string; counts: Counts }) {
 
 type Counts = { on: number; off: number; conflict: number; readOnly: number }
 
-function effectiveCounts(snapshot: Snapshot, tool: 'claude' | 'codex'): Counts {
+function effectiveCounts(snapshot: Snapshot, tool: 'claude' | 'codex' | 'muse'): Counts {
   const result = { on: 0, off: 0, conflict: 0, readOnly: 0 }
   for (const row of snapshot.rows) {
     const cell = row[tool] as SkillCell | undefined

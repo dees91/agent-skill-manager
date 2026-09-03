@@ -450,6 +450,7 @@ func (s *Service) projectInstallCandidates(draft installDraftState, manifest sta
 		candidate := InstallCandidate{Name: skill.Name, RelativePath: skill.RelativePath}
 		candidate.Claude = s.projectCandidateCell(draft, manifest, skill, model.ToolClaude)
 		candidate.Codex = s.projectCandidateCell(draft, manifest, skill, model.ToolCodex)
+		candidate.Muse = s.projectCandidateCell(draft, manifest, skill, model.ToolMuse)
 		candidates = append(candidates, candidate)
 	}
 	return candidates
@@ -627,16 +628,16 @@ func (s *Service) attachCurrentSnapshot(result *SourceMutationResult) {
 func projectManagedSources(manifest state.Manifest) []ManagedSource {
 	result := make([]ManagedSource, 0, len(manifest.Repositories)+len(manifest.LocalSources))
 	for _, repository := range manifest.Repositories {
-		claude, codex := installedToolCounts(repository.InstalledSkills)
+		claude, codex, muse := installedToolCounts(repository.InstalledSkills)
 		location := repository.OriginalURL
 		if location == "" {
 			location = repository.CanonicalURL
 		}
-		result = append(result, ManagedSource{SourceID: repositorySourceID(repository), Kind: sourceKindGit, Group: repository.Group.String(), Location: location, SkillCount: len(repository.InstalledSkills), ClaudeCount: claude, CodexCount: codex, InstalledAt: formatTime(repository.InstalledAt), Commit: repository.LastSeenCommit, CanUpdate: true, UpdateMode: "Managed Git", UpdateHint: "Use Update to fetch changes."})
+		result = append(result, ManagedSource{SourceID: repositorySourceID(repository), Kind: sourceKindGit, Group: repository.Group.String(), Location: location, SkillCount: len(repository.InstalledSkills), ClaudeCount: claude, CodexCount: codex, MuseCount: muse, InstalledAt: formatTime(repository.InstalledAt), Commit: repository.LastSeenCommit, CanUpdate: true, UpdateMode: "Managed Git", UpdateHint: "Use Update to fetch changes."})
 	}
 	for _, source := range manifest.LocalSources {
-		claude, codex := installedToolCounts(source.InstalledSkills)
-		result = append(result, ManagedSource{SourceID: localSourceID(source), Kind: sourceKindLocal, Group: source.Group.String(), Location: source.CanonicalPath, SkillCount: len(source.InstalledSkills), ClaudeCount: claude, CodexCount: codex, InstalledAt: formatTime(source.InstalledAt), CanUpdate: false, UpdateMode: "Linked folder", UpdateHint: "Changes are read directly; no update needed."})
+		claude, codex, muse := installedToolCounts(source.InstalledSkills)
+		result = append(result, ManagedSource{SourceID: localSourceID(source), Kind: sourceKindLocal, Group: source.Group.String(), Location: source.CanonicalPath, SkillCount: len(source.InstalledSkills), ClaudeCount: claude, CodexCount: codex, MuseCount: muse, InstalledAt: formatTime(source.InstalledAt), CanUpdate: false, UpdateMode: "Linked folder", UpdateHint: "Changes are read directly; no update needed."})
 	}
 	sort.SliceStable(result, func(i, j int) bool {
 		if result[i].Group != result[j].Group {
@@ -647,18 +648,21 @@ func projectManagedSources(manifest state.Manifest) []ManagedSource {
 	return result
 }
 
-func installedToolCounts(skills []state.InstalledSkillEntry) (int, int) {
-	claude, codex := 0, 0
+func installedToolCounts(skills []state.InstalledSkillEntry) (int, int, int) {
+	claude, codex, muse := 0, 0, 0
 	for _, skill := range skills {
 		for _, tool := range skill.Tools {
-			if tool == model.ToolClaude {
+			switch tool {
+			case model.ToolClaude:
 				claude++
-			} else if tool == model.ToolCodex {
+			case model.ToolCodex:
 				codex++
+			case model.ToolMuse:
+				muse++
 			}
 		}
 	}
-	return claude, codex
+	return claude, codex, muse
 }
 
 func repositorySourceID(repository state.RepositoryEntry) string {

@@ -28,18 +28,19 @@ func TestApplyCreatesSymlinksUpdatesManifestAndRescans(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
 	}
-	if len(result.Created) != 2 {
-		t.Fatalf("Created len = %d, want 2", len(result.Created))
+	if len(result.Created) != 3 {
+		t.Fatalf("Created len = %d, want 3", len(result.Created))
 	}
 	assertSymlinkTarget(t, filepath.Join(p.ClaudeUserSkills, "alpha"), skills[0].Path)
 	assertSymlinkTarget(t, filepath.Join(p.CodexUserSkills, "alpha"), skills[0].Path)
+	assertSymlinkTarget(t, filepath.Join(p.MuseUserSkills, "alpha"), skills[0].Path)
 
 	managed, err := scan.New(p).Managed()
 	if err != nil {
 		t.Fatalf("scan managed: %v", err)
 	}
-	if len(managed) != 2 {
-		t.Fatalf("managed skills len = %d, want 2: %#v", len(managed), managed)
+	if len(managed) != 3 {
+		t.Fatalf("managed skills len = %d, want 3: %#v", len(managed), managed)
 	}
 
 	manifest := loadInstallManifest(t, p)
@@ -62,7 +63,7 @@ func TestApplyCreatesSymlinksUpdatesManifestAndRescans(t *testing.T) {
 	if installed.Name != "alpha" || installed.RelativePath != "skills/alpha" {
 		t.Fatalf("installed skill = %#v, want alpha relative path", installed)
 	}
-	wantTools := []model.Tool{model.ToolClaude, model.ToolCodex}
+	wantTools := []model.Tool{model.ToolClaude, model.ToolCodex, model.ToolMuse}
 	if !sameToolSlice(installed.Tools, wantTools) {
 		t.Fatalf("installed tools = %#v, want %#v", installed.Tools, wantTools)
 	}

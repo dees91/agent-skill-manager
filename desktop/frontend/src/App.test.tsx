@@ -12,9 +12,11 @@ describe('Skill Manager desktop app', () => {
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.getByText('Managed skills')).toBeInTheDocument()
     expect(screen.getByText('Claude enabled')).toBeInTheDocument()
+    expect(screen.getByText('Muse enabled')).toBeInTheDocument()
     expect(screen.getByText('Global skill catalog cost')).toBeInTheDocument()
     expect(screen.getByText('Measured')).toBeInTheDocument()
-    expect(screen.getByText('Partial estimate')).toBeInTheDocument()
+    expect(screen.getAllByText('Partial estimate')).toHaveLength(1)
+    expect(screen.getByText('Estimated')).toBeInTheDocument()
     expect(backend.getSnapshot).toHaveBeenCalledWith(false)
     expect(screen.queryByRole('button', { name: 'Discover' })).not.toBeInTheDocument()
   })
@@ -112,7 +114,7 @@ describe('Skill Manager desktop app', () => {
     expect(screen.getByText('camera-helper')).toBeInTheDocument()
   })
 
-  it('uses tool chips for classification and scoped bulk actions while keeping both columns', async () => {
+  it('uses tool chips for classification and scoped bulk actions while keeping all three columns', async () => {
     const user = userEvent.setup()
     const backend = mockBackend(withAvailableSkills())
     render(<App backend={backend} />)
@@ -122,6 +124,7 @@ describe('Skill Manager desktop app', () => {
 
     expect(screen.getAllByRole('columnheader', { name: 'Claude' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('columnheader', { name: 'Codex' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('columnheader', { name: 'Muse' }).length).toBeGreaterThan(0)
     await user.click(screen.getByRole('button', { name: /Smart-toggle filtered results/ }))
     expect(backend.toggleSkillScope).toHaveBeenLastCalledWith(expect.arrayContaining(['alpha-skill', 'camera-helper', 'layout-helper']), ['claude'])
   })
@@ -139,7 +142,7 @@ describe('Skill Manager desktop app', () => {
     const groupToggle = screen.getByRole('button', { name: /android\/skills.*symlink repo/ })
     expect(groupToggle).toHaveAttribute('aria-expanded', 'true')
     await user.click(screen.getByRole('button', { name: /Smart-toggle entire group android\/skills/ }))
-    expect(backend.toggleGroupScope).toHaveBeenCalledWith('android/skills', ['claude', 'codex'])
+    expect(backend.toggleGroupScope).toHaveBeenCalledWith('android/skills', ['claude', 'codex', 'muse'])
 
     await user.clear(search)
     expect(screen.getByRole('button', { name: /android\/skills.*symlink repo/ })).toHaveAttribute('aria-expanded', 'false')
@@ -159,6 +162,9 @@ describe('Skill Manager desktop app', () => {
     system.codex!.state = 'RO'
     system.codex!.effectiveState = 'RO'
     system.codex!.readOnly = true
+    system.muse!.state = 'RO'
+    system.muse!.effectiveState = 'RO'
+    system.muse!.readOnly = true
     snapshot.rows.push(system)
     snapshot.pending = [{ skillName: 'alpha-skill', tool: 'claude', operation: 'disable' }] as never
     const backend = mockBackend(snapshot)
@@ -327,7 +333,7 @@ describe('Skill Manager desktop app', () => {
     await user.type(screen.getByRole('textbox', { name: 'HTTPS or SSH Git URL' }), 'https://github.com/demo/skills')
     await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
     expect(await screen.findByText('alpha')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Review 2 targets' }))
+    await user.click(screen.getByRole('button', { name: 'Review 3 targets' }))
     await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalled())
     expect(await screen.findByText('Ready to install')).toBeInTheDocument()
   })
@@ -364,6 +370,7 @@ describe('Skill Manager desktop app', () => {
 
     expect(await screen.findByRole('button', { name: 'Claude all targets: ON (2 of 2 selected)' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Codex all targets: ON (2 of 2 selected)' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Muse all targets: ON (3 of 3 selected)' })).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(screen.getByRole('checkbox', { name: 'alpha claude' }))
     expect(screen.getByRole('button', { name: 'Claude all targets: MIXED (1 of 2 selected)' })).toHaveAttribute('aria-pressed', 'mixed')
@@ -378,7 +385,8 @@ describe('Skill Manager desktop app', () => {
 
     expect(screen.getByRole('button', { name: 'Claude all targets: ON (2 of 2 selected)' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Codex all targets: OFF (0 of 2 selected)' })).toHaveAttribute('aria-pressed', 'false')
-    await user.click(screen.getByRole('button', { name: 'Review 2 targets' }))
+    expect(screen.getByRole('button', { name: 'Muse all targets: ON (3 of 3 selected)' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Review 5 targets' }))
     await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:bulk', expect.arrayContaining([
       { skillName: 'alpha', tool: 'claude' },
       { skillName: 'beta', tool: 'claude' },
@@ -399,7 +407,7 @@ describe('Skill Manager desktop app', () => {
       kind: 'git',
       group: 'demo/skills',
       location: 'https://github.com/demo/skills',
-      candidates: [installCandidate('alpha', 'available', 'conflict')],
+      candidates: [installCandidate('alpha', 'available', 'conflict', 'conflict')],
       cloned: false,
       reused: true,
       retainedClone: false,
@@ -414,8 +422,110 @@ describe('Skill Manager desktop app', () => {
     await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
 
     expect(await screen.findByRole('button', { name: 'Codex all targets: N/A (no available targets)' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Muse all targets: N/A (no available targets)' })).toBeDisabled()
     expect(screen.getByRole('checkbox', { name: 'alpha codex' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Review 1 target' })).toBeEnabled()
+  })
+
+  it('extends managed sources to the preselected tool after preview', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+
+    const extendButton = screen.getByRole('button', { name: 'Extend to tool' })
+    expect(extendButton).toBeEnabled()
+    await user.click(extendButton)
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('radio', { name: 'Codex' })).toBeChecked()
+    await waitFor(() => expect(backend.previewExtend).toHaveBeenCalledWith('codex'))
+    expect(await within(dialog).findByText('Ready to extend')).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('radio', { name: 'Muse' }))
+    await waitFor(() => expect(backend.previewExtend).toHaveBeenCalledWith('muse'))
+
+    await user.click(within(dialog).getByRole('button', { name: 'Extend to Muse' }))
+    await waitFor(() => expect(backend.extendSources).toHaveBeenCalledWith('muse', false))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('keeps the extend dialog open on preview errors and stop-at-first-failure finish', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    const preview = new gui.ExtendPreview({ tool: 'codex', sources: [new gui.ExtendPreviewSource({ kind: 'git', group: 'demo/skills', skillNames: ['alpha'], skillCount: 1, created: 1, alreadyInstalled: 0, disabledAfter: 0, status: 'ready', reason: '', skipped: [], conflicts: [] })], createCount: 1, blockedCount: 0 })
+    backend.previewExtend = vi.fn()
+      .mockRejectedValueOnce(new Error('unknown tool "orb" (supported: claude, codex, muse)'))
+      .mockResolvedValue(preview)
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Extend to tool' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByText(/unknown tool/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /Extend to / })).toBeDisabled()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Reset tool' }))
+    expect(await within(dialog).findByText('Ready to extend')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Extend to Codex' })).toBeEnabled()
+
+    backend.extendSources = vi.fn(async () => new gui.SourceMutationResult({
+      message: '0 source(s) extended to codex: 0 created, 0 already installed.',
+      completed: [],
+      createdLinks: 0,
+      alreadyInstalled: 0,
+      failure: new gui.SourceMutationFailure({ stage: 'extend', group: 'demo/skills', message: 'extend --tool codex failed for source demo/skills: target path already exists' }),
+      snapshot: fixtureSnapshot(),
+    }))
+    await user.click(within(dialog).getByRole('button', { name: 'Extend to Codex' }))
+    expect(await within(dialog).findByText(/failed for source demo\/skills/)).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('surfaces blocked sources and disables extend confirm without new links', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.previewExtend = vi.fn(async (tool) => new gui.ExtendPreview({
+      tool,
+      sources: [new gui.ExtendPreviewSource({
+        kind: 'git',
+        group: 'demo/skills',
+        skillNames: [],
+        skillCount: 0,
+        created: 0,
+        alreadyInstalled: 0,
+        disabledAfter: 0,
+        status: 'blocked',
+        reason: '',
+        skipped: [],
+        conflicts: [new gui.InstallConflict({ skillName: 'alpha', tool: 'codex', reason: 'target path already exists', path: '/tmp/blocker' })],
+      })],
+      createCount: 0,
+      blockedCount: 1,
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Extend to tool' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByText('1 blocked source')).toBeInTheDocument()
+    expect(within(dialog).getByText(/alpha: target path already exists/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Extend to Codex' })).toBeDisabled()
+    expect(backend.extendSources).not.toHaveBeenCalled()
+  })
+
+  it('disables the extend button when every source already uses all three tools', async () => {
+    const user = userEvent.setup()
+    const snapshot = fixtureSnapshot()
+    snapshot.managedSources = snapshot.managedSources.map((source) => ({ ...source, claudeCount: source.skillCount, codexCount: source.skillCount, museCount: source.skillCount }))
+    const backend = mockBackend(snapshot)
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    expect(screen.getByRole('button', { name: 'Extend to tool' })).toBeDisabled()
   })
 
   it('requires the exact group name before uninstall', async () => {
@@ -618,14 +728,15 @@ function skillRow(name: string) {
     repoCommit: '1234567890ab',
     readOnly: false,
   })
-  return new gui.SkillRow({ name, description: `${name} description`, source: 'symlink repo', group: 'android/skills', claude: makeCell('claude'), codex: makeCell('codex') })
+  return new gui.SkillRow({ name, description: `${name} description`, source: 'symlink repo', group: 'android/skills', claude: makeCell('claude'), codex: makeCell('codex'), muse: makeCell('muse') })
 }
 
-function installCandidate(name: string, claudeStatus = 'available', codexStatus = 'available') {
+function installCandidate(name: string, claudeStatus = 'available', codexStatus = 'available', museStatus = 'available') {
   return {
     name,
     relativePath: `skills/${name}`,
     claude: { tool: 'claude', status: claudeStatus, message: claudeStatus === 'conflict' ? 'Claude target conflict.' : '' },
     codex: { tool: 'codex', status: codexStatus, message: codexStatus === 'conflict' ? 'Codex target conflict.' : '' },
+    muse: { tool: 'muse', status: museStatus, message: museStatus === 'conflict' ? 'Muse target conflict.' : '' },
   }
 }

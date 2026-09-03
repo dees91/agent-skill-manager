@@ -43,8 +43,8 @@ func TestAuditLocalSourceReferencesAcceptsActiveAndDisabledWithBlocker(t *testin
 	if err != nil {
 		t.Fatalf("AuditLocalSourceReferences() error = %v", err)
 	}
-	if len(audit.References) != 4 {
-		t.Fatalf("References = %#v, want four cells", audit.References)
+	if len(audit.References) != 6 {
+		t.Fatalf("References = %#v, want six cells", audit.References)
 	}
 	contents, err := os.ReadFile(activePath)
 	if err != nil || string(contents) != "unrelated blocker" {
@@ -98,8 +98,8 @@ func TestLocalUninstallRemovesLinksAndStateButPreservesSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("uninstall: %v", err)
 	}
-	if len(uninstallResult.RemovedActive) != 2 || len(uninstallResult.RemovedDisabled) != 0 {
-		t.Fatalf("result = %#v, want two active links", uninstallResult)
+	if len(uninstallResult.RemovedActive) != 3 || len(uninstallResult.RemovedDisabled) != 0 {
+		t.Fatalf("result = %#v, want three active links", uninstallResult)
 	}
 	for _, tool := range model.Tools() {
 		dir, _ := p.UserSkillsDirFor(tool)

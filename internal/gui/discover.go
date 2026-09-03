@@ -87,8 +87,11 @@ func (s *Service) InstallDiscoverSkill(skillID string, toolNames []string, inclu
 		}
 		for _, tool := range tools {
 			toolState := projected.Claude
-			if tool == model.ToolCodex {
+			switch tool {
+			case model.ToolCodex:
 				toolState = projected.Codex
+			case model.ToolMuse:
+				toolState = projected.Muse
 			}
 			if toolState.Status != "available" {
 				return fmt.Errorf("%s is not available for %s: %s", skill.Name, tool.String(), toolState.Status)
@@ -189,6 +192,7 @@ func projectDiscoverSkillWithState(skill skillssh.Skill, rows []model.SkillRow, 
 	projected := DiscoverSkill{ID: skill.ID, SkillID: skill.SkillID, Name: skill.Name, Source: skill.Source, Installs: skill.Installs, WeeklyInstalls: append([]int64(nil), skill.WeeklyInstalls...), InstallsYesterday: skill.InstallsYesterday, Change: skill.Change, SourceType: skill.SourceType, URL: skill.URL, Installable: skill.SourceType == "github"}
 	projected.Claude = discoverToolState(rows, manifest, skill, model.ToolClaude)
 	projected.Codex = discoverToolState(rows, manifest, skill, model.ToolCodex)
+	projected.Muse = discoverToolState(rows, manifest, skill, model.ToolMuse)
 	return projected
 }
 
@@ -199,10 +203,13 @@ func discoverToolState(rows []model.SkillRow, manifest state.Manifest, skill ski
 		if rows[index].Name != skill.SkillID {
 			continue
 		}
-		if tool == model.ToolClaude {
+		switch tool {
+		case model.ToolClaude:
 			cell = rows[index].Claude
-		} else {
+		case model.ToolCodex:
 			cell = rows[index].Codex
+		case model.ToolMuse:
+			cell = rows[index].Muse
 		}
 		break
 	}

@@ -14,6 +14,10 @@ sources:
     path: "docs/images/skill-sets.png"
     platform: desktop
     dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/sources-extend.png"
+    platform: desktop
+    dimensions: "1440x960"
 confidence:
   overall: high
   colors: high
@@ -104,11 +108,14 @@ in public documentation.
 - **Saved Skill Sets:** task-oriented recipes show member count, applied and
   post-Apply state per tool, unavailable members, and expandable member detail.
   Create/edit supports one tool-agnostic member selection plus an optional
-  `When to use` note; every toggle opens an explicit Claude/Codex/Both preview.
+  `When to use` note; every toggle opens an explicit Claude/Codex/Muse/All preview.
 - **Managed Sources:** Git repositories and linked folders with unambiguous
   update modes, counts, locations, and separately confirmed lifecycle actions.
 - **Install workflow:** inspect, matrix selection, review, and apply. Tool-column
   bulk selectors cover all discovered candidates, including filtered-out rows.
+- **Extend workflow:** one tool radio, a per-source link preview that
+  surfaces blocked sources, and a stop-at-first-failure apply. Confirm stays
+  disabled while any source is blocked or no new links are planned.
 - **Discover (dormant):** its experimental design and implementation history are
   retained, but the `v0.4.1` public preview has no navigation or bound catalog
   surface.
@@ -119,8 +126,8 @@ in public documentation.
 
 The desktop layout combines a fixed navigation rail with a vertically scrolling
 content region. Dashboard summaries use a multi-column grid, while operational
-tables span the available width. The Skills screen keeps Claude and Codex
-columns stable while filters change scope.
+tables span the available width. The Skills screen keeps Claude, Codex, and
+Muse columns stable while filters change scope.
 
 At narrower supported widths, summary grids wrap before tables lose essential
 columns. Tables and matrices may scroll horizontally inside their own panels.

@@ -12,6 +12,7 @@ export function fixtureSnapshot(): Snapshot {
         favorite: true,
         claude: cell('alpha-skill', 'claude', 'ON'),
         codex: cell('alpha-skill', 'codex', 'OFF'),
+        muse: cell('alpha-skill', 'muse', 'OFF'),
       },
       {
         name: 'codex-helper',
@@ -26,8 +27,8 @@ export function fixtureSnapshot(): Snapshot {
     skillSetsWarning: '',
     favoritesWarning: '',
     groups: [
-      { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), sources: ['local'] },
-      { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), sources: ['Skills CLI'] },
+      { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), muse: counts(0, 1), sources: ['local'] },
+      { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), muse: counts(0, 0), sources: ['Skills CLI'] },
     ],
     sources: ['Skills CLI', 'local'],
     managedSources: [
@@ -39,6 +40,7 @@ export function fixtureSnapshot(): Snapshot {
         skillCount: 2,
         claudeCount: 2,
         codexCount: 1,
+        museCount: 1,
         installedAt: '2026-08-11T09:00:00Z',
         commit: '1234567890abcdef',
         canUpdate: true,
@@ -53,6 +55,7 @@ export function fixtureSnapshot(): Snapshot {
         skillCount: 1,
         claudeCount: 1,
         codexCount: 1,
+        museCount: 1,
         installedAt: '2026-08-11T09:00:00Z',
         canUpdate: false,
         updateMode: 'Linked folder',
@@ -64,6 +67,7 @@ export function fixtureSnapshot(): Snapshot {
       readOnlySkills: 0,
       claude: counts(1, 0),
       codex: counts(1, 1),
+      muse: counts(0, 1),
       conflictCells: 0,
     },
     conflicts: [],
@@ -114,6 +118,8 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     updateAllSources: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
     previewUninstall: vi.fn(async (sourceId) => new gui.UninstallPreview({ sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0, removesCheckout: true, preservesSource: false, affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites: [], favoriteImpactWarning: '' })),
     uninstallSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Uninstalled source.', completed: [], removedActive: 2, removedDisabled: 0, snapshot })),
+    previewExtend: vi.fn(async (tool) => new gui.ExtendPreview({ tool, sources: [new gui.ExtendPreviewSource({ kind: 'git', group: 'demo/skills', skillNames: ['alpha'], skillCount: 1, created: 1, alreadyInstalled: 0, disabledAfter: 0, status: 'ready', reason: '', skipped: [], conflicts: [] })], createCount: 1, blockedCount: 0 })),
+    extendSources: vi.fn(async (tool) => new gui.SourceMutationResult({ message: `1 source(s) extended to ${tool}: 1 created, 0 already installed.`, completed: [], createdLinks: 1, alreadyInstalled: 0, snapshot })),
   }
 }
 
@@ -125,11 +131,12 @@ function skillSetFixture() {
     members: [
       {
         name: 'alpha-skill', description: 'Alpha automation skill', group: 'local', source: 'local', available: true,
-        claude: setMemberCell('claude', 'ON'), codex: setMemberCell('codex', 'OFF'),
+        claude: setMemberCell('claude', 'ON'), codex: setMemberCell('codex', 'OFF'), muse: setMemberCell('muse', 'OFF'),
       },
     ],
     claude: setSummary('claude', 'enabled', 1, 1, 0),
     codex: setSummary('codex', 'disabled', 1, 0, 1),
+    muse: setSummary('muse', 'disabled', 1, 0, 1),
     unavailable: 0,
     pending: 0,
     createdAt: '2026-08-11T09:00:00Z',
@@ -151,6 +158,7 @@ function candidate(name: string) {
     relativePath: `skills/${name}`,
     claude: { tool: 'claude', status: 'available', message: '' },
     codex: { tool: 'codex', status: 'available', message: '' },
+    muse: { tool: 'muse', status: 'available', message: '' },
   }
 }
 
@@ -158,6 +166,7 @@ function budgetReports(pending: Array<{ tool: string }> = []) {
   return new contextbudget.Reports({
     claude: budgetReport('claude', 'Claude default', 640, 2000, pending.filter((change) => change.tool === 'claude').length),
     codex: budgetReport('codex', 'gpt-5.6-sol', 930, 5440, pending.filter((change) => change.tool === 'codex').length),
+    muse: budgetReport('muse', 'Muse default', 640, 2000, pending.filter((change) => change.tool === 'muse').length),
   })
 }
 
@@ -180,14 +189,14 @@ function budgetReport(tool: string, model: string, tokens: number, budgetTokens:
     tool,
     model,
     contextWindowTokens: tool === 'codex' ? 272000 : 200000,
-    contextWindowAssumed: tool === 'claude',
+    contextWindowAssumed: tool !== 'codex',
     budgetFraction: tool === 'codex' ? .02 : .01,
     budgetCharacters: budgetTokens * 4,
     budgetTokens,
-    budgetLabel: tool === 'codex' ? '2% of model context' : '1.0% of model context',
-    accuracy: tool === 'codex' ? 'measured' : 'partial',
+    budgetLabel: tool === 'codex' ? '2% of model context' : tool === 'muse' ? '1% of assumed 200,000-token context' : '1.0% of model context',
+    accuracy: tool === 'codex' ? 'measured' : tool === 'muse' ? 'estimated' : 'partial',
     coverage: 'Global test catalog.',
-    message: tool === 'codex' ? "Measured from Codex's model-visible global catalog." : 'Labeled local estimate.',
+    message: tool === 'codex' ? "Measured from Codex's model-visible global catalog." : tool === 'muse' ? 'Filesystem estimate. Muse exposes no supported catalog diagnostic.' : 'Labeled local estimate.',
     current: usage(tokens, currentPercent),
     projected: usage(projectedTokens, projectedPercent),
     projectionChanged: pendingCount > 0,

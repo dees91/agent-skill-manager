@@ -42,7 +42,7 @@ Skill Set ID + explicit tool names
 ```
 
 The dedicated workspace lists set descriptions, members, unavailable counts,
-and applied/effective Claude and Codex summaries. Member rows expand in place.
+and applied/effective Claude, Codex, and Muse summaries. Member rows expand in place.
 Create/edit/delete dialogs mutate only recipe metadata. Deleting a set leaves
 already-staged Pending cells untouched.
 

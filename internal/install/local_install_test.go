@@ -18,15 +18,15 @@ func TestLocalInstallApplyCreatesLinksAndPersistsOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PlanLocalInstall() error = %v", err)
 	}
-	if len(plan.Links) != 2 {
-		t.Fatalf("Links len = %d, want Claude and Codex", len(plan.Links))
+	if len(plan.Links) != 3 {
+		t.Fatalf("Links len = %d, want Claude, Codex, and Muse", len(plan.Links))
 	}
 	result, err := NewLocalApplyService(p).Apply(plan)
 	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
 	}
-	if len(result.Created) != 2 || len(result.Source.InstalledSkills) != 1 {
-		t.Fatalf("result = %#v, want two links and one skill", result)
+	if len(result.Created) != 3 || len(result.Source.InstalledSkills) != 1 {
+		t.Fatalf("result = %#v, want three links and one skill", result)
 	}
 	for _, tool := range model.Tools() {
 		dir, _ := p.UserSkillsDirFor(tool)
@@ -251,7 +251,7 @@ func TestLocalInstallRollsBackCreatedLinksWhenStateSaveFails(t *testing.T) {
 	service := NewLocalApplyService(p)
 	service.saveManifest = func(state.Manifest) error { return errors.New("save failed") }
 	result, err := service.Apply(plan)
-	if err == nil || !strings.Contains(err.Error(), "save failed") || len(result.RolledBack) != 2 {
+	if err == nil || !strings.Contains(err.Error(), "save failed") || len(result.RolledBack) != 3 {
 		t.Fatalf("Apply() result=%#v error=%v, want rollback", result, err)
 	}
 	for _, tool := range model.Tools() {

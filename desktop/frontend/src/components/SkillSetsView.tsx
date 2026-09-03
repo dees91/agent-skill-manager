@@ -48,7 +48,7 @@ interface EditorState {
   query: string
 }
 
-type ToolChoice = '' | 'claude' | 'codex' | 'both'
+type ToolChoice = '' | 'claude' | 'codex' | 'muse' | 'all'
 
 export default function SkillSetsView(props: SkillSetsViewProps) {
   const { snapshot, busy, backend, editorRequest } = props
@@ -154,7 +154,7 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
   return (
     <section className="page skill-sets-page" aria-labelledby="skill-sets-title">
       <div className="page-heading compact skill-sets-heading">
-        <div><p className="eyebrow">Reusable task recipes</p><h1 id="skill-sets-title">Skill Sets</h1><p>Remember useful combinations and stage them for Claude or Codex when the task returns.</p></div>
+        <div><p className="eyebrow">Reusable task recipes</p><h1 id="skill-sets-title">Skill Sets</h1><p>Remember useful combinations and stage them for Claude, Codex, or Muse when the task returns.</p></div>
         <button className="primary-button" onClick={() => openEditor()} disabled={busy || Boolean(snapshot.skillSetsWarning)}><Plus size={16} /> New Skill Set</button>
       </div>
 
@@ -172,7 +172,7 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
       ) : (
         <div className="skill-sets-table-wrap">
           <table className="skill-sets-table">
-            <thead><tr><th>Skill Set</th><th>Skills</th><th>Claude</th><th>Codex</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th>Skill Set</th><th>Skills</th><th>Claude</th><th>Codex</th><th>Muse</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>{matchingSets.map((set) => {
               const expanded = expandedSetID === set.setId
               return <SetRows key={set.setId} set={set} expanded={expanded} busy={busy} onExpand={() => setExpandedSetID(expanded ? null : set.setId)} onToggle={() => openToggle(set)} onEdit={() => openEditor(set)} onDelete={() => { setDeleteSet(set); setDialogError(null) }} />
@@ -196,13 +196,14 @@ function SetRows({ set, expanded, busy, onExpand, onToggle, onEdit, onDelete }: 
       <td><span className="set-member-count">{set.members.length}</span>{set.unavailable > 0 && <small className="set-unavailable">{set.unavailable} unavailable</small>}</td>
       <td><ToolSummary summary={set.claude} /></td>
       <td><ToolSummary summary={set.codex} /></td>
+      <td><ToolSummary summary={set.muse} /></td>
       <td><div className="set-row-actions"><button className="secondary-button compact-button" onClick={onToggle} disabled={busy}><ArrowUpDown size={13} /> Toggle…</button><button className="icon-button subtle" onClick={onEdit} disabled={busy} aria-label={`Edit ${set.name}`}><Pencil size={14} /></button><button className="icon-button subtle destructive" onClick={onDelete} disabled={busy} aria-label={`Delete ${set.name}`}><Trash2 size={14} /></button></div></td>
     </tr>
-    {expanded && <tr className="set-members-row"><td colSpan={5}><div className="set-members-list">{set.members.map((member) => <div className="set-member" key={member.name}><span className="skill-glyph">{initials(member.name)}</span><div><strong>{member.name}</strong><small>{member.available ? `${member.group} · ${member.source || 'unknown'}` : 'Unavailable — kept in this recipe'}</small></div><MemberState label="Claude" state={member.claude.effectiveState} pending={member.claude.pending} /><MemberState label="Codex" state={member.codex.effectiveState} pending={member.codex.pending} /></div>)}</div></td></tr>}
+    {expanded && <tr className="set-members-row"><td colSpan={6}><div className="set-members-list">{set.members.map((member) => <div className="set-member" key={member.name}><span className="skill-glyph">{initials(member.name)}</span><div><strong>{member.name}</strong><small>{member.available ? `${member.group} · ${member.source || 'unknown'}` : 'Unavailable — kept in this recipe'}</small></div><MemberState label="Claude" state={member.claude.effectiveState} pending={member.claude.pending} /><MemberState label="Codex" state={member.codex.effectiveState} pending={member.codex.pending} /><MemberState label="Muse" state={member.muse.effectiveState} pending={member.muse.pending} /></div>)}</div></td></tr>}
   </>
 }
 
-function ToolSummary({ summary }: { summary: SkillSet['claude'] }) {
+function ToolSummary({ summary }: { summary: SkillSet['claude'] | SkillSet['codex'] | SkillSet['muse'] }) {
   const changed = summary.appliedStatus !== summary.effectiveStatus
   return <div className="set-tool-summary"><span className={`set-status status-${summary.appliedStatus}`}>{statusLabel(summary.appliedStatus)}</span><small>{summary.on}/{summary.eligible} ON{summary.missing ? ` · ${summary.missing} missing` : ''}</small>{changed && <em>After Apply: {statusLabel(summary.effectiveStatus)}</em>}</div>
 }
@@ -229,7 +230,7 @@ function SkillSetEditor({ snapshot, editor, busy, error, onChange, onClose, onSa
   useDialogEscape(onClose, busy)
   return <SetModal title={editor.setID ? 'Edit Skill Set' : 'New Skill Set'} onClose={onClose} busy={busy} wide>
     <div className="set-editor-fields"><label className="dialog-field"><span>Name</span><input autoFocus data-initial-focus value={editor.name} onChange={(event) => onChange({ ...editor, name: event.target.value })} placeholder="Video production" /></label><label className="dialog-field"><span>When to use <small>optional</small></span><textarea value={editor.description} onChange={(event) => onChange({ ...editor, description: event.target.value })} placeholder="Use when creating an occasional project video." rows={2} /></label></div>
-    <div className="set-editor-selection"><div className="set-editor-selection-head"><label className="search-field"><Search size={14} /><input value={editor.query} onChange={(event) => onChange({ ...editor, query: event.target.value })} aria-label="Search skills for Skill Set" placeholder="Search available skills…" /></label><span><strong>{editor.selected.size}</strong> selected</span></div><div className="set-editor-list">{candidates.map((row) => { const missing = !isToggleableRow(row); return <label className={`set-editor-row ${missing ? 'missing' : ''}`} key={row.name}><input type="checkbox" checked={editor.selected.has(row.name)} onChange={() => toggle(row.name)} /><span><strong>{row.name}</strong><small>{missing ? 'Unavailable — saved member' : `${row.group} · ${row.description || 'No description'}`}</small></span><EditorCell state={row.claude?.state ?? '—'} /><EditorCell state={row.codex?.state ?? '—'} /></label>})}</div></div>
+    <div className="set-editor-selection"><div className="set-editor-selection-head"><label className="search-field"><Search size={14} /><input value={editor.query} onChange={(event) => onChange({ ...editor, query: event.target.value })} aria-label="Search skills for Skill Set" placeholder="Search available skills…" /></label><span><strong>{editor.selected.size}</strong> selected</span></div><div className="set-editor-list">{candidates.map((row) => { const missing = !isToggleableRow(row); return <label className={`set-editor-row ${missing ? 'missing' : ''}`} key={row.name}><input type="checkbox" checked={editor.selected.has(row.name)} onChange={() => toggle(row.name)} /><span><strong>{row.name}</strong><small>{missing ? 'Unavailable — saved member' : `${row.group} · ${row.description || 'No description'}`}</small></span><EditorCell state={row.claude?.state ?? '—'} /><EditorCell state={row.codex?.state ?? '—'} /><EditorCell state={row.muse?.state ?? '—'} /></label>})}</div></div>
     {error && <DialogError message={error} />}
     <DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy || !editor.name.trim() || editor.selected.size === 0} onClick={onSave}><Check size={15} /> Save Skill Set</button></DialogActions>
   </SetModal>
@@ -245,7 +246,7 @@ function AddSkillDialog({ skillName, sets, busy, onClose, onNew, onExisting }: {
 function ToggleDialog({ set, choice, preview, previewBusy, busy, error, onChoice, onClose, onConfirm }: { set: SkillSet; choice: ToolChoice; preview: SkillSetTogglePreview | null; previewBusy: boolean; busy: boolean; error: string | null; onChoice: (choice: ToolChoice) => void; onClose: () => void; onConfirm: () => void }) {
   useDialogEscape(onClose, busy || previewBusy)
   const totalSkipped = preview ? preview.counts.skippedMissing + preview.counts.skippedReadOnly + preview.counts.skippedConflict : 0
-  return <SetModal title={`Toggle ${set.name}`} onClose={onClose} busy={busy || previewBusy}><p className="dialog-description">Choose the tool scope for this use. The result is staged in Pending and will not touch files until Apply.</p><div className="set-tool-choice" role="group" aria-label="Tool scope for Skill Set">{(['claude', 'codex', 'both'] as ToolChoice[]).map((value) => <button key={value} className={choice === value ? 'active' : ''} aria-pressed={choice === value} onClick={() => onChoice(value)} disabled={busy || previewBusy}>{value === 'both' ? 'Both' : titleCase(value)}</button>)}</div>{previewBusy && <div className="set-preview-loading" role="status">Calculating smart-toggle preview…</div>}{preview && <div className={`set-toggle-preview direction-${preview.direction}`}><ArrowUpDown size={19} /><div><strong>{preview.direction === 'none' ? 'No eligible cells' : `${titleCase(preview.direction)} ${preview.counts.changed + preview.counts.removed} pending change${preview.counts.changed + preview.counts.removed === 1 ? '' : 's'}`}</strong><p>{preview.eligible} eligible cell{preview.eligible === 1 ? '' : 's'} in {preview.tools.map(titleCase).join(' + ')}.</p>{totalSkipped > 0 && <small>{totalSkipped} skipped · {preview.counts.skippedMissing} missing · {preview.counts.skippedReadOnly} read-only · {preview.counts.skippedConflict} conflict</small>}</div></div>}{error && <DialogError message={error} />}<DialogActions onClose={onClose} busy={busy || previewBusy}><button className="primary-button" disabled={busy || previewBusy || !preview || preview.direction === 'none' || preview.counts.changed + preview.counts.removed === 0} onClick={onConfirm}><ArrowUpDown size={15} /> Stage {preview?.direction === 'enable' ? 'enable' : preview?.direction === 'disable' ? 'disable' : 'changes'}</button></DialogActions></SetModal>
+  return <SetModal title={`Toggle ${set.name}`} onClose={onClose} busy={busy || previewBusy}><p className="dialog-description">Choose the tool scope for this use. The result is staged in Pending and will not touch files until Apply.</p><div className="set-tool-choice" role="group" aria-label="Tool scope for Skill Set">{(['claude', 'codex', 'muse', 'all'] as ToolChoice[]).map((value) => <button key={value} className={choice === value ? 'active' : ''} aria-pressed={choice === value} onClick={() => onChoice(value)} disabled={busy || previewBusy}>{titleCase(value)}</button>)}</div>{previewBusy && <div className="set-preview-loading" role="status">Calculating smart-toggle preview…</div>}{preview && <div className={`set-toggle-preview direction-${preview.direction}`}><ArrowUpDown size={19} /><div><strong>{preview.direction === 'none' ? 'No eligible cells' : `${titleCase(preview.direction)} ${preview.counts.changed + preview.counts.removed} pending change${preview.counts.changed + preview.counts.removed === 1 ? '' : 's'}`}</strong><p>{preview.eligible} eligible cell{preview.eligible === 1 ? '' : 's'} in {preview.tools.map(titleCase).join(' + ')}.</p>{totalSkipped > 0 && <small>{totalSkipped} skipped · {preview.counts.skippedMissing} missing · {preview.counts.skippedReadOnly} read-only · {preview.counts.skippedConflict} conflict</small>}</div></div>}{error && <DialogError message={error} />}<DialogActions onClose={onClose} busy={busy || previewBusy}><button className="primary-button" disabled={busy || previewBusy || !preview || preview.direction === 'none' || preview.counts.changed + preview.counts.removed === 0} onClick={onConfirm}><ArrowUpDown size={15} /> Stage {preview?.direction === 'enable' ? 'enable' : preview?.direction === 'disable' ? 'disable' : 'changes'}</button></DialogActions></SetModal>
 }
 
 function ConfirmDeleteDialog({ set, busy, error, onClose, onConfirm }: { set: SkillSet; busy: boolean; error: string | null; onClose: () => void; onConfirm: () => void }) {
@@ -281,9 +282,9 @@ function SetModal({ title, onClose, busy, wide = false, children }: { title: str
 function DialogActions({ onClose, busy, children }: { onClose: () => void; busy: boolean; children: React.ReactNode }) { return <div className="dialog-actions"><button className="secondary-button" disabled={busy} onClick={onClose}>Cancel</button>{children}</div> }
 function DialogError({ message }: { message: string }) { return <div className="dialog-error" role="alert"><AlertTriangle size={14} /><span>{message}</span></div> }
 function useDialogEscape(onClose: () => void, busy: boolean) { useEffect(() => { const handler = (event: KeyboardEvent) => { if (event.key === 'Escape' && !busy) onClose() }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler) }, [busy, onClose]) }
-function toolsForChoice(choice: ToolChoice) { return choice === 'both' ? ['claude', 'codex'] : choice ? [choice] : [] }
+function toolsForChoice(choice: ToolChoice) { return choice === 'all' ? ['claude', 'codex', 'muse'] : choice ? [choice] : [] }
 function titleCase(value: string) { return value ? value[0].toUpperCase() + value.slice(1) : value }
 function statusLabel(value: string) { return value.split('-').map(titleCase).join(' ') }
 function errorMessage(reason: unknown) { return reason instanceof Error ? reason.message : String(reason) }
 function initials(value: string) { return value.split(/[-_\s]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'SK' }
-function isToggleableRow(row: SkillRow) { return [row.claude, row.codex].some((cell) => cell && !cell.readOnly && ['ON', 'OFF'].includes(cell.state)) }
+function isToggleableRow(row: SkillRow) { return [row.claude, row.codex, row.muse].some((cell) => cell && !cell.readOnly && ['ON', 'OFF'].includes(cell.state)) }
