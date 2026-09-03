@@ -37,6 +37,18 @@ test('all storyboard copy is populated', () => {
   }
 })
 
+test('every managed tool appears in the scattered-skills and closing copy', () => {
+  const problem = STORYBOARD.find((scene) => scene.id === 'problem')
+  assert.ok(problem)
+  for (const key of ['claudePath', 'codexPath', 'musePath', 'grokPath']) {
+    assert.ok(typeof problem.copy[key] === 'string', `problem copy is missing ${key}`)
+  }
+  for (const tool of ['Claude Code', 'Codex', 'Muse', 'Grok']) {
+    assert.ok(SOCIAL_PREVIEW.copy.supporting.includes(tool), `social preview omits ${tool}`)
+    assert.ok(String(STORYBOARD.at(-1)?.copy.footer).includes(tool), `closing footer omits ${tool}`)
+  }
+})
+
 test('social preview has stable GitHub dimensions, copy, and tracked assets', () => {
   assert.equal(SOCIAL_PREVIEW.width, 1280)
   assert.equal(SOCIAL_PREVIEW.height, 640)
@@ -46,11 +58,13 @@ test('social preview has stable GitHub dimensions, copy, and tracked assets', ()
     assert.ok(value.trim().length > 0)
   }
 
+  assert.deepEqual([...SOCIAL_PREVIEW.tools], ['claude', 'codex', 'muse', 'grok'])
   assert.equal(SOCIAL_PREVIEW.rows.length, 3)
   for (const row of SOCIAL_PREVIEW.rows) {
     assert.ok(row.name.trim().length > 0)
-    assert.ok(['ON', 'OFF'].includes(row.claude))
-    assert.ok(['ON', 'OFF'].includes(row.codex))
+    for (const tool of SOCIAL_PREVIEW.tools) {
+      assert.ok(['ON', 'OFF'].includes(row.states[tool]), `${row.name}.${tool} is not a visibility state`)
+    }
   }
 
   assert.ok(existsSync(resolve(process.cwd(), 'public', SOCIAL_PREVIEW.asset)))

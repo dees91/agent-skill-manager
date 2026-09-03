@@ -36,8 +36,8 @@ export function SocialPreview() {
           position: 'absolute',
           left: 68,
           top: 76,
-          width: 390,
-          height: 488,
+          width: 520,
+          height: 452,
           borderRadius: 34,
           border: `1px solid ${colors.border}`,
           backgroundColor: colors.chrome,
@@ -79,20 +79,23 @@ export function SocialPreview() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 62px 62px',
+            gridTemplateColumns: '1fr 50px 50px 50px 50px',
             gap: 10,
             color: colors.muted,
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 700,
-            letterSpacing: 1.2,
-            marginTop: 38,
-            padding: '0 10px 9px',
+            letterSpacing: 0.6,
+            marginTop: 32,
+            padding: '0 6px 9px',
             textTransform: 'uppercase',
           }}
         >
           <span>Skill</span>
-          <span style={{ textAlign: 'center' }}>Claude</span>
-          <span style={{ textAlign: 'center' }}>Codex</span>
+          {SOCIAL_PREVIEW.tools.map((tool) => (
+            <span key={tool} style={{ textAlign: 'center' }}>
+              {tool}
+            </span>
+          ))}
         </div>
 
         {SOCIAL_PREVIEW.rows.map((skill) => (
@@ -100,12 +103,12 @@ export function SocialPreview() {
             key={skill.name}
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 62px 62px',
+              gridTemplateColumns: '1fr 50px 50px 50px 50px',
               alignItems: 'center',
               gap: 10,
-              height: 70,
+              height: 64,
               borderTop: `1px solid ${colors.border}`,
-              padding: '0 10px',
+              padding: '0 6px',
               boxSizing: 'border-box',
             }}
           >
@@ -123,7 +126,7 @@ export function SocialPreview() {
                 style={{
                   color: colors.text,
                   fontFamily: fonts.mono,
-                  fontSize: 12.5,
+                  fontSize: 13,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -132,23 +135,23 @@ export function SocialPreview() {
                 {skill.name}
               </span>
             </div>
-            {[skill.claude, skill.codex].map((state, index) => (
+            {SOCIAL_PREVIEW.tools.map((tool) => (
               <span
-                key={`${skill.name}-${index}`}
+                key={`${skill.name}-${tool}`}
                 style={{
                   justifySelf: 'center',
-                  minWidth: 42,
+                  minWidth: 38,
                   borderRadius: 14,
-                  backgroundColor: state === 'ON' ? 'rgba(103,197,135,0.14)' : colors.subtle,
-                  color: state === 'ON' ? colors.green : colors.muted,
+                  backgroundColor: skill.states[tool] === 'ON' ? 'rgba(103,197,135,0.14)' : colors.subtle,
+                  color: skill.states[tool] === 'ON' ? colors.green : colors.muted,
                   fontFamily: fonts.mono,
                   fontSize: 12,
                   fontWeight: 700,
-                  padding: '6px 8px',
+                  padding: '6px 6px',
                   textAlign: 'center',
                 }}
               >
-                {state}
+                {skill.states[tool]}
               </span>
             ))}
           </div>
@@ -158,9 +161,9 @@ export function SocialPreview() {
       <div
         style={{
           position: 'absolute',
-          left: 524,
-          top: 110,
-          width: 674,
+          left: 646,
+          top: 118,
+          width: 566,
         }}
       >
         <div
@@ -178,12 +181,12 @@ export function SocialPreview() {
         <div
           style={{
             color: colors.text,
-            fontSize: 78,
+            fontSize: 70,
             fontWeight: 760,
-            letterSpacing: -3.7,
+            letterSpacing: -3.2,
             lineHeight: 0.98,
             marginTop: 30,
-            maxWidth: 660,
+            maxWidth: 566,
             whiteSpace: 'pre-line',
           }}
         >
@@ -192,7 +195,7 @@ export function SocialPreview() {
         <div
           style={{
             color: colors.muted,
-            fontSize: 27,
+            fontSize: 22,
             fontWeight: 500,
             letterSpacing: -0.4,
             marginTop: 34,

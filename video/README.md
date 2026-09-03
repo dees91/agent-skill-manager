@@ -47,7 +47,9 @@ the public desktop UI changes.
    ```
 
 2. In a clean browser session with a 1440x960 viewport, capture Dashboard,
-   Skills, and Sources from `http://127.0.0.1:4173`. For Skills, capture the
+   Skills, and Sources from `http://127.0.0.1:4173`. Every capture must show
+   the four managed tool columns: Claude, Codex, Muse, and Grok. For Skills,
+   capture the
    initial state, click the Codex toggle for `dependency-review`, capture the
    pending state, click **Apply changes**, and capture the final state.
 3. Save the five images under `video/public/ui/` using the names listed in

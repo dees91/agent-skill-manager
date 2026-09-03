@@ -477,3 +477,20 @@ intentionally excluded.
   regression assertion.
 - Deferred on purpose: `docs/images` screenshots still show three tools;
   refreshing them needs an interactive GUI capture session.
+
+## [2026-09-03] documentation | README media refreshed for Muse and Grok
+
+- Recaptured all README/demo screenshots from the demo frontend at 1440x960:
+  `docs/images/{dashboard,skills,skill-sets,sources-extend}.png` and
+  `video/public/ui/{dashboard,skills-before,skills-pending,skills-after,sources}.png`.
+  Every capture now shows the four managed tool columns; `skills.png` is new and
+  is the clearest README evidence of Claude/Codex/Muse/Grok parity.
+- Storyboard revision 5: scene 1 shows four filesystem cards (added
+  `~/.config/muse/skills`, `~/.grok/skills`), the social preview grid has four
+  tool columns, and the eyebrow/supporting/footer copy reads
+  "Claude Code · Codex · Muse · Grok". `storyboard.test.ts` locks the tool list
+  and the per-tool copy so a fifth tool cannot be added silently.
+- Re-rendered `.github/assets/demo.gif` (9.8 MiB, under the 10 MiB contract) and
+  `social-preview.png` (1280x640, 330 KiB); `npm run verify` passes. The social
+  preview still has to be uploaded by hand in repository settings.
+- Closes the item deferred in the PR12 follow-up entry above.
