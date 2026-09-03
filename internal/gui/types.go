@@ -214,6 +214,30 @@ type InstallConflict struct {
 	Path      string `json:"path,omitempty"`
 }
 
+// ExtendSkip explains why one recorded skill was not planned for the target.
+type ExtendSkip struct {
+	SkillName string `json:"skillName"`
+	Reason    string `json:"reason"`
+}
+
+// ExtendPreviewSource is one managed source inside an extend preview.
+type ExtendPreviewSource struct {
+	Kind             string   `json:"kind"`
+	Group            string   `json:"group"`
+	SkillNames       []string `json:"skillNames"`
+	SkillCount       int      `json:"skillCount"`
+	Created          int      `json:"created"`
+	AlreadyInstalled int      `json:"alreadyInstalled"`
+	DisabledAfter    int      `json:"disabledAfter"`
+}
+
+// ExtendPreview is the read-only impact of extending every managed source.
+type ExtendPreview struct {
+	Tool      string                `json:"tool"`
+	Sources   []ExtendPreviewSource `json:"sources"`
+	MuseCount int                   `json:"museCount"`
+}
+
 // InstallReview is an immutable, session-scoped reviewed selection.
 type InstallReview struct {
 	ReviewID        string               `json:"reviewId,omitempty"`

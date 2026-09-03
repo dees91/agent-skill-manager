@@ -23,6 +23,10 @@
 - `uninstall <git-url|local-path> [--dry-run]` removes one complete audited
   installation and always requires an explicit source. Local source data is
   preserved.
+- `extend --tool <tool> [--dry-run]` links every managed source to one more
+  tool in manifest order, mirroring ON/OFF state through the shared
+  install/audit machinery. It stops at the first blocked source and never
+  hardcodes a tool name.
 - `advisor activate --tool claude|codex|muse --skill <name>... [--dry-run]
   [--json]` preflights 1-5 exact names and creates one opaque receipt for cells
   temporarily enabled or shared.
@@ -75,7 +79,9 @@ Git repositories only.
   clears every discovered non-conflict target regardless of the text filter;
   it exposes `ON`, `OFF`, `MIXED`, or `N/A`. Git repositories expose Update
   and Update all; both source kinds expose typed-confirmed whole-source
-  Uninstall.
+  Uninstall. **Extend to tool** links every recorded source to one tool radio
+  after a per-source link preview; confirm stays disabled until the preview
+  succeeds and the batch stops at the first failure.
 - Discover is excluded from the `v0.5.0` public preview navigation and public
   Wails binding. Its experimental Go adapter/domain remains in the repository.
 - Dashboard context metrics are filesystem estimates by default; **Run provider

@@ -384,3 +384,19 @@ intentionally excluded.
   in AGENTS.md, DESIGN.md, README.md, App copy, and wiki sources.
 - Existing `docs/images/*.png` still show two tool columns; regenerating them
   requires running the desktop app and stays open.
+
+## [2026-09-03] implementation | Extend managed sources to a tool
+
+- Added `skill-manager extend --tool <tool> [--dry-run]` (P19-T09): generic
+  `PlanExtend`/apply over `model.Tool` walks Git then local sources in
+  manifest order, reuses install discovery/preflight plus a cross-source
+  claim map, mirrors OFF state through the shared disable path, and stops at
+  the first failure with an `extend --tool <tool> failed for source <group>`
+  error. Nothing hardcodes `muse`.
+- Added `PreviewExtend`/`ExtendSources` GUI methods and desktop bindings plus
+  a Sources "Extend to tool" dialog (tool radio, per-source preview,
+  stop-at-first-failure finish), with `docs/images/sources-extend.png`
+  captured from synthetic demo data at 1440x960 and registered in DESIGN.md.
+- Covered by domain, CLI, GUI, and frontend tests; documented in README,
+  planning/phase-19-muse-support-tasks.md, and the repository/local-path
+  install, interfaces, and desktop-gui topic pages.

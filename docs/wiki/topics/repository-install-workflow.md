@@ -111,6 +111,28 @@ same ownership audit and transactional removal service.
   rollback.
 - Whole-repository `uninstall` supersedes the earlier `repo remove` idea.
 
+## Extend To One Tool
+
+- `implemented`: `skill-manager extend --tool <tool> [--dry-run]` links every
+  managed Git and local source to one more tool without reinstalling each
+  source. The tool is a parameter; no step hardcodes `muse`.
+- Selection reuses the install discovery and preflight rules per source:
+  only skills that lack the target tool are candidates, already-installed
+  cells are idempotent, and a cross-source claim map blocks two sources from
+  claiming the same tool/skill cell. Each source plans as ready, unchanged,
+  skipped (for example a missing checkout), or blocked.
+- Apply walks sources in manifest order (Git, then local) and stops at the
+  first failure with an `extend --tool <tool> failed for source <group>`
+  error, keeping the completed prefix in state. Successful links for skills
+  that are OFF for every other recorded tool are mirrored OFF through the
+  same disable path as freshly installed OFF skills.
+- Strict dry-run prints per-source link/already/disabled/skipped counts and
+  never clones, links, or writes `state.json`.
+- The desktop Sources screen exposes the same action as **Extend to tool**
+  through `PreviewExtend`/`ExtendSources` bindings: a tool radio (preselected
+  to the first tool with a missing cell), a per-source preview, and a confirm
+  that stays disabled until the preview succeeds.
+
 ## Deferred Repository Management
 
 `planned`: branch selection and force behavior remain future work. See

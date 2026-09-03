@@ -273,7 +273,16 @@ func readExpectedSymlink(linkPath, expectedTarget string) (string, error) {
 
 func findExtraManagedReferences(p paths.Paths, checkoutPath string, expected map[string]bool) ([]ReferenceConflict, error) {
 	conflicts := []ReferenceConflict{}
-	for _, baseDir := range []string{p.ClaudeUserSkills, p.CodexUserSkills, p.ClaudeDisabledDir, p.CodexDisabledDir} {
+	baseDirs := []string{}
+	for _, tool := range model.Tools() {
+		if dir, ok := p.UserSkillsDirFor(tool); ok {
+			baseDirs = append(baseDirs, dir)
+		}
+		if dir, ok := p.DisabledDirFor(tool); ok {
+			baseDirs = append(baseDirs, dir)
+		}
+	}
+	for _, baseDir := range baseDirs {
 		entries, err := os.ReadDir(baseDir)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {

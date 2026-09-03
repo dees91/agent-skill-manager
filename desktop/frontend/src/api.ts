@@ -5,9 +5,11 @@ import {
   ClearPending,
   CreateSkillSet,
   DeleteSkillSet,
+  ExtendSources,
   GetSnapshot,
   MeasureContextBudgets,
   PrepareGitInstall,
+  PreviewExtend,
   PreviewSkillSetToggle,
   PreviewUninstall,
   ReviewInstall,
@@ -45,6 +47,8 @@ export type InstallReview = gui.InstallReview
 export type InstallCellRequest = gui.InstallCellRequest
 export type SourceMutationResult = gui.SourceMutationResult
 export type UninstallPreview = gui.UninstallPreview
+export type ExtendPreview = gui.ExtendPreview
+export type ExtendPreviewSource = gui.ExtendPreviewSource
 export interface SourceProgress {
   operation: string
   phase: string
@@ -80,6 +84,8 @@ export interface Backend {
   updateAllSources(includeReadOnly: boolean): Promise<SourceMutationResult>
   previewUninstall(sourceID: string): Promise<UninstallPreview>
   uninstallSource(sourceID: string, confirmation: string, includeReadOnly: boolean): Promise<SourceMutationResult>
+  previewExtend(tool: string): Promise<ExtendPreview>
+  extendSources(tool: string): Promise<SourceMutationResult>
 }
 
 const generatedBackend: Backend = {
@@ -108,6 +114,8 @@ const generatedBackend: Backend = {
   updateAllSources: UpdateAllSources,
   previewUninstall: PreviewUninstall,
   uninstallSource: UninstallSource,
+  previewExtend: PreviewExtend,
+  extendSources: ExtendSources,
 }
 
 async function activeBackend(): Promise<Backend> {
@@ -143,6 +151,8 @@ export const wailsBackend: Backend = {
   updateAllSources: async (...args) => (await activeBackend()).updateAllSources(...args),
   previewUninstall: async (...args) => (await activeBackend()).previewUninstall(...args),
   uninstallSource: async (...args) => (await activeBackend()).uninstallSource(...args),
+  previewExtend: async (...args) => (await activeBackend()).previewExtend(...args),
+  extendSources: async (...args) => (await activeBackend()).extendSources(...args),
 }
 
 export function projectPending(snapshot: Snapshot, pending: PendingChange[], contextBudgets: ContextBudgetReports, skillSets = snapshot.skillSets, skillSetsWarning = snapshot.skillSetsWarning): Snapshot {

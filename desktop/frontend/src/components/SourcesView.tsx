@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import type {
   Backend,
+  ExtendPreview,
   InstallCellRequest,
   InstallDraft,
   InstallReview,
@@ -37,7 +38,7 @@ interface SourcesViewProps {
 }
 
 type InstallMode = 'git' | 'local'
-type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | null
+type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | null
 type InstallTool = 'claude' | 'codex' | 'muse'
 type ColumnSelectionState = 'ON' | 'OFF' | 'MIXED' | 'N/A'
 
@@ -108,6 +109,9 @@ export default function SourcesView(props: SourcesViewProps) {
           <p>Install and maintain repositories and link-in-place folders owned by Skill Manager.</p>
         </div>
         <div className="source-heading-actions">
+          <button className="secondary-button" disabled={busy || pendingCount > 0 || !canExtendSources(sources)} onClick={() => openDialog('extend')}>
+            <PackagePlus size={14} /> Extend to tool
+          </button>
           <button className="secondary-button" disabled={busy || pendingCount > 0 || !sources.some((source) => source.canUpdate)} onClick={() => openDialog('update-all')}>
             <RefreshCw size={14} /> Update all
           </button>
@@ -163,6 +167,9 @@ export default function SourcesView(props: SourcesViewProps) {
       )}
       {dialog === 'uninstall' && selectedSource && (
         <UninstallDialog source={selectedSource} preview={uninstallPreview} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={(confirmation) => void runMutation(() => backend.uninstallSource(selectedSource.sourceId, confirmation, includeReadOnly))} />
+      )}
+      {dialog === 'extend' && (
+        <ExtendDialog sources={sources} backend={backend} busy={busy} progress={progress} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} />
       )}
     </section>
   )
@@ -307,6 +314,93 @@ function ReviewSummary({ review }: { review: InstallReview }) {
     <strong>{review.ready ? 'Ready to install' : `${review.conflicts.length} conflict${review.conflicts.length === 1 ? '' : 's'}`}</strong>
     {review.ready ? <p>{review.createCount} new links · {review.alreadyOnCount} already ON · {review.alreadyOffCount} already OFF</p> : review.conflicts.map((conflict) => <p key={`${conflict.skillName}:${conflict.tool}`}>{conflict.skillName} {conflict.tool}: {conflict.reason}</p>)}
   </div>
+}
+
+function canExtendSources(sources: ManagedSource[]): boolean {
+  return sources.length > 0 && sources.some((source) => source.claudeCount < source.skillCount || source.codexCount < source.skillCount || source.museCount < source.skillCount)
+}
+
+function defaultExtendTool(sources: ManagedSource[]): InstallTool {
+  const counts: Record<InstallTool, (source: ManagedSource) => number> = {
+    claude: (source) => source.claudeCount,
+    codex: (source) => source.codexCount,
+    muse: (source) => source.museCount,
+  }
+  for (const tool of ['claude', 'codex', 'muse'] as const) {
+    if (sources.some((source) => counts[tool](source) < source.skillCount)) return tool
+  }
+  return 'muse'
+}
+
+function extendToolName(tool: InstallTool): string {
+  return tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
+}
+
+function ExtendDialog({ sources, backend, busy, progress, error, onBusy, onResult, onError, onClose }: {
+  sources: ManagedSource[]; backend: Backend; busy: boolean; progress: SourceProgress | null; error: string | null
+  onBusy: (busy: boolean) => void; onResult: (result: SourceMutationResult) => void; onError: (error: string | null) => void; onClose: () => void
+}) {
+  const fallbackTool = useMemo(() => defaultExtendTool(sources), [sources])
+  const [tool, setTool] = useState<InstallTool>(fallbackTool)
+  const [preview, setPreview] = useState<ExtendPreview | null>(null)
+  useDialogEscape(onClose, busy)
+
+  const loadPreview = async (next: InstallTool) => {
+    onBusy(true); onError(null)
+    try {
+      setPreview(await backend.previewExtend(next))
+    } catch (reason) { setPreview(null); onError(errorMessage(reason)) } finally { onBusy(false) }
+  }
+
+  useEffect(() => { void loadPreview(fallbackTool) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectTool = (next: InstallTool) => {
+    if (next === tool) return
+    setTool(next)
+    setPreview(null)
+    void loadPreview(next)
+  }
+
+  const resetTool = () => {
+    onError(null)
+    setPreview(null)
+    setTool(fallbackTool)
+    void loadPreview(fallbackTool)
+  }
+
+  const confirm = async () => {
+    if (!preview || busy) return
+    onBusy(true); onError(null)
+    try {
+      const result = await backend.extendSources(tool)
+      onResult(result)
+      if (!result.failure) onClose()
+      else onError(result.failure.message)
+    } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
+  }
+
+  const created = preview?.sources.reduce((total, source) => total + source.created, 0) ?? 0
+  const already = preview?.sources.reduce((total, source) => total + source.alreadyInstalled, 0) ?? 0
+  const disabled = preview?.sources.reduce((total, source) => total + source.disabledAfter, 0) ?? 0
+  const showReset = error !== null && /unknown tool/i.test(error)
+
+  return <Modal title={`Extend sources to ${extendToolName(tool)}?`} onClose={onClose} busy={busy}>
+    <p className="dialog-description">Missing {extendToolName(tool)} links are created for every managed source and mirrored OFF where the skill is OFF everywhere else. The batch stops at the first failure.</p>
+    <div className="extend-tool-radio" role="radiogroup" aria-label="Target tool">
+      {(['claude', 'codex', 'muse'] as const).map((option) => (
+        <label key={option} className={tool === option ? 'active' : ''}><input type="radio" name="extend-tool" checked={tool === option} disabled={busy} onChange={() => selectTool(option)} /> {extendToolName(option)}</label>
+      ))}
+    </div>
+    {preview && <div className="install-review ready">
+      <strong>Ready to extend</strong>
+      <p>{created} new link{created === 1 ? '' : 's'} · {already} already installed · {disabled} disabled after</p>
+      {preview.sources.map((source) => <p key={`${source.kind}:${source.group}`}>{source.group} ({source.kind}): {source.created} new · {source.alreadyInstalled} already · {source.disabledAfter} OFF after</p>)}
+    </div>}
+    {error && <DialogError message={error} />}
+    {showReset && <div className="dialog-actions"><button className="secondary-button" disabled={busy} onClick={resetTool}>Reset tool</button></div>}
+    {busy && <ProgressState progress={progress} />}
+    <DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy || !preview} onClick={() => void confirm()}>Extend to {extendToolName(tool)}</button></DialogActions>
+  </Modal>
 }
 
 function ConfirmDialog({ title, description, confirmLabel, busy, progress, error, onClose, onConfirm }: { title: string; description: string; confirmLabel: string; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: () => void }) {

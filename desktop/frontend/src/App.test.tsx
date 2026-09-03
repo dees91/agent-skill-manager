@@ -427,6 +427,74 @@ describe('Skill Manager desktop app', () => {
     expect(screen.getByRole('button', { name: 'Review 1 target' })).toBeEnabled()
   })
 
+  it('extends managed sources to the preselected tool after preview', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+
+    const extendButton = screen.getByRole('button', { name: 'Extend to tool' })
+    expect(extendButton).toBeEnabled()
+    await user.click(extendButton)
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('radio', { name: 'Codex' })).toBeChecked()
+    await waitFor(() => expect(backend.previewExtend).toHaveBeenCalledWith('codex'))
+    expect(await within(dialog).findByText('Ready to extend')).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('radio', { name: 'Muse' }))
+    await waitFor(() => expect(backend.previewExtend).toHaveBeenCalledWith('muse'))
+
+    await user.click(within(dialog).getByRole('button', { name: 'Extend to Muse' }))
+    await waitFor(() => expect(backend.extendSources).toHaveBeenCalledWith('muse'))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('keeps the extend dialog open on preview errors and stop-at-first-failure finish', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    const preview = new gui.ExtendPreview({ tool: 'codex', sources: [new gui.ExtendPreviewSource({ kind: 'git', group: 'demo/skills', skillNames: ['alpha'], skillCount: 1, created: 1, alreadyInstalled: 0, disabledAfter: 0 })], museCount: 1 })
+    backend.previewExtend = vi.fn()
+      .mockRejectedValueOnce(new Error('unknown tool "orb" (supported: claude, codex, muse)'))
+      .mockResolvedValue(preview)
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Extend to tool' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByText(/unknown tool/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /Extend to / })).toBeDisabled()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Reset tool' }))
+    expect(await within(dialog).findByText('Ready to extend')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Extend to Codex' })).toBeEnabled()
+
+    backend.extendSources = vi.fn(async () => new gui.SourceMutationResult({
+      message: '0 source(s) extended to codex: 0 created, 0 already installed.',
+      completed: [],
+      createdLinks: 0,
+      alreadyInstalled: 0,
+      failure: new gui.SourceMutationFailure({ stage: 'extend', group: 'demo/skills', message: 'extend --tool codex failed for source demo/skills: target path already exists' }),
+      snapshot: fixtureSnapshot(),
+    }))
+    await user.click(within(dialog).getByRole('button', { name: 'Extend to Codex' }))
+    expect(await within(dialog).findByText(/failed for source demo\/skills/)).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('disables the extend button when every source already uses all three tools', async () => {
+    const user = userEvent.setup()
+    const snapshot = fixtureSnapshot()
+    snapshot.managedSources = snapshot.managedSources.map((source) => ({ ...source, claudeCount: source.skillCount, codexCount: source.skillCount, museCount: source.skillCount }))
+    const backend = mockBackend(snapshot)
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    expect(screen.getByRole('button', { name: 'Extend to tool' })).toBeDisabled()
+  })
+
   it('requires the exact group name before uninstall', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

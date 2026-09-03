@@ -103,6 +103,8 @@ func (a App) Run(args []string, stdout, stderr io.Writer) int {
 		return a.runUpdate(stdout, stderr, args[1:])
 	case "uninstall":
 		return a.runUninstall(stdout, stderr, args[1:])
+	case "extend":
+		return a.runExtend(stdout, stderr, args[1:])
 	case "enable":
 		return a.runMutation(stdout, stderr, model.OperationEnable, args[1:])
 	case "disable":
@@ -1022,6 +1024,8 @@ Commands:
                                Update one or all managed repositories
   uninstall <git-url|local-path> [--dry-run]
                                Remove a managed source and all its links
+  extend --tool <tool> [--dry-run]
+                               Link recorded skills to one more tool across every managed source
   enable --tool <tool> <skill> [--dry-run]
                                Restore a disabled skill
   disable --tool <tool> <skill> [--dry-run]

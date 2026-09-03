@@ -151,8 +151,8 @@ a separate non-blocking impact.
 ## Visual Contract
 
 [`../../../DESIGN.md`](../../../DESIGN.md) describes the implemented interface
-and points to repository-owned Dashboard, Skill Sets, and dormant Discover
-screenshots generated from synthetic demo data. The visual system uses a dark
+and points to repository-owned Dashboard, Skill Sets, Sources extend, and
+dormant Discover screenshots generated from synthetic demo data. The visual system uses a dark
 palette, flat panel hierarchy, persistent sidebar, dense tables, cyan
 informational accents, and one warm primary action per region.
 
@@ -173,9 +173,14 @@ The Sources screen uses a dense manifest-owned source table and centered
 workflow dialogs. Install includes Git/local selection, discovery, a scrollable
 Claude/Codex/Muse matrix, review, and apply. Each tool column has an explicit bulk
 selection toggle whose `ON`, `OFF`, `MIXED`, or `N/A` state reflects every
-non-conflict discovered target, independent of the row filter. Dialogs trap and
-restore focus, announce progress/errors, remain usable at the 1024×720
-minimum, and use typed confirmation for destructive removal.
+non-conflict discovered target, independent of the row filter. **Extend to
+tool** offers one tool radio preselected to the first tool with a missing
+cell, a per-source link preview, and a confirm that stays disabled until the
+preview succeeds; the apply stops at the first failure. The synthetic 1440×960
+capture is
+[`../../images/sources-extend.png`](../../images/sources-extend.png).
+Dialogs trap and restore focus, announce progress/errors, remain usable at
+the 1024×720 minimum, and use typed confirmation for destructive removal.
 
 The Skill Sets screen uses the same compact table language, expandable member
 detail, and centered dialogs. Dialog focus is contained, action scope is named

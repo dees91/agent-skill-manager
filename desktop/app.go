@@ -155,6 +155,16 @@ func (a *App) UpdateAllSources(includeReadOnly bool) gui.SourceMutationResult {
 	return a.service.UpdateAllSources(includeReadOnly)
 }
 
+// PreviewExtend reports the read-only impact of linking every managed source to one tool.
+func (a *App) PreviewExtend(tool string) (gui.ExtendPreview, error) {
+	return a.service.PreviewExtend(tool)
+}
+
+// ExtendSources links every managed source to one tool, stopping at the first failure.
+func (a *App) ExtendSources(tool string) (gui.SourceMutationResult, error) {
+	return a.service.ExtendSources(tool)
+}
+
 // PreviewUninstall audits exact owned links and reports uninstall impact.
 func (a *App) PreviewUninstall(sourceID string) (gui.UninstallPreview, error) {
 	return a.service.PreviewUninstall(sourceID)

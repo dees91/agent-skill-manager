@@ -231,6 +231,16 @@ class DemoBackend implements Backend {
     this.sources = this.sources.filter((source) => source.sourceId !== sourceID)
     return this.sourceResult('Uninstalled demo source.')
   }
+  async previewExtend(tool: string) {
+    const sources = this.sources.map((source) => {
+      const names = this.rows.filter((row) => row.group === source.group).map((row) => row.name)
+      return { kind: source.kind, group: source.group, skillNames: names, skillCount: names.length, created: names.length, alreadyInstalled: 0, disabledAfter: 0 }
+    })
+    return { tool, sources, museCount: sources.length } as never
+  }
+  async extendSources(tool: string) {
+    return this.sourceResult(`Extended ${this.sources.length} source(s) to ${tool}: 0 created, 0 already installed.`)
+  }
 
   private sourceResult(message: string) {
     return { message, completed: [], snapshot: this.snapshot(false) } as never

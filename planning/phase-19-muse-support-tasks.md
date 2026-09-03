@@ -41,6 +41,7 @@
 | P19-T06 | GUI backend projections and desktop frontend | done | P19-T01 |
 | P19-T07 | First-party skill, README, DESIGN, and validation | done | P19-T02 |
 | P19-T08 | AGENTS.md, wiki synthesis, branch, and PR | done | P19-T07 |
+| P19-T09 | Extend managed sources to one tool (CLI/GUI) | done | P19-T06 |
 
 ## Task Definitions
 
@@ -109,3 +110,15 @@
   contracts, and the state tree for Muse.
 - Update wiki topics, index, and log.
 - Commit from a dedicated branch and open a GitHub PR.
+
+### P19-T09: Extend Managed Sources To One Tool
+
+- Add `extend --tool <tool>` (strict dry-run): plan missing cells per managed
+  source in manifest order, audit/disabled-mirror shared with install, stop at
+  the first blocked source with an `extend --tool <tool> failed for source
+  <group>` error. Nothing hardcodes `muse`.
+- Add `PreviewExtend`/`ExtendSources` GUI methods plus `PreviewExtend`/
+  `ExtendSources` desktop bindings and a Sources "Extend to tool" dialog with
+  tool radio, live preview, and stop-at-first-failure finish.
+- Cover with domain, CLI, GUI, and frontend tests; document in README, wiki,
+  and the PR description.

@@ -118,6 +118,8 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     updateAllSources: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
     previewUninstall: vi.fn(async (sourceId) => new gui.UninstallPreview({ sourceId, kind: 'git', group: 'demo/skills', location: '/tmp/demo', activeLinks: 2, disabledLinks: 0, removesCheckout: true, preservesSource: false, affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites: [], favoriteImpactWarning: '' })),
     uninstallSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Uninstalled source.', completed: [], removedActive: 2, removedDisabled: 0, snapshot })),
+    previewExtend: vi.fn(async (tool) => new gui.ExtendPreview({ tool, sources: [new gui.ExtendPreviewSource({ kind: 'git', group: 'demo/skills', skillNames: ['alpha'], skillCount: 1, created: 1, alreadyInstalled: 0, disabledAfter: 0 })], museCount: 1 })),
+    extendSources: vi.fn(async (tool) => new gui.SourceMutationResult({ message: `1 source(s) extended to ${tool}: 1 created, 0 already installed.`, completed: [], createdLinks: 1, alreadyInstalled: 0, snapshot })),
   }
 }
 

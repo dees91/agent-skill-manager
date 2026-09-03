@@ -197,6 +197,19 @@ path sources are live links, so they do not need an update operation. Uninstall
 removes a complete recorded source; Skill Manager does not uninstall one skill
 from a source at a time.
 
+Link every recorded source to one more tool, mirroring ON/OFF state, without
+reinstalling each source:
+
+```bash
+skill-manager extend --tool muse --dry-run
+skill-manager extend --tool muse
+```
+
+Extend processes sources in manifest order and stops at the first failure,
+keeping earlier sources extended. The desktop Sources screen offers the same
+bulk action as "Extend to tool". Start a new session afterwards so the added
+tool picks up the new skills.
+
 ### First-party Skill Advisor
 
 The current source build includes the optional
@@ -294,8 +307,9 @@ has four views:
   favorite managed skills, and stages reversible toggles for review and Apply.
 - **Skill Sets** stores task-oriented combinations with an optional **When to
   use** note, then stages them for Claude, Codex, Muse, or all tools.
-- **Sources** installs exact Claude/Codex/Muse skill cells and updates or
-  uninstalls complete Git and local sources recorded in the manifest.
+- **Sources** installs exact Claude/Codex/Muse skill cells, extends every
+  recorded source to one more tool, and updates or uninstalls complete Git
+  and local sources recorded in the manifest.
 
 Open **Skill Manager → About Skill Manager** in the macOS application menu to
 see the app icon, current build version, and product description. The app reads
@@ -304,6 +318,8 @@ these values from the same desktop build metadata as the application bundle.
 ![Skill Manager dashboard](docs/images/dashboard.png)
 
 ![Saved Skill Sets workspace](docs/images/skill-sets.png)
+
+![Extend managed sources to one tool](docs/images/sources-extend.png)
 
 The experimental skills.sh Discover implementation is still under development
 and does not appear in the `v0.5.0` public preview.
