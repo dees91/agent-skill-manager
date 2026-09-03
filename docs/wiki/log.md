@@ -360,3 +360,13 @@ intentionally excluded.
   taught the first-party `skill-advisor` skill the `muse` host and path.
 - Updated README, DESIGN, AGENTS.md, planning/phase-19 tasks, and wiki
   synthesis; backend, desktop, and frontend suites pass on synthetic homes.
+
+## [2026-09-03] fix | Keep ForHome hermetic for the Muse path
+
+- `paths.ForHome` read ambient `XDG_CONFIG_HOME`, so the Muse directory
+  escaped synthetic test homes and leaked state into the real
+  `~/.config/muse/skills` on CI (green locally, red in the Root Go job).
+- `ForHome` now always derives `MuseUserSkills` from the given home; only the
+  production `paths.Default()` constructor applies the `XDG_CONFIG_HOME`
+  override. Rule: path constructors used by tests stay pure functions of
+  their arguments.
