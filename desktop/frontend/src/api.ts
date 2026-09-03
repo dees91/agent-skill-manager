@@ -49,6 +49,11 @@ export type SourceMutationResult = gui.SourceMutationResult
 export type UninstallPreview = gui.UninstallPreview
 export type ExtendPreview = gui.ExtendPreview
 export type ExtendPreviewSource = gui.ExtendPreviewSource
+export const MANAGED_TOOLS = ['claude', 'codex', 'muse'] as const
+export type ManagedTool = (typeof MANAGED_TOOLS)[number]
+export function toolDisplayName(tool: ManagedTool): string {
+  return tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
+}
 export interface SourceProgress {
   operation: string
   phase: string
@@ -85,7 +90,7 @@ export interface Backend {
   previewUninstall(sourceID: string): Promise<UninstallPreview>
   uninstallSource(sourceID: string, confirmation: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   previewExtend(tool: string): Promise<ExtendPreview>
-  extendSources(tool: string): Promise<SourceMutationResult>
+  extendSources(tool: string, includeReadOnly: boolean): Promise<SourceMutationResult>
 }
 
 const generatedBackend: Backend = {

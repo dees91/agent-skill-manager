@@ -80,8 +80,9 @@ Git repositories only.
   it exposes `ON`, `OFF`, `MIXED`, or `N/A`. Git repositories expose Update
   and Update all; both source kinds expose typed-confirmed whole-source
   Uninstall. **Extend to tool** links every recorded source to one tool radio
-  after a per-source link preview; confirm stays disabled until the preview
-  succeeds and the batch stops at the first failure.
+  after a per-source link preview that surfaces blocked sources; confirm
+  stays disabled while any source is blocked or no new links are planned,
+  and the batch stops at the first failure with a fresh snapshot.
 - Discover is excluded from the `v0.5.0` public preview navigation and public
   Wails binding. Its experimental Go adapter/domain remains in the repository.
 - Dashboard context metrics are filesystem estimates by default; **Run provider

@@ -73,8 +73,15 @@ func (a App) runExtend(stdout, stderr io.Writer, args []string) int {
 		printExtendFailure(stderr, err, result.RolledBack)
 		return 1
 	}
-	created, _, _, _ := extendResultTotals(result)
-	printExtendSummary(stdout, created, result)
+	created, already, disabled, skipped := extendResultTotals(result)
+	ready := 0
+	for _, done := range result.Completed {
+		if done.Status == install.ExtendStatusExtended {
+			ready++
+		}
+	}
+	fmt.Fprintf(stdout, "extended %d symlink(s) across %d source(s); %d already installed; %d disabled; %d skipped\n",
+		created, ready, already, disabled, skipped)
 	if created > 0 {
 		fmt.Fprintln(stdout, "start a new Claude/Codex/Muse session for guaranteed skill detection")
 	}
@@ -88,7 +95,7 @@ func printExtendDryRun(stdout, stderr io.Writer, p paths.Paths, tool model.Tool,
 		label := extendSourceLabel(source.Kind)
 		if source.Status == install.ExtendStatusBlocked {
 			blocked++
-			fmt.Fprintf(stderr, "error: extend %s: %v\n", source.Group, source.Err)
+			fmt.Fprintf(stderr, "error: extend --tool %s failed for source %s: %v\n", tool, source.Group, source.Err)
 			var planErr install.PlanError
 			if errors.As(source.Err, &planErr) {
 				printInstallPlanError(stderr, planErr)
@@ -155,18 +162,6 @@ func extendResultTotals(result install.ExtendResult) (created, already, disabled
 		skipped += len(done.Skipped)
 	}
 	return created, already, disabled, skipped
-}
-
-func printExtendSummary(stdout io.Writer, created int, result install.ExtendResult) {
-	_, already, disabled, skipped := extendResultTotals(result)
-	ready := 0
-	for _, done := range result.Completed {
-		if done.Status == install.ExtendStatusExtended {
-			ready++
-		}
-	}
-	fmt.Fprintf(stdout, "extended %d symlink(s) across %d source(s); %d already installed; %d disabled; %d skipped\n",
-		created, ready, already, disabled, skipped)
 }
 
 func extendSourceLabel(kind install.ExtendSourceKind) string {

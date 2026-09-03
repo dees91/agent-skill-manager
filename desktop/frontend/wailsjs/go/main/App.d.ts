@@ -14,7 +14,7 @@ export function CreateSkillSet(arg1:string,arg2:string,arg3:Array<string>):Promi
 
 export function DeleteSkillSet(arg1:string):Promise<gui.SkillSetMutationResult>;
 
-export function ExtendSources(arg1:string):Promise<gui.SourceMutationResult>;
+export function ExtendSources(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;
 
 export function GetSnapshot(arg1:boolean):Promise<gui.Snapshot>;
 

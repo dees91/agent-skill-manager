@@ -759,6 +759,38 @@ export namespace gui {
 
 
 
+	export class InstallConflict {
+	    skillName: string;
+	    tool: string;
+	    reason: string;
+	    path?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new InstallConflict(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.skillName = source["skillName"];
+	        this.tool = source["tool"];
+	        this.reason = source["reason"];
+	        this.path = source["path"];
+	    }
+	}
+	export class ExtendSkip {
+	    skillName: string;
+	    reason: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ExtendSkip(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.skillName = source["skillName"];
+	        this.reason = source["reason"];
+	    }
+	}
 	export class ExtendPreviewSource {
 	    kind: string;
 	    group: string;
@@ -767,6 +799,10 @@ export namespace gui {
 	    created: number;
 	    alreadyInstalled: number;
 	    disabledAfter: number;
+	    status: string;
+	    reason?: string;
+	    skipped: ExtendSkip[];
+	    conflicts: InstallConflict[];
 
 	    static createFrom(source: any = {}) {
 	        return new ExtendPreviewSource(source);
@@ -781,22 +817,10 @@ export namespace gui {
 	        this.created = source["created"];
 	        this.alreadyInstalled = source["alreadyInstalled"];
 	        this.disabledAfter = source["disabledAfter"];
-	    }
-	}
-	export class ExtendPreview {
-	    tool: string;
-	    sources: ExtendPreviewSource[];
-	    museCount: number;
-
-	    static createFrom(source: any = {}) {
-	        return new ExtendPreview(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.tool = source["tool"];
-	        this.sources = this.convertValues(source["sources"], ExtendPreviewSource);
-	        this.museCount = source["museCount"];
+	        this.status = source["status"];
+	        this.reason = source["reason"];
+	        this.skipped = this.convertValues(source["skipped"], ExtendSkip);
+	        this.conflicts = this.convertValues(source["conflicts"], InstallConflict);
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -817,6 +841,43 @@ export namespace gui {
 		    return a;
 		}
 	}
+	export class ExtendPreview {
+	    tool: string;
+	    sources: ExtendPreviewSource[];
+	    createCount: number;
+	    blockedCount: number;
+
+	    static createFrom(source: any = {}) {
+	        return new ExtendPreview(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.sources = this.convertValues(source["sources"], ExtendPreviewSource);
+	        this.createCount = source["createCount"];
+	        this.blockedCount = source["blockedCount"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
 
 	export class FavoriteMutationResult {
 	    message: string;
@@ -904,24 +965,7 @@ export namespace gui {
 	        this.tool = source["tool"];
 	    }
 	}
-	export class InstallConflict {
-	    skillName: string;
-	    tool: string;
-	    reason: string;
-	    path?: string;
 
-	    static createFrom(source: any = {}) {
-	        return new InstallConflict(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.skillName = source["skillName"];
-	        this.tool = source["tool"];
-	        this.reason = source["reason"];
-	        this.path = source["path"];
-	    }
-	}
 	export class InstallDraft {
 	    draftId: string;
 	    kind: string;

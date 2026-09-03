@@ -222,20 +222,25 @@ type ExtendSkip struct {
 
 // ExtendPreviewSource is one managed source inside an extend preview.
 type ExtendPreviewSource struct {
-	Kind             string   `json:"kind"`
-	Group            string   `json:"group"`
-	SkillNames       []string `json:"skillNames"`
-	SkillCount       int      `json:"skillCount"`
-	Created          int      `json:"created"`
-	AlreadyInstalled int      `json:"alreadyInstalled"`
-	DisabledAfter    int      `json:"disabledAfter"`
+	Kind             string            `json:"kind"`
+	Group            string            `json:"group"`
+	SkillNames       []string          `json:"skillNames"`
+	SkillCount       int               `json:"skillCount"`
+	Created          int               `json:"created"`
+	AlreadyInstalled int               `json:"alreadyInstalled"`
+	DisabledAfter    int               `json:"disabledAfter"`
+	Status           string            `json:"status"`
+	Reason           string            `json:"reason,omitempty"`
+	Skipped          []ExtendSkip      `json:"skipped"`
+	Conflicts        []InstallConflict `json:"conflicts"`
 }
 
 // ExtendPreview is the read-only impact of extending every managed source.
 type ExtendPreview struct {
-	Tool      string                `json:"tool"`
-	Sources   []ExtendPreviewSource `json:"sources"`
-	MuseCount int                   `json:"museCount"`
+	Tool         string                `json:"tool"`
+	Sources      []ExtendPreviewSource `json:"sources"`
+	CreateCount  int                   `json:"createCount"`
+	BlockedCount int                   `json:"blockedCount"`
 }
 
 // InstallReview is an immutable, session-scoped reviewed selection.

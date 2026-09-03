@@ -447,14 +447,14 @@ describe('Skill Manager desktop app', () => {
     await waitFor(() => expect(backend.previewExtend).toHaveBeenCalledWith('muse'))
 
     await user.click(within(dialog).getByRole('button', { name: 'Extend to Muse' }))
-    await waitFor(() => expect(backend.extendSources).toHaveBeenCalledWith('muse'))
+    await waitFor(() => expect(backend.extendSources).toHaveBeenCalledWith('muse', false))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('keeps the extend dialog open on preview errors and stop-at-first-failure finish', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()
-    const preview = new gui.ExtendPreview({ tool: 'codex', sources: [new gui.ExtendPreviewSource({ kind: 'git', group: 'demo/skills', skillNames: ['alpha'], skillCount: 1, created: 1, alreadyInstalled: 0, disabledAfter: 0 })], museCount: 1 })
+    const preview = new gui.ExtendPreview({ tool: 'codex', sources: [new gui.ExtendPreviewSource({ kind: 'git', group: 'demo/skills', skillNames: ['alpha'], skillCount: 1, created: 1, alreadyInstalled: 0, disabledAfter: 0, status: 'ready', reason: '', skipped: [], conflicts: [] })], createCount: 1, blockedCount: 0 })
     backend.previewExtend = vi.fn()
       .mockRejectedValueOnce(new Error('unknown tool "orb" (supported: claude, codex, muse)'))
       .mockResolvedValue(preview)
@@ -482,6 +482,39 @@ describe('Skill Manager desktop app', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Extend to Codex' }))
     expect(await within(dialog).findByText(/failed for source demo\/skills/)).toBeInTheDocument()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('surfaces blocked sources and disables extend confirm without new links', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.previewExtend = vi.fn(async (tool) => new gui.ExtendPreview({
+      tool,
+      sources: [new gui.ExtendPreviewSource({
+        kind: 'git',
+        group: 'demo/skills',
+        skillNames: [],
+        skillCount: 0,
+        created: 0,
+        alreadyInstalled: 0,
+        disabledAfter: 0,
+        status: 'blocked',
+        reason: '',
+        skipped: [],
+        conflicts: [new gui.InstallConflict({ skillName: 'alpha', tool: 'codex', reason: 'target path already exists', path: '/tmp/blocker' })],
+      })],
+      createCount: 0,
+      blockedCount: 1,
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Extend to tool' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByText('1 blocked source')).toBeInTheDocument()
+    expect(within(dialog).getByText(/alpha: target path already exists/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Extend to Codex' })).toBeDisabled()
+    expect(backend.extendSources).not.toHaveBeenCalled()
   })
 
   it('disables the extend button when every source already uses all three tools', async () => {

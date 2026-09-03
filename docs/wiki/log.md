@@ -400,3 +400,24 @@ intentionally excluded.
 - Covered by domain, CLI, GUI, and frontend tests; documented in README,
   planning/phase-19-muse-support-tasks.md, and the repository/local-path
   install, interfaces, and desktop-gui topic pages.
+
+## [2026-09-03] fix | Extend review follow-up: result-only GUI mutation
+
+- Changed `ExtendSources` to the sibling result-only contract
+  `(toolName, includeReadOnly) SourceMutationResult`: partial-failure results
+  now reach the frontend with a fresh snapshot instead of being dropped by a
+  rejected Wails promise; the previous resolved-with-failure frontend mock is
+  now the real contract.
+- Replaced the hardcoding `ExtendPreview.MuseCount` with generic
+  `CreateCount`/`BlockedCount`; preview sources now surface status, reason,
+  skipped skills, and plan conflicts, and the dialog confirm stays disabled
+  while any source is blocked or no new links are planned.
+- Fixed the GUI success message double punctuation, threaded the source kind
+  through extend disable failures, single-passed the CLI summary totals, and
+  aligned the dry-run blocked error with the
+  `extend --tool <tool> failed for source <group>` format.
+- Verified the `gitInitCheckout` fixture is required: the extend test reaches
+  `AuditRepositoryReferences`/`UninstallService.Plan`, which shell out to
+  `git rev-parse`; documented why in the test.
+- Updated AGENTS.md (CLI extend contract, Sources extend action), the
+  local-path install wiki topic, and this log.

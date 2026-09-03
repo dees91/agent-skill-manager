@@ -14,6 +14,10 @@ import (
 	"github.com/dees91/agent-skill-manager/internal/state"
 )
 
+// gitInitCheckout turns a staged checkout into a real git repository. The
+// extend planner and apply services never execute git, but the
+// audit/uninstall checks exercised below shell out to `git rev-parse`, so
+// tests that reach them need genuine repository metadata.
 func gitInitCheckout(t *testing.T, dir, originURL string) {
 	t.Helper()
 	steps := [][]string{
@@ -295,7 +299,6 @@ func TestExtendServiceStopsAtFirstBlockedSource(t *testing.T) {
 	secondIdentity, secondCheckout := extendGitFixture(t, p, "https://github.com/owner/second.git", "gamma")
 	installClaudeOnly(t, p, firstIdentity, firstCheckout)
 	installClaudeOnly(t, p, secondIdentity, secondCheckout)
-	_ = secondCheckout
 	// A real directory blocks the gamma target for the second source.
 	if err := os.MkdirAll(filepath.Join(p.MuseUserSkills, "gamma"), 0o755); err != nil {
 		t.Fatalf("mkdir blocker: %v", err)

@@ -113,9 +113,9 @@ in public documentation.
   update modes, counts, locations, and separately confirmed lifecycle actions.
 - **Install workflow:** inspect, matrix selection, review, and apply. Tool-column
   bulk selectors cover all discovered candidates, including filtered-out rows.
-- **Extend workflow:** one tool radio, a per-source link preview, and a
-  stop-at-first-failure apply. Confirm stays disabled until the preview
-  succeeds.
+- **Extend workflow:** one tool radio, a per-source link preview that
+  surfaces blocked sources, and a stop-at-first-failure apply. Confirm stays
+  disabled while any source is blocked or no new links are planned.
 - **Discover (dormant):** its experimental design and implementation history are
   retained, but the `v0.4.1` public preview has no navigation or bound catalog
   surface.

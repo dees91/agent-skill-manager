@@ -494,7 +494,7 @@ func (s *ExtendService) applySource(tool model.Tool, source ExtendSourcePlan, la
 		created = len(applied.Created)
 		already = len(applied.AlreadyInstalled)
 	}
-	disabled, err := s.disableAfter(tool, source.Group, source.DisableAfter)
+	disabled, err := s.disableAfter(tool, source.Kind, source.Group, source.DisableAfter)
 	if err != nil {
 		return nil, rolledBack, err
 	}
@@ -508,7 +508,7 @@ func (s *ExtendService) applySource(tool model.Tool, source ExtendSourcePlan, la
 // disableAfter mirrors OFF state for skills that are disabled for every other
 // recorded tool. Created links stay ON when a disable fails so the operator
 // can toggle them manually.
-func (s *ExtendService) disableAfter(tool model.Tool, group model.GroupLabel, names []string) (int, error) {
+func (s *ExtendService) disableAfter(tool model.Tool, kind ExtendSourceKind, group model.GroupLabel, names []string) (int, error) {
 	if len(names) == 0 {
 		return 0, nil
 	}
@@ -516,13 +516,13 @@ func (s *ExtendService) disableAfter(tool model.Tool, group model.GroupLabel, na
 	for _, name := range names {
 		operation, err := s.ops.PlanDisable(tool, name)
 		if err != nil {
-			return 0, &ExtendFailure{Kind: "", Group: group, Tool: tool, Err: fmt.Errorf("disable %s: %w (created links stay ON and can be toggled)", name, err)}
+			return 0, &ExtendFailure{Kind: kind, Group: group, Tool: tool, Err: fmt.Errorf("disable %s: %w (created links stay ON and can be toggled)", name, err)}
 		}
 		operations = append(operations, operation)
 	}
 	applied := s.ops.Apply(operations)
 	if applied.Failed != nil {
-		return 0, &ExtendFailure{Kind: "", Group: group, Tool: tool, Err: fmt.Errorf("disable %s: %v (created links stay ON and can be toggled)", applied.Failed.Operation.SkillName, applied.Failed.Err)}
+		return 0, &ExtendFailure{Kind: kind, Group: group, Tool: tool, Err: fmt.Errorf("disable %s: %v (created links stay ON and can be toggled)", applied.Failed.Operation.SkillName, applied.Failed.Err)}
 	}
 	return len(applied.Completed), nil
 }

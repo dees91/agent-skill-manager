@@ -161,8 +161,8 @@ func (a *App) PreviewExtend(tool string) (gui.ExtendPreview, error) {
 }
 
 // ExtendSources links every managed source to one tool, stopping at the first failure.
-func (a *App) ExtendSources(tool string) (gui.SourceMutationResult, error) {
-	return a.service.ExtendSources(tool)
+func (a *App) ExtendSources(tool string, includeReadOnly bool) gui.SourceMutationResult {
+	return a.service.ExtendSources(tool, includeReadOnly)
 }
 
 // PreviewUninstall audits exact owned links and reports uninstall impact.

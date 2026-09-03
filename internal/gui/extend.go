@@ -37,22 +37,31 @@ func (s *Service) PreviewExtend(toolName string) (ExtendPreview, error) {
 		if err != nil {
 			return err
 		}
-		result = projectExtendPreview(manifest, plan)
+		result = projectExtendPreview(plan)
 		return nil
 	})
 	return result, err
 }
 
 // ExtendSources links every recorded skill to one tool in manifest order and
-// stops at the first failed source, keeping the completed prefix.
-func (s *Service) ExtendSources(toolName string) (SourceMutationResult, error) {
+// stops at the first failed source. Like every other source mutation it
+// returns only the result: failures travel in Failure with a fresh snapshot,
+// so the frontend always sees the completed prefix.
+func (s *Service) ExtendSources(toolName string, includeReadOnly bool) SourceMutationResult {
 	result := SourceMutationResult{Completed: []SourceMutationItem{}}
 	tool, ok := model.ParseTool(toolName)
 	if !ok {
-		return result, fmt.Errorf("unknown tool %q (supported: %s)", toolName, supportedExtendTools())
+		result.Failure = &SourceMutationFailure{Stage: "preflight", Message: fmt.Sprintf("unknown tool %q (supported: %s)", toolName, supportedExtendTools())}
+		result.Message = "Extend failed."
+		s.attachCurrentSnapshot(&result)
+		return result
 	}
+	refreshed := false
 	err := s.runSourceOperation("extend", "", func() error {
-		defer s.refreshSourceResult(&result, false)
+		defer func() {
+			s.refreshSourceResult(&result, includeReadOnly)
+			refreshed = true
+		}()
 		s.emitProgress(SourceProgress{Operation: "extend", Phase: "start", Message: fmt.Sprintf("Extending recorded sources to %s…", tool)})
 		manifest, err := s.store.Load()
 		if err != nil {
@@ -72,11 +81,12 @@ func (s *Service) ExtendSources(toolName string) (SourceMutationResult, error) {
 				Status:   string(done.Status),
 			})
 		}
-		result.Message = fmt.Sprintf("%d source(s) extended to %s: %d created, %d already installed.",
+		result.Message = fmt.Sprintf("%d source(s) extended to %s: %d created, %d already installed",
 			len(result.Completed), tool, result.CreatedLinks, result.AlreadyInstalled)
 		if disabled > 0 {
-			result.Message += fmt.Sprintf("; %d disabled.", disabled)
+			result.Message += fmt.Sprintf(", %d disabled", disabled)
 		}
+		result.Message += "."
 		if applyErr != nil {
 			var failure *install.ExtendFailure
 			group := ""
@@ -89,20 +99,31 @@ func (s *Service) ExtendSources(toolName string) (SourceMutationResult, error) {
 		return nil
 	})
 	if err != nil {
-		return result, err
+		if result.Failure == nil {
+			result.Failure = &SourceMutationFailure{Stage: "preflight", Message: err.Error()}
+		}
+		if result.Message == "" {
+			result.Message = "Extend failed."
+		}
+	} else {
+		s.emitProgress(SourceProgress{Operation: "extend", Phase: "done", Message: result.Message})
 	}
-	s.emitProgress(SourceProgress{Operation: "extend", Phase: "done", Message: result.Message})
-	return result, nil
+	if !refreshed {
+		s.attachCurrentSnapshot(&result)
+	}
+	return result
 }
 
-func projectExtendPreview(manifest state.Manifest, plan install.ExtendPlan) ExtendPreview {
+func projectExtendPreview(plan install.ExtendPlan) ExtendPreview {
 	preview := ExtendPreview{Tool: plan.Tool.String(), Sources: []ExtendPreviewSource{}}
-	repoIndex, localIndex := 0, 0
 	for _, source := range plan.Sources {
 		projected := ExtendPreviewSource{
 			Kind:       string(source.Kind),
 			Group:      source.Group.String(),
 			SkillNames: []string{},
+			Status:     string(source.Status),
+			Reason:     source.Reason,
+			Skipped:    []ExtendSkip{},
 		}
 		for _, link := range source.Links {
 			projected.SkillNames = append(projected.SkillNames, link.Skill.Name)
@@ -114,33 +135,35 @@ func projectExtendPreview(manifest state.Manifest, plan install.ExtendPlan) Exte
 		projected.Created = len(source.Links)
 		projected.AlreadyInstalled = len(source.AlreadyInstalled)
 		projected.DisabledAfter = len(source.DisableAfter)
-		preview.Sources = append(preview.Sources, projected)
-		toolsRecorded := map[model.Tool]bool{}
-		switch source.Kind {
-		case install.ExtendSourceGit:
-			if repoIndex < len(manifest.Repositories) {
-				for _, skill := range manifest.Repositories[repoIndex].InstalledSkills {
-					for _, tool := range skill.Tools {
-						toolsRecorded[tool] = true
-					}
-				}
-			}
-			repoIndex++
-		case install.ExtendSourceLocal:
-			if localIndex < len(manifest.LocalSources) {
-				for _, skill := range manifest.LocalSources[localIndex].InstalledSkills {
-					for _, tool := range skill.Tools {
-						toolsRecorded[tool] = true
-					}
-				}
-			}
-			localIndex++
+		for _, skipped := range source.Skipped {
+			projected.Skipped = append(projected.Skipped, ExtendSkip{SkillName: skipped.SkillName, Reason: skipped.Reason})
 		}
-		if len(toolsRecorded) < len(model.Tools()) {
-			preview.MuseCount++
+		projected.Conflicts = extendPlanConflicts(source.Err)
+		preview.Sources = append(preview.Sources, projected)
+		preview.CreateCount += projected.Created
+		if source.Status == install.ExtendStatusBlocked {
+			preview.BlockedCount++
 		}
 	}
 	return preview
+}
+
+func extendPlanConflicts(err error) []InstallConflict {
+	if err == nil {
+		return nil
+	}
+	var planErr install.PlanError
+	if !errors.As(err, &planErr) {
+		return nil
+	}
+	conflicts := make([]InstallConflict, 0, len(planErr.Conflicts)+len(planErr.MissingSkills))
+	for _, conflict := range planErr.Conflicts {
+		conflicts = append(conflicts, InstallConflict{SkillName: conflict.SkillName, Tool: conflict.Tool.String(), Reason: conflict.Reason, Path: conflict.TargetPath})
+	}
+	for _, name := range planErr.MissingSkills {
+		conflicts = append(conflicts, InstallConflict{SkillName: name, Reason: "skill is no longer present in the source"})
+	}
+	return conflicts
 }
 
 func lookupExtendSourceID(manifest state.Manifest, done install.ExtendSourceResult) string {

@@ -16,14 +16,17 @@ import {
 import type {
   Backend,
   ExtendPreview,
+  ExtendPreviewSource,
   InstallCellRequest,
   InstallDraft,
   InstallReview,
   ManagedSource,
+  ManagedTool,
   SourceMutationResult,
   SourceProgress,
   UninstallPreview,
 } from '../api'
+import { MANAGED_TOOLS, toolDisplayName } from '../api'
 
 interface SourcesViewProps {
   sources: ManagedSource[]
@@ -39,7 +42,6 @@ interface SourcesViewProps {
 
 type InstallMode = 'git' | 'local'
 type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | null
-type InstallTool = 'claude' | 'codex' | 'muse'
 type ColumnSelectionState = 'ON' | 'OFF' | 'MIXED' | 'N/A'
 
 export default function SourcesView(props: SourcesViewProps) {
@@ -169,7 +171,7 @@ export default function SourcesView(props: SourcesViewProps) {
         <UninstallDialog source={selectedSource} preview={uninstallPreview} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={(confirmation) => void runMutation(() => backend.uninstallSource(selectedSource.sourceId, confirmation, includeReadOnly))} />
       )}
       {dialog === 'extend' && (
-        <ExtendDialog sources={sources} backend={backend} busy={busy} progress={progress} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} />
+        <ExtendDialog sources={sources} backend={backend} busy={busy} progress={progress} includeReadOnly={includeReadOnly} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} />
       )}
     </section>
   )
@@ -226,7 +228,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
     setSelections((current) => { const next = new Set(current); const cell = key(skill, tool); next.has(cell) ? next.delete(cell) : next.add(cell); return next })
   }
 
-  const setToolSelection = (tool: InstallTool, selected: boolean) => {
+  const setToolSelection = (tool: ManagedTool, selected: boolean) => {
     if (!draft) return
     setReview(null)
     setSelections((current) => {
@@ -271,7 +273,7 @@ function InstallMatrix({ draft, selections, busy, onToggle, onSetToolSelection }
   selections: Set<string>
   busy: boolean
   onToggle: (skill: string, tool: string) => void
-  onSetToolSelection: (tool: InstallTool, selected: boolean) => void
+  onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
   const [query, setQuery] = useState('')
   const visible = useMemo(() => draft.candidates.filter((candidate) => candidate.name.toLowerCase().includes(query.toLowerCase()) || candidate.relativePath.toLowerCase().includes(query.toLowerCase())), [draft, query])
@@ -282,11 +284,11 @@ function InstallMatrix({ draft, selections, busy, onToggle, onSetToolSelection }
 }
 
 function InstallColumnHeader({ tool, draft, selections, busy, onSetToolSelection }: {
-  tool: InstallTool
+  tool: ManagedTool
   draft: InstallDraft
   selections: Set<string>
   busy: boolean
-  onSetToolSelection: (tool: InstallTool, selected: boolean) => void
+  onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
   const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict')
   const selectedCount = applicable.filter((candidate) => selections.has(key(candidate.name, tool))).length
@@ -316,36 +318,31 @@ function ReviewSummary({ review }: { review: InstallReview }) {
   </div>
 }
 
-function canExtendSources(sources: ManagedSource[]): boolean {
-  return sources.length > 0 && sources.some((source) => source.claudeCount < source.skillCount || source.codexCount < source.skillCount || source.museCount < source.skillCount)
+function toolSourceCount(source: ManagedSource, tool: ManagedTool): number {
+  return tool === 'claude' ? source.claudeCount : tool === 'codex' ? source.codexCount : source.museCount
 }
 
-function defaultExtendTool(sources: ManagedSource[]): InstallTool {
-  const counts: Record<InstallTool, (source: ManagedSource) => number> = {
-    claude: (source) => source.claudeCount,
-    codex: (source) => source.codexCount,
-    muse: (source) => source.museCount,
-  }
-  for (const tool of ['claude', 'codex', 'muse'] as const) {
-    if (sources.some((source) => counts[tool](source) < source.skillCount)) return tool
+function canExtendSources(sources: ManagedSource[]): boolean {
+  return sources.length > 0 && sources.some((source) => MANAGED_TOOLS.some((tool) => toolSourceCount(source, tool) < source.skillCount))
+}
+
+function defaultExtendTool(sources: ManagedSource[]): ManagedTool {
+  for (const tool of MANAGED_TOOLS) {
+    if (sources.some((source) => toolSourceCount(source, tool) < source.skillCount)) return tool
   }
   return 'muse'
 }
 
-function extendToolName(tool: InstallTool): string {
-  return tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
-}
-
-function ExtendDialog({ sources, backend, busy, progress, error, onBusy, onResult, onError, onClose }: {
-  sources: ManagedSource[]; backend: Backend; busy: boolean; progress: SourceProgress | null; error: string | null
+function ExtendDialog({ sources, backend, busy, progress, includeReadOnly, error, onBusy, onResult, onError, onClose }: {
+  sources: ManagedSource[]; backend: Backend; busy: boolean; progress: SourceProgress | null; includeReadOnly: boolean; error: string | null
   onBusy: (busy: boolean) => void; onResult: (result: SourceMutationResult) => void; onError: (error: string | null) => void; onClose: () => void
 }) {
   const fallbackTool = useMemo(() => defaultExtendTool(sources), [sources])
-  const [tool, setTool] = useState<InstallTool>(fallbackTool)
+  const [tool, setTool] = useState<ManagedTool>(fallbackTool)
   const [preview, setPreview] = useState<ExtendPreview | null>(null)
   useDialogEscape(onClose, busy)
 
-  const loadPreview = async (next: InstallTool) => {
+  const loadPreview = async (next: ManagedTool) => {
     onBusy(true); onError(null)
     try {
       setPreview(await backend.previewExtend(next))
@@ -354,7 +351,7 @@ function ExtendDialog({ sources, backend, busy, progress, error, onBusy, onResul
 
   useEffect(() => { void loadPreview(fallbackTool) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectTool = (next: InstallTool) => {
+  const selectTool = (next: ManagedTool) => {
     if (next === tool) return
     setTool(next)
     setPreview(null)
@@ -369,10 +366,10 @@ function ExtendDialog({ sources, backend, busy, progress, error, onBusy, onResul
   }
 
   const confirm = async () => {
-    if (!preview || busy) return
+    if (!preview || busy || !canConfirmExtend(preview)) return
     onBusy(true); onError(null)
     try {
-      const result = await backend.extendSources(tool)
+      const result = await backend.extendSources(tool, includeReadOnly)
       onResult(result)
       if (!result.failure) onClose()
       else onError(result.failure.message)
@@ -383,24 +380,36 @@ function ExtendDialog({ sources, backend, busy, progress, error, onBusy, onResul
   const already = preview?.sources.reduce((total, source) => total + source.alreadyInstalled, 0) ?? 0
   const disabled = preview?.sources.reduce((total, source) => total + source.disabledAfter, 0) ?? 0
   const showReset = error !== null && /unknown tool/i.test(error)
+  const confirmBlocked = !preview || !canConfirmExtend(preview)
 
-  return <Modal title={`Extend sources to ${extendToolName(tool)}?`} onClose={onClose} busy={busy}>
-    <p className="dialog-description">Missing {extendToolName(tool)} links are created for every managed source and mirrored OFF where the skill is OFF everywhere else. The batch stops at the first failure.</p>
+  return <Modal title={`Extend sources to ${toolDisplayName(tool)}?`} onClose={onClose} busy={busy}>
+    <p className="dialog-description">Missing {toolDisplayName(tool)} links are created for every managed source and mirrored OFF where the skill is OFF everywhere else. The batch stops at the first failure.</p>
     <div className="extend-tool-radio" role="radiogroup" aria-label="Target tool">
-      {(['claude', 'codex', 'muse'] as const).map((option) => (
-        <label key={option} className={tool === option ? 'active' : ''}><input type="radio" name="extend-tool" checked={tool === option} disabled={busy} onChange={() => selectTool(option)} /> {extendToolName(option)}</label>
+      {MANAGED_TOOLS.map((option) => (
+        <label key={option} className={tool === option ? 'active' : ''}><input type="radio" name="extend-tool" checked={tool === option} disabled={busy} onChange={() => selectTool(option)} /> {toolDisplayName(option)}</label>
       ))}
     </div>
-    {preview && <div className="install-review ready">
-      <strong>Ready to extend</strong>
+    {preview && <div className={preview.blockedCount > 0 ? 'install-review conflict' : 'install-review ready'}>
+      <strong>{preview.blockedCount > 0 ? `${preview.blockedCount} blocked source${preview.blockedCount === 1 ? '' : 's'}` : 'Ready to extend'}</strong>
       <p>{created} new link{created === 1 ? '' : 's'} · {already} already installed · {disabled} disabled after</p>
-      {preview.sources.map((source) => <p key={`${source.kind}:${source.group}`}>{source.group} ({source.kind}): {source.created} new · {source.alreadyInstalled} already · {source.disabledAfter} OFF after</p>)}
+      {preview.sources.map((source) => <p key={`${source.kind}:${source.group}`}>{source.group} ({source.kind}): {source.status === 'ready' ? `${source.created} new · ${source.alreadyInstalled} already · ${source.disabledAfter} OFF after` : extendSourceBlockage(source)}</p>)}
     </div>}
     {error && <DialogError message={error} />}
     {showReset && <div className="dialog-actions"><button className="secondary-button" disabled={busy} onClick={resetTool}>Reset tool</button></div>}
     {busy && <ProgressState progress={progress} />}
-    <DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy || !preview} onClick={() => void confirm()}>Extend to {extendToolName(tool)}</button></DialogActions>
+    <DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy || confirmBlocked} onClick={() => void confirm()}>Extend to {toolDisplayName(tool)}</button></DialogActions>
   </Modal>
+}
+
+function canConfirmExtend(preview: ExtendPreview): boolean {
+  return preview.blockedCount === 0 && preview.createCount > 0
+}
+
+function extendSourceBlockage(source: ExtendPreviewSource): string {
+  const details = source.conflicts.map((conflict) => `${conflict.skillName}: ${conflict.reason}`)
+  for (const skipped of source.skipped) details.push(`${skipped.skillName}: ${skipped.reason}`)
+  if (source.reason) details.unshift(source.reason)
+  return `${source.status}${details.length > 0 ? ` — ${details.join('; ')}` : ''}`
 }
 
 function ConfirmDialog({ title, description, confirmLabel, busy, progress, error, onClose, onConfirm }: { title: string; description: string; confirmLabel: string; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: () => void }) {

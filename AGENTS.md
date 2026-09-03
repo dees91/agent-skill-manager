@@ -556,6 +556,22 @@ skill-manager uninstall <local-path> [--dry-run]
 
 Local installs are live symlinks and are not included in repository update or `repos` output.
 
+Extend managed sources (Iteration 19):
+
+```bash
+skill-manager extend --tool <tool> [--dry-run]
+```
+
+`extend` links every recorded Git and local source to one more tool without
+reinstalling each source. The tool is a parameter (`claude`, `codex`, or
+`muse`); no step hardcodes a tool name. Selection reuses the install
+discovery and preflight rules per source with a cross-source claim map.
+Apply walks sources in manifest order (Git, then local), mirrors OFF state
+for skills that are OFF for every other recorded tool, and stops at the
+first failure with an `extend --tool <tool> failed for source <group>`
+error, keeping the completed prefix in state. `--dry-run` is strict and
+never clones, links, or writes `state.json`.
+
 ## Build and Distribution
 
 MVP is local-only:
@@ -626,6 +642,11 @@ preserving the CLI contracts and the ownership/safety rules above.
 - Uninstall removes a whole recorded source and requires typing its group name
   in the confirmation dialog. Git uninstall removes the managed checkout;
   local uninstall always preserves the user-owned source directory.
+- **Extend to tool** links every recorded source to one tool radio after a
+  per-source link preview that surfaces blocked and skipped sources with
+  their conflicts. Confirm stays disabled while any source is blocked or no
+  new links are planned; apply stops at the first failure and reports it
+  with a fresh snapshot like every other source mutation.
 - Source actions are immediate, separately confirmed operations. They are
   blocked while Skills toggles are pending, and no other mutation or app close
   is allowed while a source operation is active.

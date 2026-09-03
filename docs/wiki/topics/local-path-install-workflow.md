@@ -61,6 +61,10 @@ summary.
   reports the retained recovery path.
 - The GUI exposes the same audit as a preview and requires typing the exact
   group name before apply; it explicitly reports that the source is preserved.
+- `extend --tool <tool>` covers local sources in the same manifest-order pass
+  as Git repositories: missing cells are linked in place (never copied), OFF
+  state is mirrored through the shared disable path, and the source directory
+  is never staged, moved, or deleted.
 
 ## Dry-Run
 

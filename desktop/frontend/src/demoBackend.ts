@@ -234,9 +234,9 @@ class DemoBackend implements Backend {
   async previewExtend(tool: string) {
     const sources = this.sources.map((source) => {
       const names = this.rows.filter((row) => row.group === source.group).map((row) => row.name)
-      return { kind: source.kind, group: source.group, skillNames: names, skillCount: names.length, created: names.length, alreadyInstalled: 0, disabledAfter: 0 }
+      return { kind: source.kind, group: source.group, skillNames: names, skillCount: names.length, created: names.length, alreadyInstalled: 0, disabledAfter: 0, status: 'ready', reason: '', skipped: [], conflicts: [] }
     })
-    return { tool, sources, museCount: sources.length } as never
+    return { tool, sources, createCount: sources.reduce((total, source) => total + source.created, 0), blockedCount: 0 } as never
   }
   async extendSources(tool: string) {
     return this.sourceResult(`Extended ${this.sources.length} source(s) to ${tool}: 0 created, 0 already installed.`)

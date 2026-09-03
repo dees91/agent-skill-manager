@@ -62,14 +62,20 @@ func TestExtendSourcePreviewAfterClaudeOnlyLocalInstall(t *testing.T) {
 	if source.Kind != "local" {
 		t.Fatalf("kind = %q, want local", source.Kind)
 	}
+	if source.Status != "ready" {
+		t.Fatalf("status = %q, want ready", source.Status)
+	}
 	if source.SkillCount != 2 || len(source.SkillNames) != 2 {
 		t.Fatalf("source = %+v, want 2 skills", source)
 	}
 	if source.Created != 2 || source.AlreadyInstalled != 0 || source.DisabledAfter != 0 {
 		t.Fatalf("source = %+v, want only created cells", source)
 	}
-	if preview.MuseCount != 1 {
-		t.Fatalf("MuseCount = %d, want 1", preview.MuseCount)
+	if len(source.Skipped) != 0 || len(source.Conflicts) != 0 {
+		t.Fatalf("source = %+v, want no skipped or conflicts", source)
+	}
+	if preview.CreateCount != 2 || preview.BlockedCount != 0 {
+		t.Fatalf("preview = %+v, want 2 created and 0 blocked", preview)
 	}
 	if preview.Tool != "muse" {
 		t.Fatalf("Tool = %q, want muse", preview.Tool)
@@ -86,14 +92,14 @@ func TestExtendSourceApplyLinksAndMirrorsOff(t *testing.T) {
 	service := New(p)
 	disableGUIExtendSkill(t, service, "beta", "claude")
 
-	applied, err := service.ExtendSources("muse")
-	if err != nil {
-		t.Fatalf("ExtendSources() error = %v", err)
+	applied := service.ExtendSources("muse", false)
+	if applied.Failure != nil {
+		t.Fatalf("ExtendSources() failure = %+v", applied.Failure)
 	}
 	if applied.CreatedLinks != 2 {
 		t.Fatalf("created = %d, want 2", applied.CreatedLinks)
 	}
-	wantMessage := "1 source(s) extended to muse: 2 created, 0 already installed.; 1 disabled."
+	wantMessage := "1 source(s) extended to muse: 2 created, 0 already installed, 1 disabled."
 	if applied.Message != wantMessage {
 		t.Fatalf("message = %q, want %q", applied.Message, wantMessage)
 	}
@@ -136,9 +142,9 @@ func TestExtendSourceApplyLinksAndMirrorsOff(t *testing.T) {
 		t.Fatalf("muse stats = %+v, want 1 on and 1 off", snapshot.Stats.Muse)
 	}
 
-	rerun, err := service.ExtendSources("muse")
-	if err != nil {
-		t.Fatalf("second ExtendSources() error = %v", err)
+	rerun := service.ExtendSources("muse", false)
+	if rerun.Failure != nil {
+		t.Fatalf("second ExtendSources() failure = %+v", rerun.Failure)
 	}
 	if rerun.CreatedLinks != 0 {
 		t.Fatalf("second run created = %d, want 0", rerun.CreatedLinks)
@@ -157,15 +163,48 @@ func TestExtendSourceApplyStopsAtFirstBlockedSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	applied, err := service.ExtendSources("muse")
-	if err == nil {
-		t.Fatalf("ExtendSources() = %+v, want conflict error", applied)
+	applied := service.ExtendSources("muse", false)
+	if applied.Failure == nil {
+		t.Fatalf("ExtendSources() = %+v, want conflict failure", applied)
 	}
-	if !strings.Contains(err.Error(), "extend --tool muse failed for source") {
-		t.Fatalf("error = %q, want prefixed source failure", err.Error())
+	if !strings.Contains(applied.Failure.Message, "extend --tool muse failed for source") {
+		t.Fatalf("failure = %q, want prefixed source failure", applied.Failure.Message)
+	}
+	if len(applied.Snapshot.Rows) != 2 {
+		t.Fatalf("failure snapshot rows = %d, want fresh rescan with 2 managed rows", len(applied.Snapshot.Rows))
 	}
 	if _, statErr := os.Lstat(filepath.Join(p.MuseUserSkills, "zzz")); !os.IsNotExist(statErr) {
 		t.Fatalf("second source was touched after the first failure")
+	}
+}
+
+func TestExtendSourcePreviewSurfacesBlockedSource(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	extendLocalSourceFixture(t, p, "shop", "alpha")
+	service := New(p)
+	if err := os.MkdirAll(p.MuseUserSkills, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p.MuseUserSkills, "alpha"), []byte("blocker"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	preview, err := service.PreviewExtend("muse")
+	if err != nil {
+		t.Fatalf("PreviewExtend() error = %v", err)
+	}
+	if len(preview.Sources) != 1 {
+		t.Fatalf("sources = %d, want 1", len(preview.Sources))
+	}
+	source := preview.Sources[0]
+	if source.Status != "blocked" {
+		t.Fatalf("status = %q, want blocked", source.Status)
+	}
+	if len(source.Conflicts) == 0 {
+		t.Fatalf("source = %+v, want surfaced conflicts", source)
+	}
+	if preview.CreateCount != 0 || preview.BlockedCount != 1 {
+		t.Fatalf("preview = %+v, want 0 created and 1 blocked", preview)
 	}
 }
 
@@ -177,8 +216,10 @@ func TestExtendSourcePreviewRejectsUnknownTool(t *testing.T) {
 	} else if !strings.Contains(err.Error(), "unknown tool") {
 		t.Fatalf("error = %q, want unknown tool", err.Error())
 	}
-	if _, err := service.ExtendSources("grok"); err == nil {
-		t.Fatal("ExtendSources(grok) succeeded, want error")
+	if result := service.ExtendSources("grok", false); result.Failure == nil {
+		t.Fatalf("ExtendSources(grok) = %+v, want failure", result)
+	} else if !strings.Contains(result.Failure.Message, "unknown tool") {
+		t.Fatalf("failure = %q, want unknown tool", result.Failure.Message)
 	}
 }
 
@@ -189,9 +230,9 @@ func TestExtendSourceApplyBlockedWhilePending(t *testing.T) {
 	if _, err := service.ToggleCell("alpha", "claude"); err != nil {
 		t.Fatalf("ToggleCell() error = %v", err)
 	}
-	if _, err := service.ExtendSources("muse"); err == nil {
-		t.Fatal("ExtendSources() with pending changes succeeded, want error")
-	} else if !strings.Contains(err.Error(), "pending") {
-		t.Fatalf("error = %q, want pending-changes rejection", err.Error())
+	if result := service.ExtendSources("muse", false); result.Failure == nil {
+		t.Fatal("ExtendSources() with pending changes succeeded, want failure")
+	} else if !strings.Contains(result.Failure.Message, "pending") {
+		t.Fatalf("failure = %q, want pending-changes rejection", result.Failure.Message)
 	}
 }

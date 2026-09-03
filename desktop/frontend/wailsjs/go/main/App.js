@@ -26,8 +26,8 @@ export function DeleteSkillSet(arg1) {
   return window['go']['main']['App']['DeleteSkillSet'](arg1);
 }
 
-export function ExtendSources(arg1) {
-  return window['go']['main']['App']['ExtendSources'](arg1);
+export function ExtendSources(arg1, arg2) {
+  return window['go']['main']['App']['ExtendSources'](arg1, arg2);
 }
 
 export function GetSnapshot(arg1) {

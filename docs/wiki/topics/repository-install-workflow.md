@@ -130,8 +130,11 @@ same ownership audit and transactional removal service.
   never clones, links, or writes `state.json`.
 - The desktop Sources screen exposes the same action as **Extend to tool**
   through `PreviewExtend`/`ExtendSources` bindings: a tool radio (preselected
-  to the first tool with a missing cell), a per-source preview, and a confirm
-  that stays disabled until the preview succeeds.
+  to the first tool with a missing cell), a per-source preview that surfaces
+  blocked/skipped sources with their conflicts, and a confirm that stays
+  disabled until the preview succeeds with zero blocked sources and at least
+  one new link. The mutation returns only the result, so a stop-at-first-failure
+  finish still delivers the completed prefix with a fresh snapshot.
 
 ## Deferred Repository Management
 
