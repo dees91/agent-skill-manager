@@ -13,6 +13,7 @@
   disabled/
     claude/<skill-name>
     codex/<skill-name>
+    muse/<skill-name>
   repos/<host>/<repo-path>
   trash/uninstall-<operation-id>/
 ```

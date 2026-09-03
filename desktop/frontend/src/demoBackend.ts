@@ -1,15 +1,15 @@
 import { favoriteEligible, type ActionResult, type ApplyResult, type Backend, type PendingChange, type SkillCell, type SkillRow, type Snapshot } from './api'
 
 const seedRows: SkillRow[] = [
-  row('release-checklist', 'Prepare a project for a safe release.', 'example-labs/engineering-skills', 'symlink repo', 'ON', 'ON'),
-  row('dependency-review', 'Review dependency and supply-chain changes.', 'example-labs/engineering-skills', 'symlink repo', 'ON', 'ON'),
+  row('release-checklist', 'Prepare a project for a safe release.', 'example-labs/engineering-skills', 'symlink repo', 'ON', 'ON', 'ON'),
+  row('dependency-review', 'Review dependency and supply-chain changes.', 'example-labs/engineering-skills', 'symlink repo', 'ON', 'ON', 'OFF'),
   row('api-contract-audit', 'Check API changes for compatibility risks.', 'example-labs/engineering-skills', 'symlink repo', 'OFF', 'ON'),
   row('incident-summary', 'Turn incident notes into a concise report.', 'example-labs/engineering-skills', 'symlink repo', 'ON', 'OFF'),
   row('ui-accessibility', 'Audit interface semantics and keyboard access.', 'sample-org/product-skills', 'symlink repo', 'ON', 'ON'),
   row('performance-profile', 'Plan and interpret application profiling.', 'sample-org/product-skills', 'symlink repo', 'ON', 'ON'),
   row('media-compose', 'Assemble a short product demo from interface captures.', 'sample-org/media-skills', 'symlink repo', 'OFF', 'OFF'),
   row('video-encode', 'Encode and optimize video deliverables.', 'sample-org/media-skills', 'symlink repo', undefined, 'OFF'),
-  row('local-notes', 'Maintain a private, link-in-place workflow.', 'local', 'local', 'ON', undefined),
+  row('local-notes', 'Maintain a private, link-in-place workflow.', 'local', 'local', 'ON', undefined, 'ON'),
   row('catalog-search', 'Find reusable skills in a catalog.', 'Skills CLI', 'Skills CLI', undefined, 'ON'),
   row('decision-review', 'Stress-test a technical decision.', 'Skills CLI', 'Skills CLI', undefined, 'OFF'),
   readOnlyRow('system-image-tools', 'Generate or edit raster images.', 'Codex system', 'Codex system', 'codex'),
@@ -27,15 +27,15 @@ class DemoBackend implements Backend {
     { setId: 'set:release-review', name: 'Release review', description: 'Use before publishing a public build.', skills: ['dependency-review', 'release-checklist'], createdAt: '2026-08-13T09:00:00Z', updatedAt: '2026-08-15T09:00:00Z' },
   ]
   private sources = [
-    { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
-    { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
+    { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, museCount: 1, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
+    { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, museCount: 1, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
   ]
 
   async getSnapshot(includeReadOnly: boolean) { return this.snapshot(includeReadOnly) }
 
   async toggleCell(skillName: string, tool: string) {
     const row = this.rows.find((candidate) => candidate.name === skillName)
-    const cell = row?.[tool as 'claude' | 'codex']
+    const cell = row?.[tool as 'claude' | 'codex' | 'muse']
     if (!cell || cell.readOnly || cell.conflict) return this.action('Cell cannot be toggled.', 0)
     const key = `${tool}:${skillName}`
     const current = this.pending.find((change) => `${change.tool}:${change.skillName}` === key)
@@ -49,11 +49,12 @@ class DemoBackend implements Backend {
 
   async toggleBoth(skillName: string) {
     await this.toggleCell(skillName, 'claude')
-    return this.toggleCell(skillName, 'codex')
+    await this.toggleCell(skillName, 'codex')
+    return this.toggleCell(skillName, 'muse')
   }
 
   async toggleGroup(group: string) {
-    return this.toggleGroupScope(group, ['claude', 'codex'])
+    return this.toggleGroupScope(group, ['claude', 'codex', 'muse'])
   }
 
   async toggleGroupScope(group: string, tools: string[]) {
@@ -61,13 +62,13 @@ class DemoBackend implements Backend {
   }
 
   async toggleVisible(skillNames: string[]) {
-    return this.toggleSkillScope(skillNames, ['claude', 'codex'])
+    return this.toggleSkillScope(skillNames, ['claude', 'codex', 'muse'])
   }
 
   async toggleSkillScope(skillNames: string[], tools: string[]) {
     const cells = skillNames.flatMap((name) => {
       const row = this.rows.find((candidate) => candidate.name === name)
-      return tools.map((tool) => ({ row, tool, cell: row?.[tool as 'claude' | 'codex'] }))
+      return tools.map((tool) => ({ row, tool, cell: row?.[tool as 'claude' | 'codex' | 'muse'] }))
     }).filter((item) => item.row && item.cell && !item.cell.readOnly && !item.cell.conflict && ['ON', 'OFF'].includes(item.cell.state)) as Array<{ row: SkillRow; tool: string; cell: SkillCell }>
     const effective = (item: { row: SkillRow; tool: string; cell: SkillCell }) => {
       const pending = this.pending.find((change) => change.skillName === item.row.name && change.tool === item.tool)
@@ -106,7 +107,7 @@ class DemoBackend implements Backend {
   async applyPending(includeReadOnly: boolean) {
     for (const change of this.pending) {
       const row = this.rows.find((candidate) => candidate.name === change.skillName)
-      const cell = row?.[change.tool as 'claude' | 'codex']
+      const cell = row?.[change.tool as 'claude' | 'codex' | 'muse']
       if (cell) cell.state = cell.effectiveState = change.operation === 'enable' ? 'ON' : 'OFF'
     }
     const completed = this.pending.map((change) => ({ ...change }))
@@ -143,7 +144,7 @@ class DemoBackend implements Backend {
     if (!set) throw new Error('Skill Set not found')
     const items = set.skills.flatMap((name) => tools.map((tool) => {
       const skillRow = this.rows.find((candidate) => candidate.name === name)
-      const skillCell = skillRow?.[tool as 'claude' | 'codex']
+      const skillCell = skillRow?.[tool as 'claude' | 'codex' | 'muse']
       const pending = this.pending.find((change) => change.skillName === name && change.tool === tool)
       const effective = pending?.operation === 'enable' ? 'ON' : pending?.operation === 'disable' ? 'OFF' : skillCell?.state
       return { skillCell, pending, effective }
@@ -175,11 +176,11 @@ class DemoBackend implements Backend {
   }
 
   private snapshot(includeReadOnly: boolean) {
-    const visible = this.rows.filter((row) => includeReadOnly || ![row.claude, row.codex].some((cell) => cell?.readOnly))
+    const visible = this.rows.filter((row) => includeReadOnly || ![row.claude, row.codex, row.muse].some((cell) => cell?.readOnly))
     const rows = visible.map((row) => ({ ...projectRow(row, this.pending), favorite: favoriteEligible(row) && this.favorites.has(row.name) } as SkillRow))
     const groups = [...new Set(rows.map((row) => row.group))].map((group) => {
       const grouped = rows.filter((row) => row.group === group)
-      return { group, rows: grouped.length, claude: counts(grouped, 'claude'), codex: counts(grouped, 'codex'), sources: [...new Set(grouped.map((row) => row.source))] }
+      return { group, rows: grouped.length, claude: counts(grouped, 'claude'), codex: counts(grouped, 'codex'), muse: counts(grouped, 'muse'), sources: [...new Set(grouped.map((row) => row.source))] }
     })
     return {
       rows,
@@ -190,10 +191,11 @@ class DemoBackend implements Backend {
       sources: [...new Set(rows.map((row) => row.source))].sort(),
       managedSources: [...this.sources],
       stats: {
-        managedSkills: rows.filter((row) => !row.claude?.readOnly && !row.codex?.readOnly).length,
-        readOnlySkills: rows.filter((row) => row.claude?.readOnly || row.codex?.readOnly).length,
+        managedSkills: rows.filter((row) => !row.claude?.readOnly && !row.codex?.readOnly && !row.muse?.readOnly).length,
+        readOnlySkills: rows.filter((row) => row.claude?.readOnly || row.codex?.readOnly || row.muse?.readOnly).length,
         claude: counts(rows, 'claude'),
         codex: counts(rows, 'codex'),
+        muse: counts(rows, 'muse'),
         conflictCells: 0,
       },
       conflicts: [],
@@ -223,7 +225,7 @@ class DemoBackend implements Backend {
   async previewUninstall(sourceID: string) {
     const source = this.sources.find((item) => item.sourceId === sourceID)!
     const affectedFavorites = this.rows.filter((row) => row.group === source.group && this.favorites.has(row.name)).map((row) => row.name).sort()
-    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: source.claudeCount + source.codexCount, disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local', affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites, favoriteImpactWarning: '' } as never
+    return { sourceId: sourceID, kind: source.kind, group: source.group, location: source.location, activeLinks: source.claudeCount + source.codexCount + (source.museCount ?? 0), disabledLinks: 0, removesCheckout: source.kind === 'git', preservesSource: source.kind === 'local', affectedSkillSets: [], skillSetImpactWarning: '', affectedFavorites, favoriteImpactWarning: '' } as never
   }
   async uninstallSource(sourceID: string) {
     this.sources = this.sources.filter((source) => source.sourceId !== sourceID)
@@ -245,22 +247,24 @@ class DemoBackend implements Backend {
         const projected = skillRow ? projectRow(skillRow, this.pending) : undefined
         const claude = demoSetMemberCell('claude', projected?.claude, this.pending)
         const codex = demoSetMemberCell('codex', projected?.codex, this.pending)
-        return { name, description: projected?.description ?? '', group: projected?.group ?? 'unknown', source: projected?.source ?? 'unknown', available: claude.eligible || codex.eligible, claude, codex }
+        const muse = demoSetMemberCell('muse', projected?.muse, this.pending)
+        return { name, description: projected?.description ?? '', group: projected?.group ?? 'unknown', source: projected?.source ?? 'unknown', available: claude.eligible || codex.eligible || muse.eligible, claude, codex, muse }
       })
       const claude = demoSetSummary('claude', members.map((member) => member.claude))
       const codex = demoSetSummary('codex', members.map((member) => member.codex))
-      return { setId: set.setId, name: set.name, description: set.description, members, claude, codex, unavailable: members.filter((member) => !member.available).length, pending: claude.pending + codex.pending, createdAt: set.createdAt, updatedAt: set.updatedAt }
+      const muse = demoSetSummary('muse', members.map((member) => member.muse))
+      return { setId: set.setId, name: set.name, description: set.description, members, claude, codex, muse, unavailable: members.filter((member) => !member.available).length, pending: claude.pending + codex.pending + muse.pending, createdAt: set.createdAt, updatedAt: set.updatedAt }
     })
   }
 }
 
 export const demoBackend: Backend = new DemoBackend()
 
-function row(name: string, description: string, group: string, source: string, claude?: string, codex?: string) {
-  return { name, description, group, source, claude: claude ? cell(name, 'claude', claude, group, source) : undefined, codex: codex ? cell(name, 'codex', codex, group, source) : undefined } as unknown as SkillRow
+function row(name: string, description: string, group: string, source: string, claude?: string, codex?: string, muse?: string) {
+  return { name, description, group, source, claude: claude ? cell(name, 'claude', claude, group, source) : undefined, codex: codex ? cell(name, 'codex', codex, group, source) : undefined, muse: muse ? cell(name, 'muse', muse, group, source) : undefined } as unknown as SkillRow
 }
 
-function readOnlyRow(name: string, description: string, group: string, source: string, tool: 'claude' | 'codex') {
+function readOnlyRow(name: string, description: string, group: string, source: string, tool: 'claude' | 'codex' | 'muse') {
   const entry = cell(name, tool, 'RO', group, source)
   entry.readOnly = true
   return { name, description, group, source, [tool]: entry } as unknown as SkillRow
@@ -271,7 +275,7 @@ function cell(name: string, tool: string, state: string, group: string, source: 
 }
 
 function projectRow(row: SkillRow, pending: PendingChange[]) {
-  return { ...row, favorite: false, claude: projectCell(row.claude, pending), codex: projectCell(row.codex, pending) } as SkillRow
+  return { ...row, favorite: false, claude: projectCell(row.claude, pending), codex: projectCell(row.codex, pending), muse: projectCell(row.muse, pending) } as SkillRow
 }
 
 function projectCell(cell: SkillCell | undefined, pending: PendingChange[]) {
@@ -280,7 +284,7 @@ function projectCell(cell: SkillCell | undefined, pending: PendingChange[]) {
   return { ...cell, pending: operation, effectiveState: operation === 'disable' ? 'OFF' : operation === 'enable' ? 'ON' : cell.state } as SkillCell
 }
 
-function counts(rows: SkillRow[], tool: 'claude' | 'codex') {
+function counts(rows: SkillRow[], tool: 'claude' | 'codex' | 'muse') {
   const result = { on: 0, off: 0, conflict: 0, readOnly: 0 }
   for (const row of rows) {
     const cell = row[tool]
@@ -299,6 +303,7 @@ function demoCandidates() {
     relativePath: `skills/${name}`,
     claude: { tool: 'claude', status: 'available', message: '' },
     codex: { tool: 'codex', status: 'available', message: '' },
+    muse: { tool: 'muse', status: 'available', message: '' },
   }))
 }
 
@@ -306,6 +311,7 @@ function demoBudgets(pending: PendingChange[], measured: boolean) {
   return {
     claude: demoBudget('claude', 'Claude default', 1680, 2000, pending.filter((change) => change.tool === 'claude').length, measured),
     codex: demoBudget('codex', 'gpt-5.6-sol', 1951, 5440, pending.filter((change) => change.tool === 'codex').length, measured),
+    muse: demoBudget('muse', 'Muse default', 1680, 2000, pending.filter((change) => change.tool === 'muse').length, measured),
   }
 }
 

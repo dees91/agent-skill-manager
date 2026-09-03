@@ -344,3 +344,19 @@ intentionally excluded.
 - Live read-only smoke testing advertised `ranked_search_v1`, ranked the ADR and
   quality-review skills first for the target query, preserved legacy list
   ordering, completed in under half a second, and left `state.json` unchanged.
+
+## [2026-09-03] implementation | Add Muse as a third managed tool
+
+- Added `muse` as an independent managed tool alongside Claude Code and Codex:
+  `~/.config/muse/skills` (`$XDG_CONFIG_HOME/muse/skills` when set) plus
+  `~/.skill-manager/disabled/muse/`, with no shared ownership of
+  `~/.agents/skills`.
+- Extended domain scan/staging, CLI tables and `--tool` targets (`muse`,
+  `both`, `all`), install/update/uninstall planning, TUI third column,
+  advisor search/activate/status, and an always-estimated Muse context report
+  at manifest version 2.
+- Projected Muse cells through the GUI backend and desktop frontend (Skills
+  column, install matrix, Dashboard, Skill Sets, bindings, fixtures) and
+  taught the first-party `skill-advisor` skill the `muse` host and path.
+- Updated README, DESIGN, AGENTS.md, planning/phase-19 tasks, and wiki
+  synthesis; backend, desktop, and frontend suites pass on synthetic homes.

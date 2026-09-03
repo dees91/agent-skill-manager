@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/dees91/agent-skill-manager/internal/model"
 )
@@ -13,6 +14,7 @@ type Paths struct {
 	Home              string
 	ClaudeUserSkills  string
 	CodexUserSkills   string
+	MuseUserSkills    string
 	CodexSystemSkills string
 	ClaudePluginCache string
 	AgentsSkillLock   string
@@ -28,6 +30,7 @@ type Paths struct {
 	DisabledDir       string
 	ClaudeDisabledDir string
 	CodexDisabledDir  string
+	MuseDisabledDir   string
 	ReposDir          string
 	TrashDir          string
 }
@@ -51,6 +54,7 @@ func ForHome(home string) Paths {
 		Home:              home,
 		ClaudeUserSkills:  filepath.Join(home, ".claude", "skills"),
 		CodexUserSkills:   filepath.Join(home, ".agents", "skills"),
+		MuseUserSkills:    museUserSkillsDir(home),
 		CodexSystemSkills: filepath.Join(home, ".codex", "skills", ".system"),
 		ClaudePluginCache: filepath.Join(home, ".claude", "plugins", "cache"),
 		AgentsSkillLock:   filepath.Join(home, ".agents", ".skill-lock.json"),
@@ -66,9 +70,22 @@ func ForHome(home string) Paths {
 		DisabledDir:       disabledDir,
 		ClaudeDisabledDir: filepath.Join(disabledDir, model.ToolClaude.String()),
 		CodexDisabledDir:  filepath.Join(disabledDir, model.ToolCodex.String()),
+		MuseDisabledDir:   filepath.Join(disabledDir, model.ToolMuse.String()),
 		ReposDir:          filepath.Join(stateDir, "repos"),
 		TrashDir:          filepath.Join(stateDir, "trash"),
 	}
+}
+
+// museUserSkillsDir resolves the managed Muse skill directory. It honors
+// XDG_CONFIG_HOME when set to an absolute path and otherwise falls back to
+// ~/.config/muse/skills.
+func museUserSkillsDir(home string) string {
+	if raw := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); raw != "" {
+		if cleaned := filepath.Clean(raw); filepath.IsAbs(cleaned) {
+			return filepath.Join(cleaned, "muse", "skills")
+		}
+	}
+	return filepath.Join(home, ".config", "muse", "skills")
 }
 
 // UserSkillsDirFor returns the active managed skill directory for a tool.
@@ -78,6 +95,8 @@ func (p Paths) UserSkillsDirFor(tool model.Tool) (string, bool) {
 		return p.ClaudeUserSkills, true
 	case model.ToolCodex:
 		return p.CodexUserSkills, true
+	case model.ToolMuse:
+		return p.MuseUserSkills, true
 	default:
 		return "", false
 	}
@@ -90,6 +109,8 @@ func (p Paths) DisabledDirFor(tool model.Tool) (string, bool) {
 		return p.ClaudeDisabledDir, true
 	case model.ToolCodex:
 		return p.CodexDisabledDir, true
+	case model.ToolMuse:
+		return p.MuseDisabledDir, true
 	default:
 		return "", false
 	}

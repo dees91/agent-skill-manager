@@ -12,9 +12,10 @@ describe('Skill Manager desktop app', () => {
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.getByText('Managed skills')).toBeInTheDocument()
     expect(screen.getByText('Claude enabled')).toBeInTheDocument()
+    expect(screen.getByText('Muse enabled')).toBeInTheDocument()
     expect(screen.getByText('Global skill catalog cost')).toBeInTheDocument()
     expect(screen.getByText('Measured')).toBeInTheDocument()
-    expect(screen.getByText('Partial estimate')).toBeInTheDocument()
+    expect(screen.getAllByText('Partial estimate')).toHaveLength(2)
     expect(backend.getSnapshot).toHaveBeenCalledWith(false)
     expect(screen.queryByRole('button', { name: 'Discover' })).not.toBeInTheDocument()
   })
@@ -112,7 +113,7 @@ describe('Skill Manager desktop app', () => {
     expect(screen.getByText('camera-helper')).toBeInTheDocument()
   })
 
-  it('uses tool chips for classification and scoped bulk actions while keeping both columns', async () => {
+  it('uses tool chips for classification and scoped bulk actions while keeping all three columns', async () => {
     const user = userEvent.setup()
     const backend = mockBackend(withAvailableSkills())
     render(<App backend={backend} />)
@@ -122,6 +123,7 @@ describe('Skill Manager desktop app', () => {
 
     expect(screen.getAllByRole('columnheader', { name: 'Claude' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('columnheader', { name: 'Codex' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('columnheader', { name: 'Muse' }).length).toBeGreaterThan(0)
     await user.click(screen.getByRole('button', { name: /Smart-toggle filtered results/ }))
     expect(backend.toggleSkillScope).toHaveBeenLastCalledWith(expect.arrayContaining(['alpha-skill', 'camera-helper', 'layout-helper']), ['claude'])
   })
@@ -139,7 +141,7 @@ describe('Skill Manager desktop app', () => {
     const groupToggle = screen.getByRole('button', { name: /android\/skills.*symlink repo/ })
     expect(groupToggle).toHaveAttribute('aria-expanded', 'true')
     await user.click(screen.getByRole('button', { name: /Smart-toggle entire group android\/skills/ }))
-    expect(backend.toggleGroupScope).toHaveBeenCalledWith('android/skills', ['claude', 'codex'])
+    expect(backend.toggleGroupScope).toHaveBeenCalledWith('android/skills', ['claude', 'codex', 'muse'])
 
     await user.clear(search)
     expect(screen.getByRole('button', { name: /android\/skills.*symlink repo/ })).toHaveAttribute('aria-expanded', 'false')
@@ -159,6 +161,9 @@ describe('Skill Manager desktop app', () => {
     system.codex!.state = 'RO'
     system.codex!.effectiveState = 'RO'
     system.codex!.readOnly = true
+    system.muse!.state = 'RO'
+    system.muse!.effectiveState = 'RO'
+    system.muse!.readOnly = true
     snapshot.rows.push(system)
     snapshot.pending = [{ skillName: 'alpha-skill', tool: 'claude', operation: 'disable' }] as never
     const backend = mockBackend(snapshot)
@@ -327,7 +332,7 @@ describe('Skill Manager desktop app', () => {
     await user.type(screen.getByRole('textbox', { name: 'HTTPS or SSH Git URL' }), 'https://github.com/demo/skills')
     await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
     expect(await screen.findByText('alpha')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Review 2 targets' }))
+    await user.click(screen.getByRole('button', { name: 'Review 3 targets' }))
     await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalled())
     expect(await screen.findByText('Ready to install')).toBeInTheDocument()
   })
@@ -364,6 +369,7 @@ describe('Skill Manager desktop app', () => {
 
     expect(await screen.findByRole('button', { name: 'Claude all targets: ON (2 of 2 selected)' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Codex all targets: ON (2 of 2 selected)' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Muse all targets: ON (3 of 3 selected)' })).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(screen.getByRole('checkbox', { name: 'alpha claude' }))
     expect(screen.getByRole('button', { name: 'Claude all targets: MIXED (1 of 2 selected)' })).toHaveAttribute('aria-pressed', 'mixed')
@@ -378,7 +384,8 @@ describe('Skill Manager desktop app', () => {
 
     expect(screen.getByRole('button', { name: 'Claude all targets: ON (2 of 2 selected)' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Codex all targets: OFF (0 of 2 selected)' })).toHaveAttribute('aria-pressed', 'false')
-    await user.click(screen.getByRole('button', { name: 'Review 2 targets' }))
+    expect(screen.getByRole('button', { name: 'Muse all targets: ON (3 of 3 selected)' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Review 5 targets' }))
     await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:bulk', expect.arrayContaining([
       { skillName: 'alpha', tool: 'claude' },
       { skillName: 'beta', tool: 'claude' },
@@ -399,7 +406,7 @@ describe('Skill Manager desktop app', () => {
       kind: 'git',
       group: 'demo/skills',
       location: 'https://github.com/demo/skills',
-      candidates: [installCandidate('alpha', 'available', 'conflict')],
+      candidates: [installCandidate('alpha', 'available', 'conflict', 'conflict')],
       cloned: false,
       reused: true,
       retainedClone: false,
@@ -414,6 +421,7 @@ describe('Skill Manager desktop app', () => {
     await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
 
     expect(await screen.findByRole('button', { name: 'Codex all targets: N/A (no available targets)' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Muse all targets: N/A (no available targets)' })).toBeDisabled()
     expect(screen.getByRole('checkbox', { name: 'alpha codex' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Review 1 target' })).toBeEnabled()
   })
@@ -618,14 +626,15 @@ function skillRow(name: string) {
     repoCommit: '1234567890ab',
     readOnly: false,
   })
-  return new gui.SkillRow({ name, description: `${name} description`, source: 'symlink repo', group: 'android/skills', claude: makeCell('claude'), codex: makeCell('codex') })
+  return new gui.SkillRow({ name, description: `${name} description`, source: 'symlink repo', group: 'android/skills', claude: makeCell('claude'), codex: makeCell('codex'), muse: makeCell('muse') })
 }
 
-function installCandidate(name: string, claudeStatus = 'available', codexStatus = 'available') {
+function installCandidate(name: string, claudeStatus = 'available', codexStatus = 'available', museStatus = 'available') {
   return {
     name,
     relativePath: `skills/${name}`,
     claude: { tool: 'claude', status: claudeStatus, message: claudeStatus === 'conflict' ? 'Claude target conflict.' : '' },
     codex: { tool: 'codex', status: codexStatus, message: codexStatus === 'conflict' ? 'Codex target conflict.' : '' },
+    muse: { tool: 'muse', status: museStatus, message: museStatus === 'conflict' ? 'Muse target conflict.' : '' },
   }
 }

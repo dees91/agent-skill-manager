@@ -29,6 +29,7 @@ func GroupSummaries(rows []model.SkillRow) []model.GroupSummary {
 
 		countCell(row.Claude, &summary.Claude, sourceSets[group])
 		countCell(row.Codex, &summary.Codex, sourceSets[group])
+		countCell(row.Muse, &summary.Muse, sourceSets[group])
 	}
 
 	summaries := make([]model.GroupSummary, 0, len(byGroup))

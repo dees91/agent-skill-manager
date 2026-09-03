@@ -139,10 +139,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) toggleActiveTool() {
-	if m.activeTool == domain.ToolClaude {
-		m.activeTool = domain.ToolCodex
-		m.message = "Active column: Codex"
-		return
+	tools := domain.Tools()
+	for i, tool := range tools {
+		if tool == m.activeTool {
+			m.activeTool = tools[(i+1)%len(tools)]
+			m.message = "Active column: " + toolTitle(m.activeTool)
+			return
+		}
 	}
 	m.activeTool = domain.ToolClaude
 	m.message = "Active column: Claude"
@@ -645,6 +648,9 @@ func rowMatchesTextFilter(row domain.SkillRow, filter string) bool {
 	if row.Codex != nil {
 		values = append(values, row.Codex.DisplayName, row.Codex.Description)
 	}
+	if row.Muse != nil {
+		values = append(values, row.Muse.DisplayName, row.Muse.Description)
+	}
 	for _, value := range values {
 		if strings.Contains(strings.ToLower(value), filter) {
 			return true
@@ -668,6 +674,9 @@ func rowHasSource(row domain.SkillRow, source domain.SourceLabel) bool {
 		return true
 	}
 	if row.Codex != nil && row.Codex.Source == source {
+		return true
+	}
+	if row.Muse != nil && row.Muse.Source == source {
 		return true
 	}
 	return false
@@ -700,6 +709,9 @@ func collectSourceChoices(rows []domain.SkillRow) []domain.SourceLabel {
 		}
 		if row.Codex != nil {
 			addSourceChoice(seen, row.Codex.Source)
+		}
+		if row.Muse != nil {
+			addSourceChoice(seen, row.Muse.Source)
 		}
 	}
 

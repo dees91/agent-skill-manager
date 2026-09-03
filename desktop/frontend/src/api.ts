@@ -157,12 +157,13 @@ export function projectPending(snapshot: Snapshot, pending: PendingChange[], con
       ...row,
       claude: projectCell(row.claude, byCell),
       codex: projectCell(row.codex, byCell),
+      muse: projectCell(row.muse, byCell),
     })),
   } as Snapshot
 }
 
 export function favoriteEligible(row: SkillRow): boolean {
-  return [row.claude, row.codex].some((cell) => Boolean(cell && !cell.readOnly && (cell.conflict || ['ON', 'OFF', 'CONFLICT'].includes(cell.state))))
+  return [row.claude, row.codex, row.muse].some((cell) => Boolean(cell && !cell.readOnly && (cell.conflict || ['ON', 'OFF', 'CONFLICT'].includes(cell.state))))
 }
 
 function projectCell(cell: SkillCell | undefined, pending: Map<string, string>): SkillCell | undefined {

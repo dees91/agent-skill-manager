@@ -9,7 +9,7 @@
 - The source identity is its canonical absolute path after resolving symlinks.
   The display group is the canonical root basename and the source label is
   `local path`.
-- A source cannot overlap `~/.skill-manager`, Claude/Codex user skill roots,
+- A source cannot overlap `~/.skill-manager`, Claude/Codex/Muse user skill roots,
   Codex system skills, or the Claude plugin cache in either direction.
 
 ## Discovery And Install
@@ -18,7 +18,7 @@
   skill; nested skills are not scanned in that case.
 - Otherwise discovery is recursive and shares Git install's ignored-directory,
   duplicate-basename, selection, target-tool, and target-conflict rules.
-- Install creates direct symlinks from the selected Claude/Codex user skill
+- Install creates direct symlinks from the selected Claude/Codex/Muse user skill
   cells to directories under the canonical source. It never copies or clones
   the source.
 - An exact pre-existing matching link may be adopted. Reinstalling a recorded
@@ -29,7 +29,7 @@
   rolls back links created by a failed apply, then persists ownership.
 
 The desktop Sources screen obtains the source through the native macOS folder
-picker, then exposes the same discovery as an exact per-skill Claude/Codex
+picker, then exposes the same discovery as an exact per-skill Claude/Codex/Muse
 matrix. Review and Apply remain backend-owned and use opaque draft/review IDs;
 the frontend never submits a local filesystem path for mutation.
 

@@ -543,12 +543,15 @@ func TestBatchToggleOneSidedRowOnlyStagesExistingCell(t *testing.T) {
 
 	result := model.batchTogglePending(rows, domain.Tools())
 
-	if result.changed != 1 || result.skippedMissing != 1 {
-		t.Fatalf("result = %#v, want one changed and one missing skip", result)
+	if result.changed != 1 || result.skippedMissing != 2 {
+		t.Fatalf("result = %#v, want one changed and two missing skips", result)
 	}
 	assertPendingKind(t, model.pending, domain.ToolClaude, "one-sided", domain.OperationDisable)
 	if _, ok := model.pending[pendingKey{tool: domain.ToolCodex, skillName: "one-sided"}]; ok {
 		t.Fatalf("codex pending exists for missing cell: %#v", model.pending)
+	}
+	if _, ok := model.pending[pendingKey{tool: domain.ToolMuse, skillName: "one-sided"}]; ok {
+		t.Fatalf("muse pending exists for missing cell: %#v", model.pending)
 	}
 }
 
@@ -660,7 +663,7 @@ func TestGroupToggleUsesAllLoadedRowsForSelectedGroup(t *testing.T) {
 	if _, ok := model.pending[pendingKey{tool: domain.ToolClaude, skillName: "other"}]; ok {
 		t.Fatalf("other group pending exists: %#v", model.pending)
 	}
-	for _, want := range []string{"Group android/skills", "2 pending changes updated", "Skipped 2 missing"} {
+	for _, want := range []string{"Group android/skills", "2 pending changes updated", "Skipped 4 missing"} {
 		if !strings.Contains(model.message, want) {
 			t.Fatalf("message = %q, want %q", model.message, want)
 		}
@@ -767,7 +770,7 @@ func TestGroupToggleNoopMessageIncludesSkippedReasons(t *testing.T) {
 
 	model = updateModel(t, model, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
 
-	for _, want := range []string{"Group local: no applicable cells.", "Skipped 1 conflict", "1 read-only", "2 missing"} {
+	for _, want := range []string{"Group local: no applicable cells.", "Skipped 1 conflict", "1 read-only", "4 missing"} {
 		if !strings.Contains(model.message, want) {
 			t.Fatalf("message = %q, want %q", model.message, want)
 		}
@@ -829,7 +832,7 @@ func TestAllVisibleToggleHandlesMixedVisibleScope(t *testing.T) {
 	if len(model.pending) != 1 {
 		t.Fatalf("pending = %#v, want only OFF cell enable in mixed visible scope", model.pending)
 	}
-	for _, want := range []string{"All visible rows", "1 pending change updated", "Skipped 1 conflict", "1 read-only", "4 missing"} {
+	for _, want := range []string{"All visible rows", "1 pending change updated", "Skipped 1 conflict", "1 read-only", "9 missing"} {
 		if !strings.Contains(model.message, want) {
 			t.Fatalf("message = %q, want %q", model.message, want)
 		}
@@ -944,7 +947,7 @@ func TestAllVisibleToggleNoopsForEmptyAndReadOnlyOnlyRows(t *testing.T) {
 		{Name: "readonly", Codex: &domain.ToolSkill{State: domain.SkillStateReadOnly, ReadOnly: true}},
 	}
 	model = updateModel(t, model, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'A'}})
-	for _, want := range []string{"All visible rows: no applicable cells.", "Skipped 1 read-only", "1 missing"} {
+	for _, want := range []string{"All visible rows: no applicable cells.", "Skipped 1 read-only", "2 missing"} {
 		if !strings.Contains(model.message, want) {
 			t.Fatalf("message = %q, want %q", model.message, want)
 		}

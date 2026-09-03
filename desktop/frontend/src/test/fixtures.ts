@@ -12,6 +12,7 @@ export function fixtureSnapshot(): Snapshot {
         favorite: true,
         claude: cell('alpha-skill', 'claude', 'ON'),
         codex: cell('alpha-skill', 'codex', 'OFF'),
+        muse: cell('alpha-skill', 'muse', 'OFF'),
       },
       {
         name: 'codex-helper',
@@ -26,8 +27,8 @@ export function fixtureSnapshot(): Snapshot {
     skillSetsWarning: '',
     favoritesWarning: '',
     groups: [
-      { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), sources: ['local'] },
-      { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), sources: ['Skills CLI'] },
+      { group: 'local', rows: 1, claude: counts(1, 0), codex: counts(0, 1), muse: counts(0, 1), sources: ['local'] },
+      { group: 'Skills CLI', rows: 1, claude: counts(0, 0), codex: counts(1, 0), muse: counts(0, 0), sources: ['Skills CLI'] },
     ],
     sources: ['Skills CLI', 'local'],
     managedSources: [
@@ -39,6 +40,7 @@ export function fixtureSnapshot(): Snapshot {
         skillCount: 2,
         claudeCount: 2,
         codexCount: 1,
+        museCount: 1,
         installedAt: '2026-08-11T09:00:00Z',
         commit: '1234567890abcdef',
         canUpdate: true,
@@ -53,6 +55,7 @@ export function fixtureSnapshot(): Snapshot {
         skillCount: 1,
         claudeCount: 1,
         codexCount: 1,
+        museCount: 1,
         installedAt: '2026-08-11T09:00:00Z',
         canUpdate: false,
         updateMode: 'Linked folder',
@@ -64,6 +67,7 @@ export function fixtureSnapshot(): Snapshot {
       readOnlySkills: 0,
       claude: counts(1, 0),
       codex: counts(1, 1),
+      muse: counts(0, 1),
       conflictCells: 0,
     },
     conflicts: [],
@@ -125,11 +129,12 @@ function skillSetFixture() {
     members: [
       {
         name: 'alpha-skill', description: 'Alpha automation skill', group: 'local', source: 'local', available: true,
-        claude: setMemberCell('claude', 'ON'), codex: setMemberCell('codex', 'OFF'),
+        claude: setMemberCell('claude', 'ON'), codex: setMemberCell('codex', 'OFF'), muse: setMemberCell('muse', 'OFF'),
       },
     ],
     claude: setSummary('claude', 'enabled', 1, 1, 0),
     codex: setSummary('codex', 'disabled', 1, 0, 1),
+    muse: setSummary('muse', 'disabled', 1, 0, 1),
     unavailable: 0,
     pending: 0,
     createdAt: '2026-08-11T09:00:00Z',
@@ -151,6 +156,7 @@ function candidate(name: string) {
     relativePath: `skills/${name}`,
     claude: { tool: 'claude', status: 'available', message: '' },
     codex: { tool: 'codex', status: 'available', message: '' },
+    muse: { tool: 'muse', status: 'available', message: '' },
   }
 }
 
@@ -158,6 +164,7 @@ function budgetReports(pending: Array<{ tool: string }> = []) {
   return new contextbudget.Reports({
     claude: budgetReport('claude', 'Claude default', 640, 2000, pending.filter((change) => change.tool === 'claude').length),
     codex: budgetReport('codex', 'gpt-5.6-sol', 930, 5440, pending.filter((change) => change.tool === 'codex').length),
+    muse: budgetReport('muse', 'Muse default', 640, 2000, pending.filter((change) => change.tool === 'muse').length),
   })
 }
 

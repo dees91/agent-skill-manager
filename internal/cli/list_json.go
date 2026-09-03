@@ -26,6 +26,7 @@ type listJSONSkill struct {
 type listJSONTools struct {
 	Claude listJSONCell `json:"claude"`
 	Codex  listJSONCell `json:"codex"`
+	Muse   listJSONCell `json:"muse"`
 }
 
 type listJSONCell struct {
@@ -50,7 +51,7 @@ func parseListJSONArgs(args []string) (listJSONOptions, error) {
 			jsonSeen = true
 		case "--available-for":
 			if options.AvailableFor != nil || index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
-				return listJSONOptions{}, fmt.Errorf("list --json requires one --available-for <claude|codex>")
+				return listJSONOptions{}, fmt.Errorf("list --json requires one --available-for <claude|codex|muse>")
 			}
 			tool, ok := model.ParseTool(args[index+1])
 			if !ok {
@@ -107,6 +108,7 @@ func listJSONSkillFromRow(row model.SkillRow) listJSONSkill {
 		Tools: listJSONTools{
 			Claude: listCellJSON(row.Claude),
 			Codex:  listCellJSON(row.Codex),
+			Muse:   listCellJSON(row.Muse),
 		},
 	}
 }
@@ -119,6 +121,8 @@ func listJSONRowMatches(row model.SkillRow, options listJSONOptions) bool {
 			cell = row.Claude
 		case model.ToolCodex:
 			cell = row.Codex
+		case model.ToolMuse:
+			cell = row.Muse
 		}
 		if cell == nil || cell.ReadOnly || cell.State != model.SkillStateOff || !cell.Toggleable() {
 			return false

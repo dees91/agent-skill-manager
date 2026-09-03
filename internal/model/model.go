@@ -6,6 +6,7 @@ type Tool string
 const (
 	ToolClaude Tool = "claude"
 	ToolCodex  Tool = "codex"
+	ToolMuse   Tool = "muse"
 )
 
 func (t Tool) String() string {
@@ -19,6 +20,8 @@ func ParseTool(value string) (Tool, bool) {
 		return ToolClaude, true
 	case ToolCodex:
 		return ToolCodex, true
+	case ToolMuse:
+		return ToolMuse, true
 	default:
 		return "", false
 	}
@@ -26,7 +29,7 @@ func ParseTool(value string) (Tool, bool) {
 
 // Tools returns the deterministic order used for tool-specific operations.
 func Tools() []Tool {
-	return []Tool{ToolClaude, ToolCodex}
+	return []Tool{ToolClaude, ToolCodex, ToolMuse}
 }
 
 // SkillState represents the state shown for one tool-specific skill cell.
@@ -136,7 +139,7 @@ func (s ToolSkill) Toggleable() bool {
 	return !s.ReadOnly && s.State != SkillStateReadOnly && s.State != SkillStateMissing
 }
 
-// SkillRow groups the Claude and Codex cells for one skill name.
+// SkillRow groups the Claude, Codex, and Muse cells for one skill name.
 type SkillRow struct {
 	Name        string
 	Description string
@@ -144,6 +147,7 @@ type SkillRow struct {
 	Group       GroupLabel
 	Claude      *ToolSkill
 	Codex       *ToolSkill
+	Muse        *ToolSkill
 }
 
 // PlannedOperation is produced by planners and consumed by CLI/TUI executors.
@@ -173,6 +177,7 @@ type GroupSummary struct {
 	Rows       int
 	Claude     ToolStateCounts
 	Codex      ToolStateCounts
+	Muse       ToolStateCounts
 	Sources    []SourceLabel
 	SourceText string
 }

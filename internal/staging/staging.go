@@ -168,6 +168,8 @@ func SkillForTool(row model.SkillRow, tool model.Tool) *model.ToolSkill {
 		return row.Claude
 	case model.ToolCodex:
 		return row.Codex
+	case model.ToolMuse:
+		return row.Muse
 	default:
 		return nil
 	}

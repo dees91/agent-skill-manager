@@ -8,6 +8,7 @@ import (
 )
 
 func TestForHomeDerivesMVPPaths(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
 	home := filepath.Join(string(filepath.Separator), "tmp", "skill-manager-home")
 
 	got := ForHome(home)
@@ -15,6 +16,7 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	want := map[string]string{
 		"ClaudeUserSkills":  filepath.Join(home, ".claude", "skills"),
 		"CodexUserSkills":   filepath.Join(home, ".agents", "skills"),
+		"MuseUserSkills":    filepath.Join(home, ".config", "muse", "skills"),
 		"CodexSystemSkills": filepath.Join(home, ".codex", "skills", ".system"),
 		"ClaudePluginCache": filepath.Join(home, ".claude", "plugins", "cache"),
 		"AgentsSkillLock":   filepath.Join(home, ".agents", ".skill-lock.json"),
@@ -30,6 +32,7 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 		"DisabledDir":       filepath.Join(home, ".skill-manager", "disabled"),
 		"ClaudeDisabledDir": filepath.Join(home, ".skill-manager", "disabled", "claude"),
 		"CodexDisabledDir":  filepath.Join(home, ".skill-manager", "disabled", "codex"),
+		"MuseDisabledDir":   filepath.Join(home, ".skill-manager", "disabled", "muse"),
 		"ReposDir":          filepath.Join(home, ".skill-manager", "repos"),
 		"TrashDir":          filepath.Join(home, ".skill-manager", "trash"),
 	}
@@ -42,6 +45,9 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	}
 	if got.CodexUserSkills != want["CodexUserSkills"] {
 		t.Fatalf("CodexUserSkills = %q, want %q", got.CodexUserSkills, want["CodexUserSkills"])
+	}
+	if got.MuseUserSkills != want["MuseUserSkills"] {
+		t.Fatalf("MuseUserSkills = %q, want %q", got.MuseUserSkills, want["MuseUserSkills"])
 	}
 	if got.CodexSystemSkills != want["CodexSystemSkills"] {
 		t.Fatalf("CodexSystemSkills = %q, want %q", got.CodexSystemSkills, want["CodexSystemSkills"])
@@ -88,6 +94,9 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	if got.CodexDisabledDir != want["CodexDisabledDir"] {
 		t.Fatalf("CodexDisabledDir = %q, want %q", got.CodexDisabledDir, want["CodexDisabledDir"])
 	}
+	if got.MuseDisabledDir != want["MuseDisabledDir"] {
+		t.Fatalf("MuseDisabledDir = %q, want %q", got.MuseDisabledDir, want["MuseDisabledDir"])
+	}
 	if got.ReposDir != want["ReposDir"] {
 		t.Fatalf("ReposDir = %q, want %q", got.ReposDir, want["ReposDir"])
 	}
@@ -97,6 +106,7 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 }
 
 func TestToolSpecificPathHelpers(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
 	p := ForHome(filepath.Join(string(filepath.Separator), "tmp", "skill-manager-home"))
 
 	if got, ok := p.UserSkillsDirFor(model.ToolClaude); !ok || got != p.ClaudeUserSkills {
@@ -104,6 +114,9 @@ func TestToolSpecificPathHelpers(t *testing.T) {
 	}
 	if got, ok := p.UserSkillsDirFor(model.ToolCodex); !ok || got != p.CodexUserSkills {
 		t.Fatalf("UserSkillsDirFor(codex) = %q, %v; want %q, true", got, ok, p.CodexUserSkills)
+	}
+	if got, ok := p.UserSkillsDirFor(model.ToolMuse); !ok || got != p.MuseUserSkills {
+		t.Fatalf("UserSkillsDirFor(muse) = %q, %v; want %q, true", got, ok, p.MuseUserSkills)
 	}
 	if got, ok := p.UserSkillsDirFor(model.Tool("bad")); ok || got != "" {
 		t.Fatalf("UserSkillsDirFor(bad) = %q, %v; want empty, false", got, ok)
@@ -115,7 +128,27 @@ func TestToolSpecificPathHelpers(t *testing.T) {
 	if got, ok := p.DisabledDirFor(model.ToolCodex); !ok || got != p.CodexDisabledDir {
 		t.Fatalf("DisabledDirFor(codex) = %q, %v; want %q, true", got, ok, p.CodexDisabledDir)
 	}
+	if got, ok := p.DisabledDirFor(model.ToolMuse); !ok || got != p.MuseDisabledDir {
+		t.Fatalf("DisabledDirFor(muse) = %q, %v; want %q, true", got, ok, p.MuseDisabledDir)
+	}
 	if got, ok := p.DisabledDirFor(model.Tool("bad")); ok || got != "" {
 		t.Fatalf("DisabledDirFor(bad) = %q, %v; want empty, false", got, ok)
+	}
+}
+
+func TestForHomeHonorsXDGConfigHomeForMuse(t *testing.T) {
+	home := filepath.Join(string(filepath.Separator), "tmp", "skill-manager-home")
+	configHome := filepath.Join(string(filepath.Separator), "tmp", "xdg-config")
+
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	got := ForHome(home)
+	if want := filepath.Join(configHome, "muse", "skills"); got.MuseUserSkills != want {
+		t.Fatalf("MuseUserSkills = %q, want %q", got.MuseUserSkills, want)
+	}
+
+	t.Setenv("XDG_CONFIG_HOME", "relative/path")
+	got = ForHome(home)
+	if want := filepath.Join(home, ".config", "muse", "skills"); got.MuseUserSkills != want {
+		t.Fatalf("MuseUserSkills with relative XDG = %q, want %q", got.MuseUserSkills, want)
 	}
 }

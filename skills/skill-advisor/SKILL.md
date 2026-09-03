@@ -1,15 +1,15 @@
 ---
 name: skill-advisor
-description: Inspect Skill Manager's locally installed Claude Code or Codex skills before non-trivial work, report the smallest clearly relevant set already active, temporarily activate relevant inactive skills, load all selected instructions, and clean up any receipt it creates before finishing. Use at the start of implementation, debugging, research, media, document, or other multi-step tasks where a specialized installed skill could materially improve the result; also use when the user asks which skills to enable, invokes $skill-advisor, requests advisor status, or asks to clean up an advisor receipt. Do not use for trivial conversation or one-step factual answers.
+description: Inspect Skill Manager's locally installed Claude Code, Codex, or Muse skills before non-trivial work, report the smallest clearly relevant set already active, temporarily activate relevant inactive skills, load all selected instructions, and clean up any receipt it creates before finishing. Use at the start of implementation, debugging, research, media, document, or other multi-step tasks where a specialized installed skill could materially improve the result; also use when the user asks which skills to enable, invokes $skill-advisor, requests advisor status, or asks to clean up an advisor receipt. Do not use for trivial conversation or one-step factual answers.
 ---
 
 # Skill Advisor
 
-Identify only specialized local skills that materially improve the current task. Report which selected skills are already active and which need activation. Keep every activation reversible and scoped to the current Claude Code or Codex host.
+Identify only specialized local skills that materially improve the current task. Report which selected skills are already active and which need activation. Keep every activation reversible and scoped to the current Claude Code, Codex, or Muse host.
 
 ## Check compatibility
 
-1. Identify the current host as `claude` for Claude Code or `codex` for Codex. Do not infer the host from repository files or a tool name mentioned by the user. Stop without mutation if the host is ambiguous.
+1. Identify the current host as `claude` for Claude Code, `codex` for Codex, or `muse` for Muse. Do not infer the host from repository files or a tool name mentioned by the user. Stop without mutation if the host is ambiguous.
 2. Run `skill-manager advisor status --tool <host> --json`.
 3. Require `apiVersion` to equal `1` and `capabilities` to contain `ranked_search_v1`. If the command is unavailable, invalid, or incompatible, ask the user to install or update Skill Manager and continue without activating skills. Do not fall back to `list --json --query`.
 
@@ -20,7 +20,7 @@ Identify only specialized local skills that materially improve the current task.
 
    ```bash
    skill-manager advisor search \
-     --tool <claude|codex> \
+     --tool <claude|codex|muse> \
      --query 'video remotion ffmpeg animation rendering' \
      --limit 20 \
      --json
@@ -34,7 +34,7 @@ Identify only specialized local skills that materially improve the current task.
    - **Already active:** `state: "on"` and `toggleable: true`.
    - **Needs activation:** `state: "off"` and `toggleable: true`.
 6. Exclude `skill-advisor`, conflicts, read-only entries, missing cells, and skills with merely speculative relevance.
-7. Select the smallest useful set across both categories, never more than five skills total. Prefer no selection over a weak match. Never select a whole group or both hosts.
+7. Select the smallest useful set across both categories, never more than five skills total. Prefer no selection over a weak match. Never select a whole group or skills for more than one host.
 8. Before continuing, report both categories concisely, using `none` when a category is empty. If recommending skills is the whole task, put this report in the final response instead of a progress update.
 
 ## Activate and apply
@@ -43,7 +43,7 @@ Run one command with every selected name, including skills already active. The A
 
 ```bash
 skill-manager advisor activate \
-  --tool <claude|codex> \
+  --tool <claude|codex|muse> \
   --skill <name> [--skill <name> ...] \
   --json
 ```
@@ -56,6 +56,7 @@ After the command succeeds:
 2. Read every selected skill's complete active instruction file before continuing, whether it was already ON or newly activated:
    - Claude Code: `~/.claude/skills/<name>/SKILL.md`
    - Codex: `~/.agents/skills/<name>/SKILL.md`
+   - Muse: `$XDG_CONFIG_HOME/muse/skills/<name>/SKILL.md`, or `~/.config/muse/skills/<name>/SKILL.md` when `XDG_CONFIG_HOME` is unset
 3. Follow each applicable workflow while preserving higher-priority user, repository, and safety instructions.
 
 If activation fails but the structured error contains a `receiptId`, retain it because it may own a completed partial activation. Attempt cleanup of that exact receipt before retrying activation or responding.

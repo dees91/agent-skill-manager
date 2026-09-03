@@ -140,7 +140,7 @@ func parseAdvisorSearchArgs(args []string) (advisorSearchOptions, error) {
 		switch args[index] {
 		case "--tool":
 			if toolSeen || index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
-				return advisorSearchOptions{}, fmt.Errorf("advisor search requires one --tool <claude|codex>")
+				return advisorSearchOptions{}, fmt.Errorf("advisor search requires one --tool <claude|codex|muse>")
 			}
 			tool, ok := model.ParseTool(args[index+1])
 			if !ok {
@@ -177,7 +177,7 @@ func parseAdvisorSearchArgs(args []string) (advisorSearchOptions, error) {
 		}
 	}
 	if !toolSeen {
-		return advisorSearchOptions{}, fmt.Errorf("advisor search requires --tool <claude|codex>")
+		return advisorSearchOptions{}, fmt.Errorf("advisor search requires --tool <claude|codex|muse>")
 	}
 	if !querySeen {
 		return advisorSearchOptions{}, fmt.Errorf("advisor search requires --query <text>")
@@ -192,7 +192,7 @@ func parseAdvisorActivateArgs(args []string) (advisorActivateOptions, error) {
 		switch args[index] {
 		case "--tool":
 			if toolSeen || index+1 >= len(args) {
-				return advisorActivateOptions{}, fmt.Errorf("advisor activate requires one --tool <claude|codex>")
+				return advisorActivateOptions{}, fmt.Errorf("advisor activate requires one --tool <claude|codex|muse>")
 			}
 			tool, ok := model.ParseTool(args[index+1])
 			if !ok {
@@ -222,7 +222,7 @@ func parseAdvisorActivateArgs(args []string) (advisorActivateOptions, error) {
 		}
 	}
 	if !toolSeen {
-		return advisorActivateOptions{}, fmt.Errorf("advisor activate requires --tool <claude|codex>")
+		return advisorActivateOptions{}, fmt.Errorf("advisor activate requires --tool <claude|codex|muse>")
 	}
 	if len(options.SkillNames) == 0 {
 		return advisorActivateOptions{}, fmt.Errorf("advisor activate requires at least one --skill")
@@ -349,10 +349,16 @@ func printAdvisorSearch(stdout io.Writer, tool model.Tool, rows []model.SkillRow
 }
 
 func searchResultCell(row model.SkillRow, tool model.Tool) *model.ToolSkill {
-	if tool == model.ToolClaude {
+	switch tool {
+	case model.ToolClaude:
 		return row.Claude
+	case model.ToolCodex:
+		return row.Codex
+	case model.ToolMuse:
+		return row.Muse
+	default:
+		return nil
 	}
-	return row.Codex
 }
 
 func publicAdvisorSearchError(err error, jsonOutput bool) error {

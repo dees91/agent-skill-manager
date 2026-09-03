@@ -147,6 +147,7 @@ func validateLocalSourceBoundaries(p paths.Paths, sourcePath string) error {
 		p.StateDir,
 		p.ClaudeUserSkills,
 		p.CodexUserSkills,
+		p.MuseUserSkills,
 		p.CodexSystemSkills,
 		p.ClaudePluginCache,
 	}

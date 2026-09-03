@@ -38,7 +38,7 @@ interface SourcesViewProps {
 
 type InstallMode = 'git' | 'local'
 type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | null
-type InstallTool = 'claude' | 'codex'
+type InstallTool = 'claude' | 'codex' | 'muse'
 type ColumnSelectionState = 'ON' | 'OFF' | 'MIXED' | 'N/A'
 
 export default function SourcesView(props: SourcesViewProps) {
@@ -142,7 +142,7 @@ export default function SourcesView(props: SourcesViewProps) {
                 <tr key={source.sourceId}>
                   <td><div className="source-identity"><span>{source.kind === 'git' ? <GitBranch size={15} /> : <HardDrive size={15} />}</span><div><strong>{source.group}</strong><code>{source.location}</code></div></div></td>
                   <td><strong className="source-count">{source.skillCount}</strong></td>
-                  <td><div className="target-counts"><span>Claude {source.claudeCount}</span><span>Codex {source.codexCount}</span></div></td>
+                  <td><div className="target-counts"><span>Claude {source.claudeCount}</span><span>Codex {source.codexCount}</span><span>Muse {source.museCount}</span></div></td>
                   <td><div className="source-update-mode"><span className={source.canUpdate ? 'status-dot git' : 'status-dot'} /><div><strong>{source.updateMode}</strong><small>{source.updateHint}</small>{source.commit && <code>Commit {shortCommit(source.commit)}</code>}</div></div></td>
                   <td><div className="source-row-actions">
                     {source.canUpdate && <button aria-label={`Update ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('update-one', source)}><RefreshCw size={12} /> Update</button>}
@@ -189,7 +189,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       if (next.cancelled) return
       setDraft(next)
       setReview(null)
-      setSelections(new Set(next.candidates.flatMap((candidate) => [candidate.claude, candidate.codex].filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
+      setSelections(new Set(next.candidates.flatMap((candidate) => [candidate.claude, candidate.codex, candidate.muse].filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
       if (next.cloned) onAnnounce('Repository cloned for inspection. The checkout will be retained if you cancel.')
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -270,7 +270,7 @@ function InstallMatrix({ draft, selections, busy, onToggle, onSetToolSelection }
   const visible = useMemo(() => draft.candidates.filter((candidate) => candidate.name.toLowerCase().includes(query.toLowerCase()) || candidate.relativePath.toLowerCase().includes(query.toLowerCase())), [draft, query])
   return <div className="install-matrix-wrap">
     <label className="search-field install-search"><Search size={14} /><input aria-label="Filter discovered skills" value={query} disabled={busy} onChange={(event) => setQuery(event.target.value)} placeholder="Filter discovered skills…" /></label>
-    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{(['claude', 'codex'] as const).map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong><code>{candidate.relativePath}</code></td>{(['claude', 'codex'] as const).map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict'} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{cell.status.replace('-', ' ')}</small></label></td> })}</tr>)}</tbody></table></div>
+    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{(['claude', 'codex', 'muse'] as const).map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong><code>{candidate.relativePath}</code></td>{(['claude', 'codex', 'muse'] as const).map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict'} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{cell.status.replace('-', ' ')}</small></label></td> })}</tr>)}</tbody></table></div>
   </div>
 }
 
@@ -284,7 +284,7 @@ function InstallColumnHeader({ tool, draft, selections, busy, onSetToolSelection
   const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict')
   const selectedCount = applicable.filter((candidate) => selections.has(key(candidate.name, tool))).length
   const state: ColumnSelectionState = applicable.length === 0 ? 'N/A' : selectedCount === 0 ? 'OFF' : selectedCount === applicable.length ? 'ON' : 'MIXED'
-  const name = tool === 'claude' ? 'Claude' : 'Codex'
+  const name = tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
   const count = applicable.length === 0 ? 'no available targets' : `${selectedCount} of ${applicable.length} selected`
   const selectAll = state !== 'ON'
   return <th scope="col">

@@ -28,6 +28,8 @@ const (
 	claudeBudgetFraction          = 0.01
 	claudeUnknownContextWindow    = 200000
 	claudeDefaultDescriptionLimit = 1536
+	museBudgetFraction            = 0.01
+	museUnknownContextWindow      = 200000
 	unboundedCodexContextWindow   = 100000000
 )
 
@@ -66,9 +68,9 @@ func (a *Analyzer) analyze(rows []model.SkillRow, measure bool) Result {
 		report        ToolReport
 		contributions map[CellKey]contribution
 	}
-	var claude, codex providerResult
+	var claude, codex, muse providerResult
 	var wait sync.WaitGroup
-	wait.Add(2)
+	wait.Add(3)
 	go func() {
 		defer wait.Done()
 		claude.report, claude.contributions = a.analyzeClaude(rows, measure)
@@ -77,12 +79,19 @@ func (a *Analyzer) analyze(rows []model.SkillRow, measure bool) Result {
 		defer wait.Done()
 		codex.report, codex.contributions = a.analyzeCodex(rows, measure)
 	}()
+	go func() {
+		defer wait.Done()
+		muse.report, muse.contributions = a.analyzeMuse(rows)
+	}()
 	wait.Wait()
-	result.Reports = Reports{Claude: claude.report, Codex: codex.report}
+	result.Reports = Reports{Claude: claude.report, Codex: codex.report, Muse: muse.report}
 	for key, item := range claude.contributions {
 		result.contributions[key] = item
 	}
 	for key, item := range codex.contributions {
+		result.contributions[key] = item
+	}
+	for key, item := range muse.contributions {
 		result.contributions[key] = item
 	}
 	return result
@@ -352,6 +361,61 @@ func (a *Analyzer) codexFilesystemEntries(rows []model.SkillRow) ([]catalogEntry
 }
 
 func codexLine(cell *model.ToolSkill) string {
+	name := strings.TrimSpace(cell.DisplayName)
+	if name == "" {
+		name = cell.Name
+	}
+	skillFile := cell.SkillFilePath
+	if cell.State != model.SkillStateOn && cell.ActivePath != "" {
+		skillFile = filepath.Join(cell.ActivePath, "SKILL.md")
+	}
+	return fmt.Sprintf("- %s: %s (file: %s)", name, strings.TrimSpace(cell.Description), skillFile)
+}
+
+// analyzeMuse builds a labeled filesystem estimate for the Muse global
+// catalog. Muse exposes no supported read-only diagnostic in this version,
+// so the report is always an estimate and never launches a subprocess.
+func (a *Analyzer) analyzeMuse(rows []model.SkillRow) (ToolReport, map[CellKey]contribution) {
+	budgetCharacters := int(float64(museUnknownContextWindow) * museBudgetFraction * charactersPerToken)
+	report := ToolReport{
+		Tool:                 model.ToolMuse.String(),
+		Model:                "Muse default",
+		ContextWindowTokens:  museUnknownContextWindow,
+		ContextWindowAssumed: true,
+		BudgetFraction:       museBudgetFraction,
+		BudgetCharacters:     budgetCharacters,
+		BudgetTokens:         tokensForCharacters(budgetCharacters),
+		BudgetLabel:          "1% of assumed 200,000-token context",
+		Accuracy:             AccuracyEstimated,
+		Coverage:             "Managed Muse user skills; no provider diagnostic is available.",
+		Message:              "Filesystem estimate. Muse exposes no supported catalog diagnostic in this version.",
+	}
+	entries := make([]catalogEntry, 0)
+	contributions := make(map[CellKey]contribution)
+	for _, row := range rows {
+		cell := row.Muse
+		if cell == nil || cell.ReadOnly {
+			continue
+		}
+		line := museLine(cell)
+		key := CellKey{Tool: model.ToolMuse, SkillName: cell.Name}
+		contributions[key] = contribution{Characters: utf8.RuneCountInString(line) + 1, Included: cell.State == model.SkillStateOn}
+		if cell.State == model.SkillStateOn {
+			entries = append(entries, parseCodexEntry(line))
+		}
+	}
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
+	report.Current = Usage{
+		SkillCount:          len(entries),
+		RequestedCharacters: catalogCharacters(entries),
+		RenderedCharacters:  min(catalogCharacters(entries), report.BudgetCharacters),
+	}
+	finalizeUsage(&report.Current, report.BudgetCharacters)
+	report.Projected = report.Current
+	return report, contributions
+}
+
+func museLine(cell *model.ToolSkill) string {
 	name := strings.TrimSpace(cell.DisplayName)
 	if name == "" {
 		name = cell.Name

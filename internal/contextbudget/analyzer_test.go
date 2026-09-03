@@ -19,11 +19,12 @@ func TestAnalyzeFilesystemFallbackAndClaudeVisibilityRules(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	claudePath := writeTestSkill(t, filepath.Join(p.ClaudeUserSkills, "alpha"), "Alpha helper", "")
 	codexPath := writeTestSkill(t, filepath.Join(p.CodexUserSkills, "alpha"), "Alpha helper", "")
+	musePath := writeTestSkill(t, filepath.Join(p.MuseUserSkills, "alpha"), "Alpha helper", "")
 	writeTestSkill(t, filepath.Join(p.CodexSystemSkills, "system"), "System helper", "")
 	hiddenPath := writeTestSkill(t, filepath.Join(p.ClaudeUserSkills, "manual-only"), "Manual helper", "disable-model-invocation: true\n")
 
 	rows := []model.SkillRow{
-		{Name: "alpha", Claude: testCell(model.ToolClaude, "alpha", claudePath, model.SkillStateOn), Codex: testCell(model.ToolCodex, "alpha", codexPath, model.SkillStateOn)},
+		{Name: "alpha", Claude: testCell(model.ToolClaude, "alpha", claudePath, model.SkillStateOn), Codex: testCell(model.ToolCodex, "alpha", codexPath, model.SkillStateOn), Muse: testCell(model.ToolMuse, "alpha", musePath, model.SkillStateOn)},
 		{Name: "manual-only", Claude: testCell(model.ToolClaude, "manual-only", hiddenPath, model.SkillStateOn)},
 	}
 	reports := New(p).Estimate(rows).Reports
@@ -34,14 +35,23 @@ func TestAnalyzeFilesystemFallbackAndClaudeVisibilityRules(t *testing.T) {
 	if reports.Codex.Current.SkillCount != 2 {
 		t.Fatalf("Codex skill count = %d, want managed + system", reports.Codex.Current.SkillCount)
 	}
+	if reports.Muse.Current.SkillCount != 1 {
+		t.Fatalf("Muse skill count = %d, want 1", reports.Muse.Current.SkillCount)
+	}
 	if reports.Claude.BudgetTokens != 2000 || reports.Claude.BudgetFraction != .01 {
 		t.Fatalf("Claude budget = %#v", reports.Claude)
 	}
 	if reports.Codex.BudgetTokens != 2000 || reports.Codex.BudgetFraction != .02 {
 		t.Fatalf("Codex fallback budget = %#v", reports.Codex)
 	}
+	if reports.Muse.BudgetTokens != 2000 || reports.Muse.BudgetFraction != .01 {
+		t.Fatalf("Muse fallback budget = %#v", reports.Muse)
+	}
 	if reports.Claude.Accuracy != AccuracyPartial || reports.Codex.Accuracy != AccuracyPartial {
 		t.Fatalf("accuracy = Claude %q, Codex %q", reports.Claude.Accuracy, reports.Codex.Accuracy)
+	}
+	if reports.Muse.Accuracy != AccuracyEstimated || !reports.Muse.ContextWindowAssumed {
+		t.Fatalf("Muse report = %#v, want labeled estimate", reports.Muse)
 	}
 }
 
@@ -88,16 +98,18 @@ func TestProjectPendingUpdatesEachToolIndependently(t *testing.T) {
 	finalizeUsage(&base.Current, base.BudgetCharacters)
 	base.Projected = base.Current
 	result := Result{
-		Reports: Reports{Claude: base, Codex: base},
+		Reports: Reports{Claude: base, Codex: base, Muse: base},
 		contributions: map[CellKey]contribution{
 			{Tool: model.ToolClaude, SkillName: "on"}: {Characters: 40, Included: true},
 			{Tool: model.ToolCodex, SkillName: "off"}: {Characters: 80, Included: false},
+			{Tool: model.ToolMuse, SkillName: "on"}:   {Characters: 40, Included: true},
 		},
 	}
 
 	projected := result.Project(map[CellKey]model.OperationKind{
 		{Tool: model.ToolClaude, SkillName: "on"}: model.OperationDisable,
 		{Tool: model.ToolCodex, SkillName: "off"}: model.OperationEnable,
+		{Tool: model.ToolMuse, SkillName: "on"}:   model.OperationDisable,
 	})
 
 	if projected.Claude.Projected.RequestedCharacters != 160 || projected.Claude.Projected.SkillCount != 1 || projected.Claude.Projected.UsedPercent != 40 {
@@ -105,6 +117,9 @@ func TestProjectPendingUpdatesEachToolIndependently(t *testing.T) {
 	}
 	if projected.Codex.Projected.RequestedCharacters != 280 || projected.Codex.Projected.SkillCount != 3 || projected.Codex.Projected.UsedPercent != 70 {
 		t.Fatalf("Codex projection = %#v", projected.Codex.Projected)
+	}
+	if projected.Muse.Projected.RequestedCharacters != 160 || projected.Muse.Projected.SkillCount != 1 || projected.Muse.Projected.UsedPercent != 40 {
+		t.Fatalf("Muse projection = %#v", projected.Muse.Projected)
 	}
 }
 

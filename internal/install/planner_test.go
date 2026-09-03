@@ -20,8 +20,10 @@ func TestParseToolTarget(t *testing.T) {
 	}{
 		{value: "", want: model.Tools(), ok: true},
 		{value: "both", want: model.Tools(), ok: true},
+		{value: "all", want: model.Tools(), ok: true},
 		{value: "claude", want: []model.Tool{model.ToolClaude}, ok: true},
 		{value: "codex", want: []model.Tool{model.ToolCodex}, ok: true},
+		{value: "muse", want: []model.Tool{model.ToolMuse}, ok: true},
 		{value: "bad", ok: false},
 	}
 
@@ -56,8 +58,10 @@ func TestPlanInstallDefaultsToBothToolsAndAllSkills(t *testing.T) {
 	want := []LinkPlan{
 		{Skill: skills[0], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "alpha")},
 		{Skill: skills[0], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "alpha")},
+		{Skill: skills[0], Tool: model.ToolMuse, TargetPath: filepath.Join(p.MuseUserSkills, "alpha")},
 		{Skill: skills[1], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "beta")},
 		{Skill: skills[1], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "beta")},
+		{Skill: skills[1], Tool: model.ToolMuse, TargetPath: filepath.Join(p.MuseUserSkills, "beta")},
 	}
 	assertLinkPlans(t, plan.Links, want)
 	if len(plan.AlreadyInstalled) != 0 {
