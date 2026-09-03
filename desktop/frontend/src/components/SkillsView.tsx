@@ -16,9 +16,9 @@ import {
   Star,
   X,
 } from 'lucide-react'
-import { favoriteEligible, type SkillCell, type SkillRow, type Snapshot } from '../api'
+import { MANAGED_TOOLS, favoriteEligible, toolDisplayName, toolFullName, type ManagedTool, type SkillCell, type SkillRow, type Snapshot } from '../api'
 
-export type SkillToolScope = 'all' | 'claude' | 'codex' | 'muse'
+export type SkillToolScope = 'all' | ManagedTool
 type SkillStatusScope = 'all' | 'active' | 'available' | 'favorites'
 type Placement = 'attention' | 'active' | 'available' | 'readonly' | 'unavailable'
 
@@ -118,7 +118,7 @@ export default function SkillsView(props: SkillsViewProps) {
         <div className="skills-filter-primary">
           <label className="search-field" htmlFor="skill-search"><Search size={16} /><input id="skill-search" aria-label="Search name, description, group, or source" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills or sources…" /><kbd>⌘F</kbd></label>
           <SegmentedFilter label="Skill availability" value={statusScope} options={[["all", `All ${matchingRows.length}`], ["active", `Active ${matchingRows.filter((row) => placementFor(row, tools) === 'active').length}`], ["available", `Available ${matchingRows.filter((row) => placementFor(row, tools) === 'available').length}`], ["favorites", `Favorites ${favoriteRows.length}`]]} onChange={(value) => setStatusScope(value as SkillStatusScope)} />
-          <SegmentedFilter label="Tool scope" value={toolScope} options={[["all", "All tools"], ["claude", "Claude"], ["codex", "Codex"], ["muse", "Muse"]]} onChange={(value) => setToolScope(value as SkillToolScope)} />
+          <SegmentedFilter label="Tool scope" value={toolScope} options={[["all", "All tools"], ...MANAGED_TOOLS.map((tool) => [tool, toolDisplayName(tool)] as [string, string])]} onChange={(value) => setToolScope(value as SkillToolScope)} />
           <button className={`secondary-button filters-button ${filtersOpen ? 'active' : ''}`} aria-expanded={filtersOpen} aria-controls="advanced-skill-filters" onClick={() => setFiltersOpen((open) => !open)}>
             <Filter size={14} /> Filters {advancedFilterCount > 0 && <span>{advancedFilterCount}</span>}<ChevronDown size={13} />
           </button>
@@ -139,7 +139,7 @@ export default function SkillsView(props: SkillsViewProps) {
 
       <div className="skills-results-summary">
         <span><strong>{visibleCount}</strong> of {snapshot.rows.length} skills shown</span>
-        <span>Bulk scope: <strong>{toolScope === 'all' ? 'Claude + Codex + Muse' : titleCase(toolScope)}</strong></span>
+        <span>Bulk scope: <strong>{toolScope === 'all' ? MANAGED_TOOLS.map(toolDisplayName).join(' + ') : toolDisplayName(toolScope)}</strong></span>
       </div>
 
       <div className="skills-workspace">
@@ -222,7 +222,7 @@ function GroupedSkills(props: {
   allRows: SkillRow[]
   selectedRow: SkillRow | null
   busy: boolean
-  tools: string[]
+  tools: ManagedTool[]
   forceExpanded: boolean
   expandedGroups: string[]
   readOnly?: boolean
@@ -269,7 +269,7 @@ function SkillsTable(props: {
   rows: SkillRow[]
   selectedRow: SkillRow | null
   busy: boolean
-  tools: string[]
+  tools: ManagedTool[]
   showGroup?: boolean
   favoritesUnavailable: boolean
   onSelect: (name: string) => void
@@ -280,15 +280,13 @@ function SkillsTable(props: {
   return (
     <div className="skills-table-wrap">
       <table className="skills-table">
-        <thead><tr><th>Skill</th><th>Claude</th><th>Codex</th><th>Muse</th><th><span className="sr-only">Actions</span></th></tr></thead>
+        <thead><tr><th>Skill</th>{MANAGED_TOOLS.map((tool) => <th key={tool}>{toolDisplayName(tool)}</th>)}<th><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{props.rows.map((row) => {
           const targets = toggleableCellCount([row], props.tools)
           return (
             <tr key={row.name} className={props.selectedRow?.name === row.name ? 'selected' : ''} tabIndex={0} onClick={() => props.onSelect(row.name)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); props.onSelect(row.name) } }}>
               <td><div className="skill-name"><span className="skill-glyph">{initials(row.name)}</span><div><strong>{row.name}</strong><small>{row.description || 'No description in SKILL.md'}</small>{props.showGroup && <span className="active-group-label"><FolderGit2 size={11} />{row.group}<i>{row.source}</i></span>}</div></div></td>
-              <td><ToolCell cell={row.claude} rowName={row.name} busy={props.busy} onToggle={props.onToggleCell} /></td>
-              <td><ToolCell cell={row.codex} rowName={row.name} busy={props.busy} onToggle={props.onToggleCell} /></td>
-              <td><ToolCell cell={row.muse} rowName={row.name} busy={props.busy} onToggle={props.onToggleCell} /></td>
+              {MANAGED_TOOLS.map((tool) => <td key={tool}><ToolCell cell={row[tool]} rowName={row.name} busy={props.busy} onToggle={props.onToggleCell} /></td>)}
               <td><div className="row-actions">{favoriteEligible(row) && <button className={`icon-button subtle favorite-button ${row.favorite ? 'active' : ''}`} title={row.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-label={`${row.favorite ? 'Remove' : 'Add'} ${row.name} ${row.favorite ? 'from' : 'to'} favorites`} aria-pressed={row.favorite} onClick={(event) => { event.stopPropagation(); props.onSetFavorite(row.name, !row.favorite) }} disabled={props.busy || props.favoritesUnavailable}><Star size={15} fill={row.favorite ? 'currentColor' : 'none'} /></button>}<button className="icon-button subtle" title="Smart-toggle this row in the selected tool scope" aria-label={`Smart-toggle ${row.name}: ${targets} eligible ${targets === 1 ? 'cell' : 'cells'}`} onClick={(event) => { event.stopPropagation(); props.onToggleSkillScope([row.name], props.tools) }} disabled={props.busy || targets === 0}><SlidersHorizontal size={15} /></button></div></td>
             </tr>
           )
@@ -324,7 +322,10 @@ function SelectFilter({ label, value, onChange, options }: { label: string; valu
 }
 
 function DetailsDrawer({ row, onClose, onToggleGroup, onAddToSkillSet, onSetFavorite, favoritesUnavailable, busy, toolScope }: { row: SkillRow; onClose: () => void; onToggleGroup: (group: string) => void; onAddToSkillSet: (name: string) => void; onSetFavorite: (name: string, favorite: boolean) => void; favoritesUnavailable: boolean; busy: boolean; toolScope: SkillToolScope }) {
-  const canSaveToSet = [row.claude, row.codex, row.muse].some((cell) => cell && !cell.readOnly && ['ON', 'OFF'].includes(cell.state))
+  const canSaveToSet = MANAGED_TOOLS.some((tool) => {
+    const cell = row[tool]
+    return Boolean(cell && !cell.readOnly && ['ON', 'OFF'].includes(cell.state))
+  })
   return (
     <aside className="details-drawer" aria-label={`Details for ${row.name}`}>
       <div className="drawer-header"><div><p className="eyebrow">Skill details</p><h2>{row.name}</h2></div><button className="icon-button" onClick={onClose} aria-label="Close skill details"><X size={17} /></button></div>
@@ -332,11 +333,12 @@ function DetailsDrawer({ row, onClose, onToggleGroup, onAddToSkillSet, onSetFavo
       <dl className="details-summary"><div><dt>Group</dt><dd>{row.group}</dd></div><div><dt>Source</dt><dd>{row.source}</dd></div></dl>
       {favoriteEligible(row) && <button className={`secondary-button details-group-action details-favorite-action ${row.favorite ? 'active' : ''}`} onClick={() => onSetFavorite(row.name, !row.favorite)} disabled={busy || favoritesUnavailable}><Star size={15} fill={row.favorite ? 'currentColor' : 'none'} /> {row.favorite ? 'Remove from favorites' : 'Add to favorites'}</button>}
       <button className="secondary-button details-group-action" onClick={() => onAddToSkillSet(row.name)} disabled={busy || !canSaveToSet} title={canSaveToSet ? undefined : 'Only toggleable user skills can be added'}><BookmarkPlus size={15} /> Add to Skill Set…</button>
-      <button className="secondary-button details-group-action" onClick={() => onToggleGroup(row.group)} disabled={busy}><ArrowUpDown size={15} /> Smart-toggle group · {toolScope === 'all' ? 'All tools' : titleCase(toolScope)}</button>
+      <button className="secondary-button details-group-action" onClick={() => onToggleGroup(row.group)} disabled={busy}><ArrowUpDown size={15} /> Smart-toggle group · {toolScope === 'all' ? 'All tools' : toolDisplayName(toolScope)}</button>
       <div className="detail-cells">
-        {row.claude && <CellDetails title="Claude Code" cell={row.claude} />}
-        {row.codex && <CellDetails title="Codex" cell={row.codex} />}
-        {row.muse && <CellDetails title="Muse" cell={row.muse} />}
+        {MANAGED_TOOLS.map((tool) => {
+          const cell = row[tool]
+          return cell ? <CellDetails key={tool} title={toolFullName(tool)} cell={cell} /> : null
+        })}
       </div>
     </aside>
   )
@@ -362,7 +364,7 @@ function Detail({ label, value, mono = false, icon = false }: { label: string; v
   return <div className="detail-line"><span>{label}</span><p className={mono ? 'mono' : ''}>{icon && <Link2 size={12} />}{value || '—'}</p></div>
 }
 
-function placementFor(row: SkillRow, tools: string[]): Placement {
+function placementFor(row: SkillRow, tools: ManagedTool[]): Placement {
   const cells = tools.map((tool) => cellForTool(row, tool)).filter((cell): cell is SkillCell => Boolean(cell))
   if (cells.some((cell) => Boolean(cell.conflict) || cell.state === 'CONFLICT')) return 'attention'
   if (cells.some((cell) => !cell.readOnly && cell.state === 'ON')) return 'active'
@@ -371,7 +373,7 @@ function placementFor(row: SkillRow, tools: string[]): Placement {
   return 'unavailable'
 }
 
-function groupMetrics(rows: SkillRow[], tools: string[]) {
+function groupMetrics(rows: SkillRow[], tools: ManagedTool[]) {
   return {
     active: rows.filter((row) => placementFor(row, tools) === 'active').length,
     available: rows.filter((row) => placementFor(row, tools) === 'available').length,
@@ -380,23 +382,23 @@ function groupMetrics(rows: SkillRow[], tools: string[]) {
   }
 }
 
-function toggleableCellCount(rows: SkillRow[], tools: string[]) {
+function toggleableCellCount(rows: SkillRow[], tools: ManagedTool[]) {
   return rows.reduce((total, row) => total + tools.filter((tool) => {
     const cell = cellForTool(row, tool)
     return Boolean(cell && !cell.readOnly && !cell.conflict && ['ON', 'OFF'].includes(cell.state))
   }).length, 0)
 }
 
-function toolsForScope(scope: SkillToolScope) {
-  return scope === 'all' ? ['claude', 'codex', 'muse'] : [scope]
+function toolsForScope(scope: SkillToolScope): ManagedTool[] {
+  return scope === 'all' ? [...MANAGED_TOOLS] : [scope]
 }
 
-function cellForTool(row: SkillRow, tool: string) {
-  return tool === 'claude' ? row.claude : tool === 'codex' ? row.codex : tool === 'muse' ? row.muse : undefined
+function cellForTool(row: SkillRow, tool: ManagedTool) {
+  return row[tool]
 }
 
 function rowSources(row: SkillRow) {
-  return unique([row.source, row.claude?.source, row.codex?.source, row.muse?.source].filter((value): value is string => Boolean(value)))
+  return unique([row.source, ...MANAGED_TOOLS.map((tool) => row[tool]?.source)].filter((value): value is string => Boolean(value)))
 }
 
 function groupRows(rows: SkillRow[]): [string, SkillRow[]][] {

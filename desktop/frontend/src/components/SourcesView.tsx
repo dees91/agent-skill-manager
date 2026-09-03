@@ -318,8 +318,14 @@ function ReviewSummary({ review }: { review: InstallReview }) {
   </div>
 }
 
+const TOOL_SOURCE_COUNT: Record<ManagedTool, (source: ManagedSource) => number> = {
+  claude: (source) => source.claudeCount,
+  codex: (source) => source.codexCount,
+  muse: (source) => source.museCount,
+}
+
 function toolSourceCount(source: ManagedSource, tool: ManagedTool): number {
-  return tool === 'claude' ? source.claudeCount : tool === 'codex' ? source.codexCount : source.museCount
+  return TOOL_SOURCE_COUNT[tool](source)
 }
 
 function canExtendSources(sources: ManagedSource[]): boolean {

@@ -51,8 +51,17 @@ export type ExtendPreview = gui.ExtendPreview
 export type ExtendPreviewSource = gui.ExtendPreviewSource
 export const MANAGED_TOOLS = ['claude', 'codex', 'muse'] as const
 export type ManagedTool = (typeof MANAGED_TOOLS)[number]
+const TOOL_DISPLAY_NAMES: Record<ManagedTool, string> = { claude: 'Claude', codex: 'Codex', muse: 'Muse' }
 export function toolDisplayName(tool: ManagedTool): string {
-  return tool === 'claude' ? 'Claude' : tool === 'codex' ? 'Codex' : 'Muse'
+  return TOOL_DISPLAY_NAMES[tool]
+}
+export function joinList(values: string[], conjunction: 'and' | 'or'): string {
+  if (values.length <= 1) return values.join('')
+  return `${values.slice(0, -1).join(', ')}, ${conjunction} ${values[values.length - 1]}`
+}
+const TOOL_FULL_NAMES: Record<ManagedTool, string> = { claude: 'Claude Code', codex: 'Codex', muse: 'Muse' }
+export function toolFullName(tool: ManagedTool): string {
+  return TOOL_FULL_NAMES[tool]
 }
 export interface SourceProgress {
   operation: string
@@ -170,15 +179,16 @@ export function projectPending(snapshot: Snapshot, pending: PendingChange[], con
     skillSetsWarning,
     rows: snapshot.rows.map((row) => ({
       ...row,
-      claude: projectCell(row.claude, byCell),
-      codex: projectCell(row.codex, byCell),
-      muse: projectCell(row.muse, byCell),
+      ...Object.fromEntries(MANAGED_TOOLS.map((tool) => [tool, projectCell(row[tool], byCell)])),
     })),
   } as Snapshot
 }
 
 export function favoriteEligible(row: SkillRow): boolean {
-  return [row.claude, row.codex, row.muse].some((cell) => Boolean(cell && !cell.readOnly && (cell.conflict || ['ON', 'OFF', 'CONFLICT'].includes(cell.state))))
+  return MANAGED_TOOLS.some((tool) => {
+    const cell = row[tool]
+    return Boolean(cell && !cell.readOnly && (cell.conflict || ['ON', 'OFF', 'CONFLICT'].includes(cell.state)))
+  })
 }
 
 function projectCell(cell: SkillCell | undefined, pending: Map<string, string>): SkillCell | undefined {
