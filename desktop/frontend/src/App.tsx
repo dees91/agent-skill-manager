@@ -214,7 +214,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="brand">
           <span className="brand-mark"><SlidersHorizontal size={19} /></span>
-          <span><strong>Skill Manager</strong><small>Claude + Codex</small></span>
+          <span><strong>Skill Manager</strong><small>Claude + Codex + Muse</small></span>
         </div>
 
         <button className="sidebar-search" onClick={focusSearch} aria-label="Search installed skills">
@@ -341,7 +341,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
 function LoadingState() {
   return (
     <div className="center-state" aria-label="Loading skills">
-      <span className="loader" /><strong>Scanning local skills…</strong><small>Reading Claude and Codex user directories</small>
+      <span className="loader" /><strong>Scanning local skills…</strong><small>Reading Claude, Codex, and Muse user directories</small>
     </div>
   )
 }

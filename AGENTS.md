@@ -2,7 +2,7 @@
 
 ## Project Intent
 
-`skill-manager` is a local tool for managing globally installed agent skills for Claude Code and Codex. Its established terminal interfaces remain the primary source-management surface, with a macOS desktop interface for visibility and reversible toggles.
+`skill-manager` is a local tool for managing globally installed agent skills for Claude Code, Codex, and Muse. Its established terminal interfaces remain the primary source-management surface, with a macOS desktop interface for visibility and reversible toggles.
 
 The first version is a local, simple, reversible TUI plus a minimal CLI. It must make it easy to see which skills are enabled for each tool and toggle them off and on without losing their original installation method.
 

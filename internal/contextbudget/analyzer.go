@@ -322,7 +322,7 @@ func codexContributions(rows []model.SkillRow, raw []catalogEntry) map[CellKey]c
 			continue
 		}
 		key := CellKey{Tool: model.ToolCodex, SkillName: cell.Name}
-		line := codexLine(cell)
+		line := catalogLine(cell)
 		if entry, ok := byPath[filepath.Clean(cell.SkillFilePath)]; ok {
 			line = entry.Line
 		}
@@ -340,7 +340,7 @@ func (a *Analyzer) codexFilesystemEntries(rows []model.SkillRow) ([]catalogEntry
 		if cell == nil || cell.ReadOnly {
 			continue
 		}
-		line := codexLine(cell)
+		line := catalogLine(cell)
 		key := CellKey{Tool: model.ToolCodex, SkillName: cell.Name}
 		contributions[key] = contribution{Characters: utf8.RuneCountInString(line) + 1, Included: cell.State == model.SkillStateOn}
 		if cell.State == model.SkillStateOn {
@@ -360,7 +360,9 @@ func (a *Analyzer) codexFilesystemEntries(rows []model.SkillRow) ([]catalogEntry
 	return entries, contributions
 }
 
-func codexLine(cell *model.ToolSkill) string {
+// catalogLine formats one filesystem-estimated catalog entry shared by the
+// Codex fallback and Muse reports.
+func catalogLine(cell *model.ToolSkill) string {
 	name := strings.TrimSpace(cell.DisplayName)
 	if name == "" {
 		name = cell.Name
@@ -397,7 +399,7 @@ func (a *Analyzer) analyzeMuse(rows []model.SkillRow) (ToolReport, map[CellKey]c
 		if cell == nil || cell.ReadOnly {
 			continue
 		}
-		line := museLine(cell)
+		line := catalogLine(cell)
 		key := CellKey{Tool: model.ToolMuse, SkillName: cell.Name}
 		contributions[key] = contribution{Characters: utf8.RuneCountInString(line) + 1, Included: cell.State == model.SkillStateOn}
 		if cell.State == model.SkillStateOn {
@@ -413,18 +415,6 @@ func (a *Analyzer) analyzeMuse(rows []model.SkillRow) (ToolReport, map[CellKey]c
 	finalizeUsage(&report.Current, report.BudgetCharacters)
 	report.Projected = report.Current
 	return report, contributions
-}
-
-func museLine(cell *model.ToolSkill) string {
-	name := strings.TrimSpace(cell.DisplayName)
-	if name == "" {
-		name = cell.Name
-	}
-	skillFile := cell.SkillFilePath
-	if cell.State != model.SkillStateOn && cell.ActivePath != "" {
-		skillFile = filepath.Join(cell.ActivePath, "SKILL.md")
-	}
-	return fmt.Sprintf("- %s: %s (file: %s)", name, strings.TrimSpace(cell.Description), skillFile)
 }
 
 func (a *Analyzer) codexModel() (string, int, bool) {

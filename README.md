@@ -208,7 +208,7 @@ skills, and returns an opaque receipt when it owns or shares a lease. The
 agent cleans that exact receipt itself before its final response. It needs no
 plugin or provider hook.
 
-After reviewing the skill instructions, install it for both tools from the
+After reviewing the skill instructions, install it for all tools from the
 public repository:
 
 ```bash
