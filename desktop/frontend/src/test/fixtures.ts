@@ -1,4 +1,5 @@
-import type { ActionResult, ApplyResult, Backend, Snapshot } from '../api'
+import type { ActionResult, ApplyResult, Backend, ManagedTool, Snapshot } from '../api'
+import { DEMO_BUDGET_SPECS } from '../demoBackend'
 import { contextbudget, gui } from '../../wailsjs/go/models'
 
 export function fixtureSnapshot(): Snapshot {
@@ -170,17 +171,18 @@ function candidate(name: string) {
 
 function budgetReports(pending: Array<{ tool: string }> = []) {
   return new contextbudget.Reports({
-    claude: budgetReport('claude', 'Claude default', 640, 2000, pending.filter((change) => change.tool === 'claude').length),
-    codex: budgetReport('codex', 'gpt-5.6-sol', 930, 5440, pending.filter((change) => change.tool === 'codex').length),
-    muse: budgetReport('muse', 'Muse default', 640, 2000, pending.filter((change) => change.tool === 'muse').length),
-    grok: budgetReport('grok', 'Grok default', 640, 2000, pending.filter((change) => change.tool === 'grok').length),
+    claude: budgetReport('claude', 640, pending.filter((change) => change.tool === 'claude').length, false),
+    codex: budgetReport('codex', 930, pending.filter((change) => change.tool === 'codex').length, true),
+    muse: budgetReport('muse', 640, pending.filter((change) => change.tool === 'muse').length, false),
+    grok: budgetReport('grok', 640, pending.filter((change) => change.tool === 'grok').length, false),
   })
 }
 
-function budgetReport(tool: string, model: string, tokens: number, budgetTokens: number, pendingCount: number) {
-  const currentPercent = Math.round(tokens / budgetTokens * 1000) / 10
+function budgetReport(tool: ManagedTool, tokens: number, pendingCount: number, measured: boolean) {
+  const spec = DEMO_BUDGET_SPECS[tool]
+  const currentPercent = Math.round(tokens / spec.budgetTokens * 1000) / 10
   const projectedTokens = Math.max(0, tokens - pendingCount * 35)
-  const projectedPercent = Math.round(projectedTokens / budgetTokens * 1000) / 10
+  const projectedPercent = Math.round(projectedTokens / spec.budgetTokens * 1000) / 10
   const usage = (estimatedTokens: number, usedPercent: number) => ({
     skillCount: 2,
     requestedCharacters: estimatedTokens * 4,
@@ -194,16 +196,16 @@ function budgetReport(tool: string, model: string, tokens: number, budgetTokens:
   })
   return {
     tool,
-    model,
-    contextWindowTokens: tool === 'codex' ? 272000 : 200000,
-    contextWindowAssumed: tool !== 'codex',
-    budgetFraction: tool === 'codex' ? .02 : .01,
-    budgetCharacters: budgetTokens * 4,
-    budgetTokens,
-    budgetLabel: tool === 'codex' ? '2% of model context' : tool === 'claude' ? '1.0% of model context' : '1% of assumed 200,000-token context',
-    accuracy: tool === 'codex' ? 'measured' : tool === 'claude' ? 'partial' : 'estimated',
+    model: spec.model,
+    contextWindowTokens: spec.contextWindowTokens,
+    contextWindowAssumed: spec.contextWindowAssumed,
+    budgetFraction: spec.budgetFraction,
+    budgetCharacters: spec.budgetTokens * 4,
+    budgetTokens: spec.budgetTokens,
+    budgetLabel: spec.budgetLabel,
+    accuracy: spec.accuracy(measured),
     coverage: 'Global test catalog.',
-    message: tool === 'codex' ? "Measured from Codex's model-visible global catalog." : tool === 'claude' ? 'Labeled local estimate.' : `Filesystem estimate. ${tool === 'grok' ? 'Grok' : 'Muse'} exposes no supported catalog diagnostic.`,
+    message: spec.message(measured),
     current: usage(tokens, currentPercent),
     projected: usage(projectedTokens, projectedPercent),
     projectionChanged: pendingCount > 0,

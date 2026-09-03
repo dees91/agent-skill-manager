@@ -28,11 +28,45 @@ const (
 	claudeBudgetFraction          = 0.01
 	claudeUnknownContextWindow    = 200000
 	claudeDefaultDescriptionLimit = 1536
-	museBudgetFraction            = 0.01
-	museUnknownContextWindow      = 200000
-	grokBudgetFraction            = 0.01
-	grokUnknownContextWindow      = 200000
 	unboundedCodexContextWindow   = 100000000
+)
+
+// estimatedToolSpec describes one provider without a supported catalog
+// diagnostic. Its report is always a labeled filesystem estimate that never
+// launches a subprocess, so a new diagnostic-less tool only needs one spec
+// entry below.
+type estimatedToolSpec struct {
+	tool           model.Tool
+	modelName      string
+	budgetFraction float64
+	contextWindow  int
+	budgetLabel    string
+	coverage       string
+	message        string
+	cellOf         func(model.SkillRow) *model.ToolSkill
+}
+
+var (
+	museEstimateSpec = estimatedToolSpec{
+		tool:           model.ToolMuse,
+		modelName:      "Muse default",
+		budgetFraction: 0.01,
+		contextWindow:  200000,
+		budgetLabel:    "1% of assumed 200,000-token context",
+		coverage:       "Managed Muse user skills; no provider diagnostic is available.",
+		message:        "Filesystem estimate. Muse exposes no supported catalog diagnostic in this version.",
+		cellOf:         func(row model.SkillRow) *model.ToolSkill { return row.Muse },
+	}
+	grokEstimateSpec = estimatedToolSpec{
+		tool:           model.ToolGrok,
+		modelName:      "Grok default",
+		budgetFraction: 0.01,
+		contextWindow:  200000,
+		budgetLabel:    "1% of assumed 200,000-token context",
+		coverage:       "Managed Grok user skills; no provider diagnostic is available.",
+		message:        "Filesystem estimate. Grok exposes no supported catalog diagnostic in this version.",
+		cellOf:         func(row model.SkillRow) *model.ToolSkill { return row.Grok },
+	}
 )
 
 // Analyzer builds best-effort global catalog reports for the desktop app.
@@ -383,76 +417,38 @@ func catalogLine(cell *model.ToolSkill) string {
 	return fmt.Sprintf("- %s: %s (file: %s)", name, strings.TrimSpace(cell.Description), skillFile)
 }
 
-// analyzeMuse builds a labeled filesystem estimate for the Muse global
-// catalog. Muse exposes no supported read-only diagnostic in this version,
-// so the report is always an estimate and never launches a subprocess.
 func (a *Analyzer) analyzeMuse(rows []model.SkillRow) (ToolReport, map[CellKey]contribution) {
-	budgetCharacters := int(float64(museUnknownContextWindow) * museBudgetFraction * charactersPerToken)
-	report := ToolReport{
-		Tool:                 model.ToolMuse.String(),
-		Model:                "Muse default",
-		ContextWindowTokens:  museUnknownContextWindow,
-		ContextWindowAssumed: true,
-		BudgetFraction:       museBudgetFraction,
-		BudgetCharacters:     budgetCharacters,
-		BudgetTokens:         tokensForCharacters(budgetCharacters),
-		BudgetLabel:          "1% of assumed 200,000-token context",
-		Accuracy:             AccuracyEstimated,
-		Coverage:             "Managed Muse user skills; no provider diagnostic is available.",
-		Message:              "Filesystem estimate. Muse exposes no supported catalog diagnostic in this version.",
-	}
-	entries := make([]catalogEntry, 0)
-	contributions := make(map[CellKey]contribution)
-	for _, row := range rows {
-		cell := row.Muse
-		if cell == nil || cell.ReadOnly {
-			continue
-		}
-		line := catalogLine(cell)
-		key := CellKey{Tool: model.ToolMuse, SkillName: cell.Name}
-		contributions[key] = contribution{Characters: utf8.RuneCountInString(line) + 1, Included: cell.State == model.SkillStateOn}
-		if cell.State == model.SkillStateOn {
-			entries = append(entries, parseCodexEntry(line))
-		}
-	}
-	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
-	report.Current = Usage{
-		SkillCount:          len(entries),
-		RequestedCharacters: catalogCharacters(entries),
-		RenderedCharacters:  min(catalogCharacters(entries), report.BudgetCharacters),
-	}
-	finalizeUsage(&report.Current, report.BudgetCharacters)
-	report.Projected = report.Current
-	return report, contributions
+	return a.analyzeEstimatedTool(rows, museEstimateSpec)
 }
 
-// analyzeGrok builds a labeled filesystem estimate for the Grok global
-// catalog. Grok exposes no supported read-only diagnostic in this version,
-// so the report is always an estimate and never launches a subprocess.
 func (a *Analyzer) analyzeGrok(rows []model.SkillRow) (ToolReport, map[CellKey]contribution) {
-	budgetCharacters := int(float64(grokUnknownContextWindow) * grokBudgetFraction * charactersPerToken)
+	return a.analyzeEstimatedTool(rows, grokEstimateSpec)
+}
+
+func (a *Analyzer) analyzeEstimatedTool(rows []model.SkillRow, spec estimatedToolSpec) (ToolReport, map[CellKey]contribution) {
+	budgetCharacters := int(float64(spec.contextWindow) * spec.budgetFraction * charactersPerToken)
 	report := ToolReport{
-		Tool:                 model.ToolGrok.String(),
-		Model:                "Grok default",
-		ContextWindowTokens:  grokUnknownContextWindow,
+		Tool:                 spec.tool.String(),
+		Model:                spec.modelName,
+		ContextWindowTokens:  spec.contextWindow,
 		ContextWindowAssumed: true,
-		BudgetFraction:       grokBudgetFraction,
+		BudgetFraction:       spec.budgetFraction,
 		BudgetCharacters:     budgetCharacters,
 		BudgetTokens:         tokensForCharacters(budgetCharacters),
-		BudgetLabel:          "1% of assumed 200,000-token context",
+		BudgetLabel:          spec.budgetLabel,
 		Accuracy:             AccuracyEstimated,
-		Coverage:             "Managed Grok user skills; no provider diagnostic is available.",
-		Message:              "Filesystem estimate. Grok exposes no supported catalog diagnostic in this version.",
+		Coverage:             spec.coverage,
+		Message:              spec.message,
 	}
 	entries := make([]catalogEntry, 0)
 	contributions := make(map[CellKey]contribution)
 	for _, row := range rows {
-		cell := row.Grok
+		cell := spec.cellOf(row)
 		if cell == nil || cell.ReadOnly {
 			continue
 		}
 		line := catalogLine(cell)
-		key := CellKey{Tool: model.ToolGrok, SkillName: cell.Name}
+		key := CellKey{Tool: spec.tool, SkillName: cell.Name}
 		contributions[key] = contribution{Characters: utf8.RuneCountInString(line) + 1, Included: cell.State == model.SkillStateOn}
 		if cell.State == model.SkillStateOn {
 			entries = append(entries, parseCodexEntry(line))

@@ -148,7 +148,7 @@ export default function SourcesView(props: SourcesViewProps) {
                 <tr key={source.sourceId}>
                   <td><div className="source-identity"><span>{source.kind === 'git' ? <GitBranch size={15} /> : <HardDrive size={15} />}</span><div><strong>{source.group}</strong><code>{source.location}</code></div></div></td>
                   <td><strong className="source-count">{source.skillCount}</strong></td>
-                  <td><div className="target-counts"><span>Claude {source.claudeCount}</span><span>Codex {source.codexCount}</span><span>Muse {source.museCount}</span></div></td>
+                  <td><div className="target-counts">{MANAGED_TOOLS.map((tool) => <span key={tool}>{toolDisplayName(tool)} {toolSourceCount(source, tool)}</span>)}</div></td>
                   <td><div className="source-update-mode"><span className={source.canUpdate ? 'status-dot git' : 'status-dot'} /><div><strong>{source.updateMode}</strong><small>{source.updateHint}</small>{source.commit && <code>Commit {shortCommit(source.commit)}</code>}</div></div></td>
                   <td><div className="source-row-actions">
                     {source.canUpdate && <button aria-label={`Update ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('update-one', source)}><RefreshCw size={12} /> Update</button>}
