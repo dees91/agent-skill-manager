@@ -16,7 +16,7 @@ import SkillsView from './components/SkillsView'
 import SkillSetsView, { type SkillSetEditorRequest } from './components/SkillSetsView'
 import SourcesView from './components/SourcesView'
 import type { ActionResult, Backend, FavoriteMutationResult, SkillRow, SkillSetMutationResult, Snapshot, SourceMutationResult, SourceProgress } from './api'
-import { MANAGED_TOOLS, favoriteEligible, joinEnglish, projectPending, toolDisplayName, wailsBackend } from './api'
+import { MANAGED_TOOLS, favoriteEligible, joinList, projectPending, toolDisplayName, wailsBackend } from './api'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 
 type View = 'dashboard' | 'skills' | 'skillsets' | 'sources'
@@ -341,7 +341,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
 function LoadingState() {
   return (
     <div className="center-state" aria-label="Loading skills">
-      <span className="loader" /><strong>Scanning local skills…</strong><small>Reading {joinEnglish(MANAGED_TOOLS.map(toolDisplayName), 'and')} user directories</small>
+      <span className="loader" /><strong>Scanning local skills…</strong><small>Reading {joinList(MANAGED_TOOLS.map(toolDisplayName), 'and')} user directories</small>
     </div>
   )
 }

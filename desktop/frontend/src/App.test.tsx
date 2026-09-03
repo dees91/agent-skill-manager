@@ -521,10 +521,10 @@ describe('Skill Manager desktop app', () => {
     expect(backend.extendSources).not.toHaveBeenCalled()
   })
 
-  it('disables the extend button when every source already uses all three tools', async () => {
+  it('disables the extend button when every source already uses all four tools', async () => {
     const user = userEvent.setup()
     const snapshot = fixtureSnapshot()
-    snapshot.managedSources = snapshot.managedSources.map((source) => ({ ...source, claudeCount: source.skillCount, codexCount: source.skillCount, museCount: source.skillCount }))
+    snapshot.managedSources = snapshot.managedSources.map((source) => ({ ...source, claudeCount: source.skillCount, codexCount: source.skillCount, museCount: source.skillCount, grokCount: source.skillCount }))
     const backend = mockBackend(snapshot)
     render(<App backend={backend} />)
     await screen.findByRole('heading', { name: 'Dashboard' })
