@@ -63,7 +63,7 @@ func (s CheckoutService) EnsureCheckout(identity RepoIdentity, checkoutPath stri
 		return CheckoutResult{}, err
 	}
 	if strings.TrimSpace(checkoutPath) == "" {
-		return CheckoutResult{}, fmt.Errorf("checkout conflict: missing checkout path")
+		return CheckoutResult{}, conflictf(CheckoutConflictIdentity, "", "checkout conflict: missing checkout path")
 	}
 	checkoutPath = filepath.Clean(checkoutPath)
 	result := CheckoutResult{CheckoutPath: checkoutPath}
@@ -92,10 +92,10 @@ func (s CheckoutService) EnsureCheckout(identity RepoIdentity, checkoutPath stri
 	}
 
 	if info.Mode()&os.ModeSymlink != 0 {
-		return result, fmt.Errorf("checkout conflict: %s is a symlink", checkoutPath)
+		return result, conflictf(CheckoutConflictSymlink, checkoutPath, "checkout conflict: %s is a symlink", checkoutPath)
 	}
 	if !info.IsDir() {
-		return result, fmt.Errorf("checkout conflict: %s exists and is not a directory", checkoutPath)
+		return result, conflictf(CheckoutConflictNotDirectory, checkoutPath, "checkout conflict: %s exists and is not a directory", checkoutPath)
 	}
 
 	if err := s.validateExistingCheckout(identity, checkoutPath); err != nil {
@@ -108,12 +108,12 @@ func (s CheckoutService) EnsureCheckout(identity RepoIdentity, checkoutPath stri
 
 func validateCheckoutIdentity(identity RepoIdentity) error {
 	if strings.TrimSpace(identity.OriginalURL) == "" {
-		return fmt.Errorf("checkout conflict: missing repository URL")
+		return conflictf(CheckoutConflictIdentity, "", "checkout conflict: missing repository URL")
 	}
 	if strings.TrimSpace(identity.CanonicalURL) == "" ||
 		strings.TrimSpace(identity.Host) == "" ||
 		strings.TrimSpace(identity.RepoPath) == "" {
-		return fmt.Errorf("checkout conflict: missing repository identity")
+		return conflictf(CheckoutConflictIdentity, "", "checkout conflict: missing repository identity")
 	}
 	return nil
 }
@@ -122,39 +122,39 @@ func (s CheckoutService) validateExistingCheckout(identity RepoIdentity, checkou
 	inside, err := s.runner.RunGit("-C", checkoutPath, "rev-parse", "--is-inside-work-tree")
 	if err != nil || strings.TrimSpace(inside) != "true" {
 		if err != nil {
-			return fmt.Errorf("checkout conflict: %s is not a git checkout: %w", checkoutPath, err)
+			return conflictf(CheckoutConflictNotCheckout, checkoutPath, "checkout conflict: %s is not a git checkout: %w", checkoutPath, err)
 		}
-		return fmt.Errorf("checkout conflict: %s is not a git checkout", checkoutPath)
+		return conflictf(CheckoutConflictNotCheckout, checkoutPath, "checkout conflict: %s is not a git checkout", checkoutPath)
 	}
 	topLevel, err := s.runner.RunGit("-C", checkoutPath, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return fmt.Errorf("checkout conflict: cannot resolve git checkout root for %s: %w", checkoutPath, err)
+		return conflictf(CheckoutConflictNotCheckout, checkoutPath, "checkout conflict: cannot resolve git checkout root for %s: %w", checkoutPath, err)
 	}
 	topLevelPath, err := equivalentPath(strings.TrimSpace(topLevel))
 	if err != nil {
-		return fmt.Errorf("checkout conflict: cannot resolve git checkout root for %s: %w", checkoutPath, err)
+		return conflictf(CheckoutConflictNotCheckout, checkoutPath, "checkout conflict: cannot resolve git checkout root for %s: %w", checkoutPath, err)
 	}
 	checkoutRoot, err := equivalentPath(checkoutPath)
 	if err != nil {
-		return fmt.Errorf("checkout conflict: cannot resolve checkout path %s: %w", checkoutPath, err)
+		return conflictf(CheckoutConflictNotCheckout, checkoutPath, "checkout conflict: cannot resolve checkout path %s: %w", checkoutPath, err)
 	}
 	if topLevelPath != checkoutRoot {
-		return fmt.Errorf("checkout conflict: %s is inside git checkout %s, not the checkout root", checkoutPath, strings.TrimSpace(topLevel))
+		return conflictf(CheckoutConflictNestedCheckout, checkoutPath, "checkout conflict: %s is inside git checkout %s, not the checkout root", checkoutPath, strings.TrimSpace(topLevel))
 	}
 
 	origin, err := s.runner.RunGit("-C", checkoutPath, "config", "--get", "remote.origin.url")
 	if err != nil || strings.TrimSpace(origin) == "" {
 		if err != nil {
-			return fmt.Errorf("checkout conflict: cannot read origin remote for %s: %w", checkoutPath, err)
+			return conflictf(CheckoutConflictOriginMissing, checkoutPath, "checkout conflict: cannot read origin remote for %s: %w", checkoutPath, err)
 		}
-		return fmt.Errorf("checkout conflict: missing origin remote for %s", checkoutPath)
+		return conflictf(CheckoutConflictOriginMissing, checkoutPath, "checkout conflict: missing origin remote for %s", checkoutPath)
 	}
 	remoteIdentity, err := NormalizeGitURL(origin)
 	if err != nil {
-		return fmt.Errorf("checkout conflict: unsupported origin remote %q for %s: %w", origin, checkoutPath, err)
+		return conflictf(CheckoutConflictOriginMismatch, checkoutPath, "checkout conflict: unsupported origin remote %q for %s: %w", origin, checkoutPath, err)
 	}
 	if remoteIdentity.CanonicalURL != identity.CanonicalURL {
-		return fmt.Errorf("checkout conflict: origin remote %s does not match requested %s", remoteIdentity.CanonicalURL, identity.CanonicalURL)
+		return conflictf(CheckoutConflictOriginMismatch, checkoutPath, "checkout conflict: origin remote %s does not match requested %s", remoteIdentity.CanonicalURL, identity.CanonicalURL)
 	}
 	return nil
 }

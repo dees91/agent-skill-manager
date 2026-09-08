@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   Check,
@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  Wrench,
   X,
 } from 'lucide-react'
 import type {
@@ -22,11 +23,14 @@ import type {
   InstallReview,
   ManagedSource,
   ManagedTool,
+  RepairPreview,
+  SourceHealth,
+  SourceMutationFailure,
   SourceMutationResult,
   SourceProgress,
   UninstallPreview,
 } from '../api'
-import { MANAGED_TOOLS, toolDisplayName } from '../api'
+import { MANAGED_TOOLS, joinList, toolDisplayName } from '../api'
 
 interface SourcesViewProps {
   sources: ManagedSource[]
@@ -41,7 +45,7 @@ interface SourcesViewProps {
 }
 
 type InstallMode = 'git' | 'local'
-type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | null
+type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | 'repair' | null
 type ColumnSelectionState = 'ON' | 'OFF' | 'MIXED' | 'N/A'
 
 export default function SourcesView(props: SourcesViewProps) {
@@ -50,8 +54,22 @@ export default function SourcesView(props: SourcesViewProps) {
   const [selectedSource, setSelectedSource] = useState<ManagedSource | null>(null)
   const [uninstallPreview, setUninstallPreview] = useState<UninstallPreview | null>(null)
   const [dialogError, setDialogError] = useState<string | null>(null)
+  const [dialogFailure, setDialogFailure] = useState<SourceMutationFailure | null>(null)
+  const [repairPreview, setRepairPreview] = useState<RepairPreview | null>(null)
+  const [health, setHealth] = useState<Map<string, SourceHealth>>(new Map())
   const installButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
+
+  const loadHealth = useCallback(async () => {
+    try {
+      const entries = await backend.inspectSources()
+      setHealth(new Map(entries.map((entry) => [entry.sourceId, entry])))
+    } catch {
+      setHealth(new Map())
+    }
+  }, [backend])
+
+  useEffect(() => { void loadHealth() }, [loadHealth, sources])
 
   const openDialog = (next: Dialog, source: ManagedSource | null = null) => {
     if (pendingCount > 0) {
@@ -60,7 +78,9 @@ export default function SourcesView(props: SourcesViewProps) {
     }
     setSelectedSource(source)
     setUninstallPreview(null)
+    setRepairPreview(null)
     setDialogError(null)
+    setDialogFailure(null)
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setDialog(next)
   }
@@ -70,7 +90,9 @@ export default function SourcesView(props: SourcesViewProps) {
     setDialog(null)
     setSelectedSource(null)
     setUninstallPreview(null)
+    setRepairPreview(null)
     setDialogError(null)
+    setDialogFailure(null)
     window.setTimeout(() => (returnFocusRef.current ?? installButtonRef.current)?.focus(), 0)
   }
 
@@ -78,16 +100,41 @@ export default function SourcesView(props: SourcesViewProps) {
     if (busy) return
     onBusy(true)
     setDialogError(null)
+    setDialogFailure(null)
     try {
       const result = await action()
       onResult(result)
-      if (result.failure) setDialogError(result.failure.message)
-      else closeDialog()
+      if (result.failure) {
+        setDialogError(result.failure.message)
+        setDialogFailure(result.failure)
+      } else {
+        closeDialog()
+      }
+    } catch (reason) {
+      setDialogError(errorMessage(reason))
+    } finally {
+      onBusy(false)
+      void loadHealth()
+    }
+  }
+
+  const prepareRepair = async (source: ManagedSource) => {
+    openDialog('repair', source)
+    onBusy(true)
+    try {
+      setRepairPreview(await backend.previewRepair(source.sourceId))
     } catch (reason) {
       setDialogError(errorMessage(reason))
     } finally {
       onBusy(false)
     }
+  }
+
+  const repairFromFailure = () => {
+    const failure = dialogFailure
+    const source = sources.find((candidate) => candidate.sourceId === failure?.sourceId)
+    if (!source) return
+    void prepareRepair(source)
   }
 
   const prepareUninstall = async (source: ManagedSource) => {
@@ -149,8 +196,9 @@ export default function SourcesView(props: SourcesViewProps) {
                   <td><div className="source-identity"><span>{source.kind === 'git' ? <GitBranch size={15} /> : <HardDrive size={15} />}</span><div><strong>{source.group}</strong><code>{source.location}</code></div></div></td>
                   <td><strong className="source-count">{source.skillCount}</strong></td>
                   <td><div className="target-counts">{MANAGED_TOOLS.map((tool) => <span key={tool}>{toolDisplayName(tool)} {toolSourceCount(source, tool)}</span>)}</div></td>
-                  <td><div className="source-update-mode"><span className={source.canUpdate ? 'status-dot git' : 'status-dot'} /><div><strong>{source.updateMode}</strong><small>{source.updateHint}</small>{source.commit && <code>Commit {shortCommit(source.commit)}</code>}</div></div></td>
+                  <td><div className="source-update-mode"><span className={updateModeDotClass(source, health.get(source.sourceId))} /><div><strong>{source.updateMode}</strong><small>{source.updateHint}</small>{source.commit && <code>Commit {shortCommit(source.commit)}</code>}{sourceHealthNote(health.get(source.sourceId))}</div></div></td>
                   <td><div className="source-row-actions">
+                    {health.get(source.sourceId)?.repairable && <button aria-label={`Repair ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => void prepareRepair(source)}><Wrench size={12} /> Repair</button>}
                     {source.canUpdate && <button aria-label={`Update ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('update-one', source)}><RefreshCw size={12} /> Update</button>}
                     <button aria-label={`Uninstall ${source.group}`} className="ghost-button compact-button destructive" disabled={busy || pendingCount > 0} onClick={() => void prepareUninstall(source)}><Trash2 size={12} /> Uninstall</button>
                   </div></td>
@@ -165,8 +213,12 @@ export default function SourcesView(props: SourcesViewProps) {
         <InstallDialog backend={backend} busy={busy} progress={progress} includeReadOnly={includeReadOnly} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} onAnnounce={onAnnounce} />
       )}
       {(dialog === 'update-all' || dialog === 'update-one') && (
-        <ConfirmDialog title={dialog === 'update-all' ? 'Update all repositories?' : `Update ${selectedSource?.group}?`} description={dialog === 'update-all' ? 'Repositories are processed in deterministic order and the batch stops at the first failure.' : 'Skill Manager will fetch origin, validate installed paths, and fast-forward only.'} confirmLabel={dialog === 'update-all' ? 'Update all' : 'Update'} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={() => void runMutation(() => dialog === 'update-all' ? backend.updateAllSources(includeReadOnly) : backend.updateSource(selectedSource!.sourceId, includeReadOnly))} />
+        <ConfirmDialog title={dialog === 'update-all' ? 'Update all repositories?' : `Update ${selectedSource?.group}?`} description={dialog === 'update-all' ? 'Repositories are processed in deterministic order and the batch stops at the first failure.' : 'Skill Manager will fetch origin, validate installed paths, and fast-forward only.'} confirmLabel={dialog === 'update-all' ? 'Update all' : 'Update'} busy={busy} progress={progress} error={dialogError} failure={dialogFailure} onRepair={repairFromFailure} onClose={closeDialog} onConfirm={() => void runMutation(() => dialog === 'update-all' ? backend.updateAllSources(includeReadOnly) : backend.updateSource(selectedSource!.sourceId, includeReadOnly))} />
       )}
+      {dialog === 'repair' && selectedSource && (
+        <RepairDialog source={selectedSource} preview={repairPreview} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={() => void runMutation(() => backend.repairSource(selectedSource.sourceId, includeReadOnly))} />
+      )}
+
       {dialog === 'uninstall' && selectedSource && (
         <UninstallDialog source={selectedSource} preview={uninstallPreview} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={(confirmation) => void runMutation(() => backend.uninstallSource(selectedSource.sourceId, confirmation, includeReadOnly))} />
       )}
@@ -419,9 +471,65 @@ function extendSourceBlockage(source: ExtendPreviewSource): string {
   return `${source.status}${details.length > 0 ? ` — ${details.join('; ')}` : ''}`
 }
 
-function ConfirmDialog({ title, description, confirmLabel, busy, progress, error, onClose, onConfirm }: { title: string; description: string; confirmLabel: string; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: () => void }) {
+function ConfirmDialog({ title, description, confirmLabel, busy, progress, error, failure, onRepair, onClose, onConfirm }: { title: string; description: string; confirmLabel: string; busy: boolean; progress: SourceProgress | null; error: string | null; failure?: SourceMutationFailure | null; onRepair?: () => void; onClose: () => void; onConfirm: () => void }) {
   useDialogEscape(onClose, busy)
-  return <Modal title={title} onClose={onClose} busy={busy}><p className="dialog-description">{description}</p>{error && <DialogError message={error} />}{busy && <ProgressState progress={progress} />}<DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy} onClick={onConfirm}>{confirmLabel}</button></DialogActions></Modal>
+  return <Modal title={title} onClose={onClose} busy={busy}><p className="dialog-description">{description}</p>{error && <DialogError message={error} />}<FailureDiagnosis failure={failure} busy={busy} onRepair={onRepair} />{busy && <ProgressState progress={progress} />}<DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy} onClick={onConfirm}>{confirmLabel}</button></DialogActions></Modal>
+}
+
+function FailureDiagnosis({ failure, busy, onRepair }: { failure?: SourceMutationFailure | null; busy: boolean; onRepair?: () => void }) {
+  if (!failure?.cause) return null
+  return <div className="source-diagnosis">
+    <Wrench size={15} />
+    <div>
+      <strong>{failure.group ? `${failure.group}: ` : ''}{failure.cause}</strong>
+      <p>{failure.remedy}</p>
+      {failure.repairable && onRepair && failure.sourceId && (
+        <button className="secondary-button compact-button" disabled={busy} onClick={onRepair}>Repair{failure.group ? ` ${failure.group}` : ''}…</button>
+      )}
+    </div>
+  </div>
+}
+
+function RepairDialog({ source, preview, busy, progress, error, onClose, onConfirm }: { source: ManagedSource; preview: RepairPreview | null; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: () => void }) {
+  useDialogEscape(onClose, busy)
+  const clean = preview?.clean ?? false
+  return <Modal title={`Repair ${source.group}?`} onClose={onClose} busy={busy}>
+    {!preview && busy ? <ProgressState progress={progress} /> : preview && (clean ? (
+      <p className="dialog-description">This checkout is already clean. There is nothing to repair.</p>
+    ) : <>
+      <div className="uninstall-impact repair-impact">
+        <Wrench size={21} />
+        <div>
+          <strong>This removes {preview.entries.length} path{preview.entries.length === 1 ? '' : 's'} from the managed checkout</strong>
+          <p>{repairCountsLabel(preview)}</p>
+          <p>Each path is moved into Skill Manager&apos;s trash so a failed repair rolls back, then the staging copy is deleted. Tracked files are restored from the last fetched commit.</p>
+        </div>
+      </div>
+      <ul className="repair-path-list">{preview.entries.map((entry) => (
+        <li key={entry.path}><span className={`repair-path-class ${entry.class}`}>{entry.class}</span><code>{entry.path}</code></li>
+      ))}</ul>
+    </>)}
+    {error && <DialogError message={error} />}{busy && preview && <ProgressState progress={progress} />}
+    <DialogActions onClose={onClose} busy={busy}><button className="danger-button" disabled={busy || !preview || clean} onClick={onConfirm}>Repair checkout</button></DialogActions>
+  </Modal>
+}
+
+function repairCountsLabel(preview: RepairPreview): string {
+  const parts: string[] = []
+  if (preview.trackedCount > 0) parts.push(`${preview.trackedCount} tracked`)
+  if (preview.untrackedCount > 0) parts.push(`${preview.untrackedCount} untracked`)
+  if (preview.ignoredCount > 0) parts.push(`${preview.ignoredCount} ignored`)
+  return parts.length > 0 ? `${joinList(parts, 'and')}.` : 'No paths to remove.'
+}
+
+function updateModeDotClass(source: ManagedSource, health?: SourceHealth): string {
+  if (health && health.status !== 'ok') return 'status-dot blocked'
+  return source.canUpdate ? 'status-dot git' : 'status-dot'
+}
+
+function sourceHealthNote(health?: SourceHealth) {
+  if (!health || health.status === 'ok') return null
+  return <span className={`source-health ${health.status}`}>{health.status === 'needs-repair' ? 'Needs repair' : 'Blocked'} — {health.cause}</span>
 }
 
 function UninstallDialog({ source, preview, busy, progress, error, onClose, onConfirm }: { source: ManagedSource; preview: UninstallPreview | null; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: (confirmation: string) => void }) {

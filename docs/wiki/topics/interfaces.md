@@ -23,6 +23,10 @@
 - `uninstall <git-url|local-path> [--dry-run]` removes one complete audited
   installation and always requires an explicit source. Local source data is
   preserved.
+- `repair <git-url> [--dry-run]` clears worktree changes blocking a managed Git
+  checkout and always requires an explicit URL. It lists the offending paths by
+  class, has no `--all`, `--force`, or prompt, and `update` prints the exact
+  `repair` command when a failure is repairable.
 - `extend --tool <tool> [--dry-run]` links every managed source to one more
   tool in manifest order, mirroring ON/OFF state through the shared
   install/audit machinery. It stops at the first blocked source and never

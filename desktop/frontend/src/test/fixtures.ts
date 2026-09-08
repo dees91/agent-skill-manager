@@ -125,6 +125,9 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     uninstallSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Uninstalled source.', completed: [], removedActive: 2, removedDisabled: 0, snapshot })),
     previewExtend: vi.fn(async (tool) => new gui.ExtendPreview({ tool, sources: [new gui.ExtendPreviewSource({ kind: 'git', group: 'demo/skills', skillNames: ['alpha'], skillCount: 1, created: 1, alreadyInstalled: 0, disabledAfter: 0, status: 'ready', reason: '', skipped: [], conflicts: [] })], createCount: 1, blockedCount: 0 })),
     extendSources: vi.fn(async (tool) => new gui.SourceMutationResult({ message: `1 source(s) extended to ${tool}: 1 created, 0 already installed.`, completed: [], createdLinks: 1, alreadyInstalled: 0, snapshot })),
+    inspectSources: vi.fn(async () => []),
+    previewRepair: vi.fn(async (sourceId) => new gui.RepairPreview({ sourceId, group: 'demo/skills', clean: false, entries: [new gui.RepairEntry({ path: 'generated/trace_processor', class: 'untracked' })], trackedCount: 0, untrackedCount: 1, ignoredCount: 0 })),
+    repairSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Repaired demo/skills and staged 1 path.', completed: [], snapshot })),
   }
 }
 

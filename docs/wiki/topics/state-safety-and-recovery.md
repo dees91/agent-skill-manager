@@ -104,6 +104,8 @@ The tool may:
 - fetch and fast-forward clean Skill Manager-managed checkouts;
 - remove a complete audited managed repository installation through staging;
 - remove an audited local installation's links and state through staging;
+- stage worktree changes out of an audited managed checkout through the trash
+  directory and restore its tracked paths from `HEAD`;
 - write Skill Manager state and backups.
 - write saved Skill Set metadata and its independent backups.
 - write favorite basename metadata and its independent backups.
@@ -114,7 +116,11 @@ The tool may:
 
 The tool must not:
 
-- delete or edit skill source repositories or `SKILL.md`;
+- delete or edit skill source repositories or `SKILL.md`, except that repair
+  stages a managed checkout's own worktree changes through the trash directory
+  after an explicit confirmation;
+- run `git clean`, `reset --hard`, or a forced checkout, or move an installed
+  skill directory out from under its managed symlink;
 - copy, update, move, stage, or delete a link-in-place local source directory;
 - rewrite Skills CLI or plugin metadata/lockfiles;
 - mutate Codex system skills or Claude plugin cache skills;

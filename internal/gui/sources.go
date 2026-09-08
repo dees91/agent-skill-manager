@@ -252,7 +252,7 @@ func (s *Service) UpdateSource(sourceID string, includeReadOnly bool) SourceMuta
 		s.emitProgress(SourceProgress{Operation: "update", Phase: "fetch", Group: repository.Group.String(), Current: 1, Total: 1, Message: "Fetching and validating repository…"})
 		updated, applyErr := install.NewUpdateService(s.paths, s.gitRunner).Apply(repository)
 		if applyErr != nil {
-			result.Failure = &SourceMutationFailure{Stage: "update", Group: repository.Group.String(), Message: applyErr.Error()}
+			result.Failure = newSourceMutationFailure("update", sourceID, repository.Group.String(), applyErr)
 			return applyErr
 		}
 		status := "up-to-date"
@@ -299,7 +299,7 @@ func (s *Service) UpdateAllSources(includeReadOnly bool) SourceMutationResult {
 			s.emitProgress(SourceProgress{Operation: "update", Phase: "fetch", Group: repository.Group.String(), Current: index + 1, Total: len(manifest.Repositories), Message: "Fetching and validating repository…"})
 			updated, applyErr := service.Apply(repository)
 			if applyErr != nil {
-				result.Failure = &SourceMutationFailure{Stage: "update", Group: repository.Group.String(), Message: applyErr.Error()}
+				result.Failure = newSourceMutationFailure("update", repositorySourceID(repository), repository.Group.String(), applyErr)
 				return applyErr
 			}
 			status := "up-to-date"

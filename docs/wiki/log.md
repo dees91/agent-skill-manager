@@ -517,3 +517,113 @@ intentionally excluded.
 - Published the draft as a GitHub prerelease, then installed both artifacts
   from the public download URLs: CLI at `~/.local/bin/skill-manager` and
   `Skill Manager.app` in `/Applications`, both reporting 0.6.0.
+
+## [2026-09-08] implementation | Managed checkout diagnosis and repair
+
+- Cause of the reported `Update all` failure: a skill had written
+  `profilers/android-profiler/bin/trace_processor` into its own managed
+  checkout, and `inspectManagedCheckout` requires
+  `git status --porcelain --untracked-files=all --ignored` to be completely
+  empty. Because update-all stops at the first failure, one generated file
+  blocked every later repository.
+- Added `CheckoutConflictError` with a stable `Kind`, `Cause()`, `Remedy()`, and
+  `Repairable()`. `Error()` returns the historical message verbatim, so every
+  existing substring assertion still passes and the change stays additive.
+- Added `RepairService` (`internal/install/repair.go`): ownership audit, dirty
+  worktree only, path sanitizing, `rename` into `trash/repair-*`,
+  `git checkout HEAD --` restore, `git reset HEAD --` for index-only paths,
+  re-verification, empty-parent pruning, reverse rollback, and cleanup
+  reporting. Never `git clean`, `reset --hard`, or a forced checkout.
+- Implementation correction worth keeping: `ExecGitRunner.RunGit` trims its
+  output, which silently ate the leading space of the first
+  `git status --porcelain -z` record and truncated that path by one character.
+  The parser now restores it for record zero. Any future positional parsing of
+  git output through `RunGit` must account for the same trim.
+- Two guards found during implementation, not planning: repair must refuse to
+  stage a recorded skill directory or an ancestor of one (the managed symlink
+  would break), and must refuse an untracked `SKILL.md` that `HEAD` cannot
+  restore. A stray file *inside* a skill directory stays repairable, which is
+  the reported real-world case.
+- `RepairService.prepare` also requires fast-forward ancestry when the worktree
+  is clean, so a checkout with local-only commits reports `diverged` instead of
+  claiming there is nothing to repair.
+- CLI: `skill-manager repair <git-url> [--dry-run]`, plus classified guidance
+  from `update` that prints the exact `repair` command for a repairable blocker.
+- Desktop: `InspectSources` is an explicit read-only diagnosis kept out of
+  `reloadLocked`, `SourceMutationFailure` gained `sourceId`/`kind`/`cause`/
+  `remedy`/`repairable`, and `PreviewRepair`/`RepairSource` run in the existing
+  exclusive source lane. `SourcesView` shows a `Needs repair` row state and a
+  confirmed repair dialog listing checkout-relative paths only.
+- `open`: a managed checkout whose installed `SKILL.md` was deleted locally is
+  still blocked by the shared ownership audit, which also blocks update and
+  uninstall. Repair does not change that pre-existing limitation.
+
+## [2026-09-08] analysis | PR 15 repair safety review
+
+Reviewed `248a8d7` using code-review-and-quality, limited to P1/P2, and
+published two P1 and two P2 inline comments on PR #15. Temporary real-Git
+fixtures reproduced installed staged-only SKILL.md deletion, index state lost
+on failed repair rollback, dirty checkout ancestry preflight bypass, and
+whitespace filename corruption. Recorded the open findings in
+`topics/repository-install-workflow.md`. Existing root and desktop Go tests,
+frontend typecheck, 30 frontend tests, and production build passed. Review
+reproductions were removed from the source tree; no implementation changes
+were made.
+
+## [2026-09-08] correction | Repair review findings addressed
+
+Four defects found in review of the Iteration 21 repair path, all reproduced
+before fixing and now covered by tests that fail without the fix:
+
+- `WorktreeEntryTracked` includes staged additions, so the installed-`SKILL.md`
+  guard keyed on class allowed an index-only `SKILL.md` through; repair then
+  unstaged it, pruned the directory, and left the recorded symlink dangling.
+  The guard now requires HEAD to hold the file as a regular blob, and the
+  ownership audit is re-run after restore before recovery data is deleted.
+- Rollback reversed only filesystem renames although `restoreTracked` also
+  rewrites the index through `git checkout HEAD` / `git reset HEAD`, so a
+  post-restore failure silently replaced staged content with HEAD. Apply now
+  snapshots the index with `write-tree` and restores it with `read-tree`,
+  retaining recovery data when either restoration is incomplete.
+- Branch/upstream/ancestry blockers were only checked when the worktree was
+  clean, because `inspectManagedCheckout` returns at the dirty check. A dirty
+  checkout with local-only commits was therefore "repaired" while update still
+  failed. `resolveManagedCheckoutRefs` was extracted so repair validates refs
+  independently of worktree cleanliness, before any mutation. The extraction
+  preserves `inspectManagedCheckout`'s existing check order and messages.
+- Porcelain v1 parsing trimmed path whitespace and could not distinguish a
+  trimmed `X ` status code from a filename starting with a space. Enumeration
+  moved to `--porcelain=v2` (records never start with whitespace) and HEAD
+  lookups to the default `ls-tree` format (records start with the mode), so both
+  are lossless and the mode is available for the guard above. This supersedes
+  the record-zero leading-space workaround noted in the previous entry.
+
+## [2026-09-08] verification | PR 15 re-review of repair fixes
+
+Re-reviewed `2fdaa34`; all four original real-Git reproductions now pass.
+Replied to and resolved all four original GitHub threads. Published one new
+P2 for incomplete rollback of originally absent paths, reproduced with an
+unstaged deletion and a staged rename plus a post-restore verification failure.
+Verdict: changes required before merge. Existing root/desktop Go tests and
+vet, root build, frontend typecheck, 30 tests, production build, and both CI
+jobs pass. Removed temporary reproduction tests from the source tree and
+updated the repository workflow topic; no implementation changes were made.
+
+## [2026-09-08] correction | Repair rollback restores absent paths
+
+Follow-up review finding, reproduced before fixing:
+
+- The staging loop skips paths that are already absent and never records them in
+  `moves`, but `restoreTracked` recreates the ones HEAD holds. A failure after
+  restore therefore left those files behind while reporting a complete rollback.
+  Rollback now tracks pre-existing absence, deletes the recreated non-directory
+  paths inside the checkout, prunes directories recreation added, and reports
+  which of the three restorations (renames, recreated paths, index) failed.
+- `TestRepairRollbackRestoresTheExactPreOperationState` compares the full
+  `git status` output and a walk of the worktree before and after a failed
+  repair, for an unstaged deletion, a staged rename, and a deleted directory
+  holding a tracked file. All three fail without the fix.
+- Worth remembering for future rollback work: undoing a repair is not just
+  reversing what was moved. `git checkout HEAD -- <path>` also writes the index
+  and can create files and parent directories, so every effect of the restore
+  step needs its own inverse.

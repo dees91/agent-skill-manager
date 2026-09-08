@@ -92,9 +92,87 @@ same ownership audit and transactional removal service.
   the manifest's installed skill/tool set and existing ON/OFF link locations.
 - Successful updates persist the target commit as `lastSeenCommit`. Update-all
   is deterministic, stops on the first failure, and keeps the completed prefix.
+- Every blocker is a typed `CheckoutConflictError` carrying a stable `Kind`
+  alongside its unchanged message, so the CLI and the desktop app can explain
+  the cause without parsing error text (`implemented`,
+  `internal/install/checkout_conflict.go`).
+
+## Managed Checkout Repair
+
+- `skill-manager repair <git-url> [--dry-run]` clears the one repairable
+  blocker: `dirty-worktree`. An explicit URL is always required and there is no
+  `--all`, `--force`, or interactive prompt (`documented`, `implemented`).
+- Repair runs the same ownership audit as update and uninstall, re-asserts that
+  the checkout sits inside `~/.skill-manager/repos`, and sanitizes every
+  reported path against absolute, `..`, backslash, and `.git/` components.
+- Offending paths are enumerated from `git status --porcelain=v2 -z
+  --untracked-files=all --ignored`. Version 2 is required: every v2 record starts
+  with `1`, `2`, `u`, `?`, or `!`, whereas a v1 record may start with the space of
+  an `X ` status code, which the trimming `RunGit` removes and which is then
+  indistinguishable from a filename beginning with a space. Path bytes are kept
+  exactly; HEAD membership uses the default `ls-tree` format for the same reason,
+  and it supplies the blob mode.
+- Apply snapshots the index with `git write-tree`, renames every path into
+  `~/.skill-manager/trash/repair-*/worktree/`, restores tracked paths with
+  `git checkout --quiet HEAD --`, unstages index-only paths with
+  `git reset --quiet HEAD --`, re-verifies the checkout, re-runs the ownership
+  audit, prunes directories left empty, then deletes staging. Any failure rolls
+  the staged moves back in reverse, restores the index with `git read-tree`, and
+  deletes the paths restore recreated at locations that were absent beforehand,
+  pruning any directory that recreation added. Restoring tracked paths rewrites
+  the index and recreates deleted files, so reversing the renames alone would
+  both discard staged content and leave new files behind while reporting a
+  complete rollback. Recovery data is retained whenever any of the three
+  restorations is incomplete, and the error names which one failed.
+- Branch, upstream, and ancestry blockers are checked through
+  `resolveManagedCheckoutRefs` independently of worktree cleanliness. Without
+  this, `inspectManagedCheckout` reports the dirty worktree first and returns
+  before reaching them, so a dirty checkout with local-only commits would be
+  "repaired" while update still failed.
+- Repair refuses to stage a recorded skill directory, an ancestor of one, or an
+  installed `SKILL.md` that `HEAD` does not hold as a regular file. Tracked
+  status alone is not sufficient: a staged addition is tracked yet absent from
+  HEAD, so staging it would leave the recorded symlink dangling. A stray
+  generated file inside a skill directory is repairable, which is the common
+  real-world case.
+- Repair is idempotent, never writes `state.json`, never moves symlinks, and
+  never issues `git clean`, `reset --hard`, or a forced checkout (`implemented`,
+  guarded by a regression test).
+- A managed checkout whose installed `SKILL.md` was deleted locally stays
+  blocked by the shared ownership audit (`open`: the same pre-existing
+  limitation blocks update and uninstall).
 - Dry-run never fetches or changes remote-tracking refs. It checks the current
   checkout and cached upstream and reports that exact remote preflight remains
   unavailable until a real update.
+
+## PR #15 Review Follow-up
+
+`observed`, resolved in `2fdaa34`: review of commit `248a8d7` reproduced four repair gaps
+with temporary local Git fixtures. Findings were published as inline comments
+in [PR #15](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestreview-5138633999):
+
+- P1: a recorded installed SKILL.md added only to the index passes the tracked
+  guard, then repair deletes it and leaves the managed link dangling. Check
+  HEAD membership and regular-file mode before staging.
+- P1: a failure after tracked restoration rolls filesystem moves back but
+  leaves the Git index rewritten; preserve and restore index state too.
+- P2: dirty worktrees bypass branch/upstream/ancestry preflight. A dirty
+  checkout with local-only commits can report successful repair while remaining
+  unusable by update. Check non-repairable blockers before mutation.
+- P2: trimming NUL-delimited filenames corrupts leading/trailing whitespace
+  and prevents repair of valid paths. Preserve exact Git path bytes.
+
+Re-review of `2fdaa34` independently reran all four original reproductions:
+all pass, and the four GitHub review threads are resolved.
+
+`observed`, `open`: an additional P2 remains in repair rollback. Paths absent
+before repair are skipped during staging but recreated by tracked restoration.
+A post-restore verification failure leaves those files behind despite reporting
+complete rollback. Temporary real-Git tests reproduced both an unstaged
+`.gitignore` deletion being undone and a staged rename gaining an extra
+untracked source path. Track original absence and undo repair-created paths
+on rollback. See the [re-review](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestreview-5138750585).
+The review verdict is changes required before merge.
 
 ## Whole-Repository Uninstall
 

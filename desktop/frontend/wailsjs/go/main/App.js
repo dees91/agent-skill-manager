@@ -34,6 +34,10 @@ export function GetSnapshot(arg1) {
   return window['go']['main']['App']['GetSnapshot'](arg1);
 }
 
+export function InspectSources() {
+  return window['go']['main']['App']['InspectSources']();
+}
+
 export function MeasureContextBudgets() {
   return window['go']['main']['App']['MeasureContextBudgets']();
 }
@@ -46,12 +50,20 @@ export function PreviewExtend(arg1) {
   return window['go']['main']['App']['PreviewExtend'](arg1);
 }
 
+export function PreviewRepair(arg1) {
+  return window['go']['main']['App']['PreviewRepair'](arg1);
+}
+
 export function PreviewSkillSetToggle(arg1, arg2) {
   return window['go']['main']['App']['PreviewSkillSetToggle'](arg1, arg2);
 }
 
 export function PreviewUninstall(arg1) {
   return window['go']['main']['App']['PreviewUninstall'](arg1);
+}
+
+export function RepairSource(arg1, arg2) {
+  return window['go']['main']['App']['RepairSource'](arg1, arg2);
 }
 
 export function ReviewInstall(arg1, arg2) {

@@ -103,6 +103,8 @@ func (a App) Run(args []string, stdout, stderr io.Writer) int {
 		return a.runUpdate(stdout, stderr, args[1:])
 	case "uninstall":
 		return a.runUninstall(stdout, stderr, args[1:])
+	case "repair":
+		return a.runRepair(stdout, stderr, args[1:])
 	case "extend":
 		return a.runExtend(stdout, stderr, args[1:])
 	case "enable":
@@ -269,6 +271,7 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 			plan, err := service.PlanLocal(repository)
 			if err != nil {
 				fmt.Fprintf(stderr, "error: update %s: %v\n", repositoryGroup(repository), err)
+				reportCheckoutConflict(stderr, repository, err)
 				return 1
 			}
 			fmt.Fprintf(stdout, "dry-run: update %s\n", repositoryGroup(repository))
@@ -287,6 +290,7 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 		result, err := service.Apply(repository)
 		if err != nil {
 			fmt.Fprintf(stderr, "error: update %s: %v\n", repositoryGroup(repository), err)
+			reportCheckoutConflict(stderr, repository, err)
 			return 1
 		}
 		if result.Updated {
@@ -1026,6 +1030,8 @@ Commands:
                                Update one or all managed repositories
   uninstall <git-url|local-path> [--dry-run]
                                Remove a managed source and all its links
+  repair <git-url> [--dry-run]
+                               Clear worktree changes blocking a managed checkout
   extend --tool <tool> [--dry-run]
                                Link recorded skills to one more tool across every managed source
   enable --tool <tool> <skill> [--dry-run]
