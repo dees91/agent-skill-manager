@@ -993,9 +993,12 @@ confirmed repair for the only repairable class.
   when the worktree is dirty. A dirty checkout that also has local-only commits
   or a detached HEAD is refused, never partially repaired.
 - Repair snapshots the Git index before mutating and restores it on rollback,
-  because restoring tracked paths rewrites the index as well as the worktree. If
-  either the worktree or the index cannot be restored, recovery data is kept and
-  reported.
+  because restoring tracked paths rewrites the index as well as the worktree.
+  Rollback also deletes paths repair recreated from `HEAD` at locations that were
+  absent beforehand, and prunes directories that recreation added, so the
+  worktree returns to its exact pre-operation shape. If the worktree, the
+  recreated paths, or the index cannot be restored, recovery data is kept and the
+  error names which restoration failed.
 - Worktree enumeration uses `git status --porcelain=v2 -z`. Version 1 records may
   start with the space of an `X ` status code, which the trimming Git runner
   removes, making it indistinguishable from a filename that begins with a space.

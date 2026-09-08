@@ -597,3 +597,33 @@ before fixing and now covered by tests that fail without the fix:
   lookups to the default `ls-tree` format (records start with the mode), so both
   are lossless and the mode is available for the guard above. This supersedes
   the record-zero leading-space workaround noted in the previous entry.
+
+## [2026-09-08] verification | PR 15 re-review of repair fixes
+
+Re-reviewed `2fdaa34`; all four original real-Git reproductions now pass.
+Replied to and resolved all four original GitHub threads. Published one new
+P2 for incomplete rollback of originally absent paths, reproduced with an
+unstaged deletion and a staged rename plus a post-restore verification failure.
+Verdict: changes required before merge. Existing root/desktop Go tests and
+vet, root build, frontend typecheck, 30 tests, production build, and both CI
+jobs pass. Removed temporary reproduction tests from the source tree and
+updated the repository workflow topic; no implementation changes were made.
+
+## [2026-09-08] correction | Repair rollback restores absent paths
+
+Follow-up review finding, reproduced before fixing:
+
+- The staging loop skips paths that are already absent and never records them in
+  `moves`, but `restoreTracked` recreates the ones HEAD holds. A failure after
+  restore therefore left those files behind while reporting a complete rollback.
+  Rollback now tracks pre-existing absence, deletes the recreated non-directory
+  paths inside the checkout, prunes directories recreation added, and reports
+  which of the three restorations (renames, recreated paths, index) failed.
+- `TestRepairRollbackRestoresTheExactPreOperationState` compares the full
+  `git status` output and a walk of the worktree before and after a failed
+  repair, for an unstaged deletion, a staged rename, and a deleted directory
+  holding a tracked file. All three fail without the fix.
+- Worth remembering for future rollback work: undoing a repair is not just
+  reversing what was moved. `git checkout HEAD -- <path>` also writes the index
+  and can create files and parent directories, so every effect of the restore
+  step needs its own inverse.

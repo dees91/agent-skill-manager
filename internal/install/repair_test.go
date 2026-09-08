@@ -2,6 +2,7 @@ package install
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -592,4 +593,96 @@ func (r *failingVerifyRunner) RunGit(args ...string) (string, error) {
 		}
 	}
 	return r.inner.RunGit(args...)
+}
+
+func TestRepairRollbackRestoresTheExactPreOperationState(t *testing.T) {
+	tests := []struct {
+		name  string
+		dirty func(t *testing.T, fixture updateGitFixture)
+	}{
+		{
+			name: "unstaged deletion",
+			dirty: func(t *testing.T, fixture updateGitFixture) {
+				if err := os.Remove(filepath.Join(fixture.checkoutPath, ".gitignore")); err != nil {
+					t.Fatalf("remove tracked file: %v", err)
+				}
+			},
+		},
+		{
+			name: "staged rename",
+			dirty: func(t *testing.T, fixture updateGitFixture) {
+				fixture.gitCheckout("mv", ".gitignore", "ignore-rules")
+			},
+		},
+		{
+			// The whole directory disappears, so restoring the file from HEAD
+			// recreates it too and rollback has to prune it again.
+			name: "deleted directory holding a tracked file",
+			dirty: func(t *testing.T, fixture updateGitFixture) {
+				fixture.commitRemoteChange("add nested", map[string]string{"docs/nested/file.txt": "nested\n"}, nil)
+				if _, err := NewUpdateService(fixture.paths, nil).Apply(fixture.repository); err != nil {
+					t.Fatalf("Apply() update error = %v", err)
+				}
+				if err := os.RemoveAll(filepath.Join(fixture.checkoutPath, "docs")); err != nil {
+					t.Fatalf("remove nested directory: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newUpdateGitFixture(t)
+			test.dirty(t, fixture)
+			wantStatus := fixture.gitCheckout("status", "--porcelain", "--untracked-files=all", "--ignored")
+			wantPresent := worktreeSnapshot(t, fixture.checkoutPath)
+
+			service := NewRepairService(fixture.paths, nil)
+			service.runner = &failingVerifyRunner{inner: service.runner, checkoutPath: fixture.checkoutPath}
+
+			result, err := service.Apply(fixture.repository)
+
+			if err == nil || !strings.Contains(err.Error(), "repair did not clear the checkout") {
+				t.Fatalf("Apply() error = %v, want the injected verification failure", err)
+			}
+			if result.CleanupPending != "" {
+				t.Fatalf("CleanupPending = %q, want a complete rollback", result.CleanupPending)
+			}
+			if gotStatus := fixture.gitCheckout("status", "--porcelain", "--untracked-files=all", "--ignored"); gotStatus != wantStatus {
+				t.Fatalf("status after rollback = %q, want the pre-operation status %q", gotStatus, wantStatus)
+			}
+			if gotPresent := worktreeSnapshot(t, fixture.checkoutPath); !equalStrings(gotPresent, wantPresent) {
+				t.Fatalf("worktree after rollback = %v, want %v", gotPresent, wantPresent)
+			}
+			assertTrashEmpty(t, fixture)
+		})
+	}
+}
+
+// worktreeSnapshot lists every checkout-relative path outside .git, sorted.
+func worktreeSnapshot(t *testing.T, checkoutPath string) []string {
+	t.Helper()
+	paths := []string{}
+	err := filepath.WalkDir(checkoutPath, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relative, relErr := filepath.Rel(checkoutPath, path)
+		if relErr != nil {
+			return relErr
+		}
+		if relative == "." {
+			return nil
+		}
+		if entry.IsDir() && entry.Name() == ".git" {
+			return filepath.SkipDir
+		}
+		paths = append(paths, filepath.ToSlash(relative))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk checkout: %v", err)
+	}
+	sort.Strings(paths)
+	return paths
 }

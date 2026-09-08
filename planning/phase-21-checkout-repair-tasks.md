@@ -31,7 +31,9 @@
   checkout before deleting recovery data.
 - Branch, upstream, and ancestry blockers are rejected before any mutation, even
   on a dirty checkout, so repair never reports success while update still fails.
-- The Git index is snapshotted before mutation and restored on rollback.
+- The Git index is snapshotted before mutation and restored on rollback, and
+  rollback removes paths repair recreated at locations that were absent
+  beforehand, so a failed repair leaves the exact pre-operation state.
 - Worktree enumeration uses porcelain v2 and preserves path bytes exactly.
 - An installed `SKILL.md` is only stageable when `HEAD` holds it as a regular
   file that the restore step can put back.

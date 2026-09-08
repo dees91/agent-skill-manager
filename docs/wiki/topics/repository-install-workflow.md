@@ -117,10 +117,13 @@ same ownership audit and transactional removal service.
   `git checkout --quiet HEAD --`, unstages index-only paths with
   `git reset --quiet HEAD --`, re-verifies the checkout, re-runs the ownership
   audit, prunes directories left empty, then deletes staging. Any failure rolls
-  the staged moves back in reverse **and** restores the index with
-  `git read-tree`; restoring tracked paths rewrites the index, so reversing the
-  renames alone would silently discard staged content. Recovery data is retained
-  whenever either restoration is incomplete.
+  the staged moves back in reverse, restores the index with `git read-tree`, and
+  deletes the paths restore recreated at locations that were absent beforehand,
+  pruning any directory that recreation added. Restoring tracked paths rewrites
+  the index and recreates deleted files, so reversing the renames alone would
+  both discard staged content and leave new files behind while reporting a
+  complete rollback. Recovery data is retained whenever any of the three
+  restorations is incomplete, and the error names which one failed.
 - Branch, upstream, and ancestry blockers are checked through
   `resolveManagedCheckoutRefs` independently of worktree cleanliness. Without
   this, `inspectManagedCheckout` reports the dirty worktree first and returns
@@ -144,7 +147,7 @@ same ownership audit and transactional removal service.
 
 ## PR #15 Review Follow-up
 
-`observed`, `open`: review of commit `248a8d7` reproduced four repair gaps
+`observed`, resolved in `2fdaa34`: review of commit `248a8d7` reproduced four repair gaps
 with temporary local Git fixtures. Findings were published as inline comments
 in [PR #15](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestreview-5138633999):
 
@@ -159,7 +162,17 @@ in [PR #15](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestrev
 - P2: trimming NUL-delimited filenames corrupts leading/trailing whitespace
   and prevents repair of valid paths. Preserve exact Git path bytes.
 
-These are unresolved review findings, not accepted changes to product scope.
+Re-review of `2fdaa34` independently reran all four original reproductions:
+all pass, and the four GitHub review threads are resolved.
+
+`observed`, `open`: an additional P2 remains in repair rollback. Paths absent
+before repair are skipped during staging but recreated by tracked restoration.
+A post-restore verification failure leaves those files behind despite reporting
+complete rollback. Temporary real-Git tests reproduced both an unstaged
+`.gitignore` deletion being undone and a staged rename gaining an extra
+untracked source path. Track original absence and undo repair-created paths
+on rollback. See the [re-review](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestreview-5138750585).
+The review verdict is changes required before merge.
 
 ## Whole-Repository Uninstall
 

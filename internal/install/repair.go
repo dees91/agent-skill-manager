@@ -44,6 +44,7 @@ type RepairService struct {
 	mkdirAll  func(string, os.FileMode) error
 	mkdirTemp func(string, string) (string, error)
 	lstat     func(string) (os.FileInfo, error)
+	remove    func(string) error
 }
 
 // NewRepairService creates a repair service. A nil runner uses real git.
@@ -60,6 +61,7 @@ func NewRepairService(p paths.Paths, runner GitRunner) *RepairService {
 		mkdirAll:  os.MkdirAll,
 		mkdirTemp: os.MkdirTemp,
 		lstat:     os.Lstat,
+		remove:    os.Remove,
 	}
 }
 
@@ -118,15 +120,24 @@ func (s *RepairService) Apply(repository state.RepositoryEntry) (RepairResult, e
 	}
 
 	moves := []StagedMove{}
+	// Paths that were already absent are never staged, but restoreTracked
+	// recreates the ones HEAD holds. Rollback has to remove them again, or a
+	// failed repair leaves files behind while reporting a complete rollback.
+	absent := []string{}
 	rollback := func(original error) (RepairResult, error) {
 		result.RolledBack = rollbackStagedMoves(moves, s.rename)
+		recreatedErr := s.removeRecreatedPaths(checkoutPath, absent)
 		indexErr := s.restoreIndex(checkoutPath, indexTree)
-		if len(result.RolledBack) != len(moves) || indexErr != nil {
+		if len(result.RolledBack) != len(moves) || recreatedErr != nil || indexErr != nil {
 			result.CleanupPending = stagingRoot
-			if indexErr != nil {
-				return result, fmt.Errorf("%w; rollback restored %d of %d staged paths but the Git index was not restored: %v; recovery data retained at %s", original, len(result.RolledBack), len(moves), indexErr, stagingRoot)
+			details := []string{fmt.Sprintf("rollback restored %d of %d staged paths", len(result.RolledBack), len(moves))}
+			if recreatedErr != nil {
+				details = append(details, fmt.Sprintf("paths recreated by repair were not removed: %v", recreatedErr))
 			}
-			return result, fmt.Errorf("%w; rollback restored %d of %d staged paths; recovery data retained at %s", original, len(result.RolledBack), len(moves), stagingRoot)
+			if indexErr != nil {
+				details = append(details, fmt.Sprintf("the Git index was not restored: %v", indexErr))
+			}
+			return result, fmt.Errorf("%w; %s; recovery data retained at %s", original, strings.Join(details, "; "), stagingRoot)
 		}
 		if cleanupErr := s.removeAll(stagingRoot); cleanupErr != nil {
 			result.CleanupPending = stagingRoot
@@ -139,6 +150,7 @@ func (s *RepairService) Apply(repository state.RepositoryEntry) (RepairResult, e
 		originalPath := filepath.Join(checkoutPath, filepath.FromSlash(entry.RelPath))
 		if _, err := s.lstat(originalPath); err != nil {
 			if os.IsNotExist(err) {
+				absent = append(absent, entry.RelPath)
 				continue
 			}
 			return rollback(fmt.Errorf("inspect worktree path %s: %w", entry.RelPath, err))
@@ -165,7 +177,11 @@ func (s *RepairService) Apply(repository state.RepositoryEntry) (RepairResult, e
 		return rollback(fmt.Errorf("repair broke a recorded reference: %w", err))
 	}
 	// Only after the checkout verifies clean, so rollback never needs a pruned parent.
-	s.pruneEmptyParents(checkoutPath, moves)
+	staged := make([]string, 0, len(moves))
+	for _, move := range moves {
+		staged = append(staged, move.OriginalPath)
+	}
+	s.pruneEmptyParents(checkoutPath, staged)
 	if err := s.removeAll(stagingRoot); err != nil {
 		result.CleanupPending = stagingRoot
 		return result, fmt.Errorf("repair completed but cleanup remains at %s: %w", stagingRoot, err)
@@ -343,12 +359,42 @@ func regularBlobMode(mode string) bool {
 	return mode == "100644" || mode == "100755"
 }
 
+// removeRecreatedPaths deletes the files restoreTracked recreated at paths that
+// were absent before the repair started, returning the worktree to its exact
+// pre-operation shape. Only non-directory paths inside the checkout are removed.
+func (s *RepairService) removeRecreatedPaths(checkoutPath string, relativePaths []string) error {
+	root := filepath.Clean(checkoutPath)
+	removed := []string{}
+	for _, relative := range relativePaths {
+		target := filepath.Join(root, filepath.FromSlash(relative))
+		if !pathInside(root, target) {
+			continue
+		}
+		info, err := s.lstat(target)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("inspect recreated path %s: %w", relative, err)
+		}
+		if info.IsDir() {
+			return fmt.Errorf("recreated path %s is a directory", relative)
+		}
+		if err := s.remove(target); err != nil {
+			return fmt.Errorf("remove recreated path %s: %w", relative, err)
+		}
+		removed = append(removed, target)
+	}
+	s.pruneEmptyParents(root, removed)
+	return nil
+}
+
 // pruneEmptyParents removes directories left empty by staging. os.Remove only
 // succeeds on an empty directory, and the walk never reaches the checkout root.
-func (s *RepairService) pruneEmptyParents(checkoutPath string, moves []StagedMove) {
+func (s *RepairService) pruneEmptyParents(checkoutPath string, paths []string) {
 	root := filepath.Clean(checkoutPath)
-	for i := len(moves) - 1; i >= 0; i-- {
-		directory := filepath.Dir(moves[i].OriginalPath)
+	for i := len(paths) - 1; i >= 0; i-- {
+		directory := filepath.Dir(paths[i])
 		for {
 			directory = filepath.Clean(directory)
 			if directory == root || !pathInside(root, directory) {
