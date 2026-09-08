@@ -637,3 +637,26 @@ No new P1/P2 findings. Published a ready-to-merge verdict as a review comment
 (the authenticated account is the PR author). Root/desktop Go tests and vet,
 CLI build, and both CI jobs pass. Temporary tests were removed; no code changes
 or merge were made. Updated the repository workflow review status locally.
+
+## [2026-09-08] release | Prepare and publish v0.7.0 public preview
+
+- Selected a minor prerelease for the completed Iteration 21 managed checkout
+  diagnosis and repair work, keeping the Apple Silicon, ad-hoc-signed preview
+  limitations.
+- Bumped `desktop/wails.json`, `desktop/frontend/package.json`, its lockfile,
+  and the README download/version guidance to `0.7.0`; added
+  `docs/releases/v0.7.0.md`. Third-party notices regenerated unchanged.
+- Tagged `70002c1` after the full local Apple Silicon packaging gate and public
+  Root Go plus Desktop/frontend CI succeeded for that exact commit; no open PRs
+  or Dependabot alerts remained.
+- Uploaded the desktop ZIP, CLI tarball, and SHA-256 manifest to a draft,
+  downloaded them back, and verified digests against the local manifest,
+  archive contents including LICENSE and notices, absence of absolute or
+  parent paths, ad-hoc signatures, arm64 Mach-O format, bundle identifier
+  `io.github.dees91.skillmanager`, versions, `LSMinimumSystemVersion` 13.0,
+  `skill-manager --version`, the `repair` command in CLI help, and an
+  isolated-home desktop launch that left the real state untouched.
+- Published the draft as a GitHub prerelease and re-verified both archives from
+  the unauthenticated public download URLs.
+- `observed`: `releases/latest` returns 404 for this repository because every
+  release is a prerelease. That is expected, not a publication defect.
