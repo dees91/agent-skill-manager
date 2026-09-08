@@ -984,10 +984,22 @@ confirmed repair for the only repairable class.
 - Do not add `git clean`, `reset --hard`, forced checkouts, or in-place
   deletion. Repair never writes `state.json`, moves symlinks, or changes remote
   refs, and it never leaves the managed checkout root.
-- Repair requires the same ownership audit as update and uninstall. It refuses
-  to stage a recorded skill directory, an ancestor of one, or an untracked
-  `SKILL.md` that `HEAD` cannot restore. A stray file inside a skill directory
-  is repairable.
+- Repair requires the same ownership audit as update and uninstall, and re-runs
+  it after restoring the checkout, before any recovery data is deleted. It
+  refuses to stage a recorded skill directory, an ancestor of one, or an
+  installed `SKILL.md` that `HEAD` does not hold as a regular file. A stray file
+  inside a skill directory is repairable.
+- Branch, upstream, and ancestry blockers are rejected before any mutation, even
+  when the worktree is dirty. A dirty checkout that also has local-only commits
+  or a detached HEAD is refused, never partially repaired.
+- Repair snapshots the Git index before mutating and restores it on rollback,
+  because restoring tracked paths rewrites the index as well as the worktree. If
+  either the worktree or the index cannot be restored, recovery data is kept and
+  reported.
+- Worktree enumeration uses `git status --porcelain=v2 -z`. Version 1 records may
+  start with the space of an `X ` status code, which the trimming Git runner
+  removes, making it indistinguishable from a filename that begins with a space.
+  Path bytes are preserved exactly apart from the documented directory suffix.
 - Repair is idempotent. A clean, fast-forwardable checkout succeeds without
   mutating anything.
 - A managed checkout whose installed `SKILL.md` was deleted locally stays

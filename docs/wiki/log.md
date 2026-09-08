@@ -557,3 +557,43 @@ intentionally excluded.
 - `open`: a managed checkout whose installed `SKILL.md` was deleted locally is
   still blocked by the shared ownership audit, which also blocks update and
   uninstall. Repair does not change that pre-existing limitation.
+
+## [2026-09-08] analysis | PR 15 repair safety review
+
+Reviewed `248a8d7` using code-review-and-quality, limited to P1/P2, and
+published two P1 and two P2 inline comments on PR #15. Temporary real-Git
+fixtures reproduced installed staged-only SKILL.md deletion, index state lost
+on failed repair rollback, dirty checkout ancestry preflight bypass, and
+whitespace filename corruption. Recorded the open findings in
+`topics/repository-install-workflow.md`. Existing root and desktop Go tests,
+frontend typecheck, 30 frontend tests, and production build passed. Review
+reproductions were removed from the source tree; no implementation changes
+were made.
+
+## [2026-09-08] correction | Repair review findings addressed
+
+Four defects found in review of the Iteration 21 repair path, all reproduced
+before fixing and now covered by tests that fail without the fix:
+
+- `WorktreeEntryTracked` includes staged additions, so the installed-`SKILL.md`
+  guard keyed on class allowed an index-only `SKILL.md` through; repair then
+  unstaged it, pruned the directory, and left the recorded symlink dangling.
+  The guard now requires HEAD to hold the file as a regular blob, and the
+  ownership audit is re-run after restore before recovery data is deleted.
+- Rollback reversed only filesystem renames although `restoreTracked` also
+  rewrites the index through `git checkout HEAD` / `git reset HEAD`, so a
+  post-restore failure silently replaced staged content with HEAD. Apply now
+  snapshots the index with `write-tree` and restores it with `read-tree`,
+  retaining recovery data when either restoration is incomplete.
+- Branch/upstream/ancestry blockers were only checked when the worktree was
+  clean, because `inspectManagedCheckout` returns at the dirty check. A dirty
+  checkout with local-only commits was therefore "repaired" while update still
+  failed. `resolveManagedCheckoutRefs` was extracted so repair validates refs
+  independently of worktree cleanliness, before any mutation. The extraction
+  preserves `inspectManagedCheckout`'s existing check order and messages.
+- Porcelain v1 parsing trimmed path whitespace and could not distinguish a
+  trimmed `X ` status code from a filename starting with a space. Enumeration
+  moved to `--porcelain=v2` (records never start with whitespace) and HEAD
+  lookups to the default `ls-tree` format (records start with the mode), so both
+  are lossless and the mode is available for the guard above. This supersedes
+  the record-zero leading-space workaround noted in the previous entry.

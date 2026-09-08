@@ -37,6 +37,14 @@ func inspectManagedCheckout(identity RepoIdentity, checkoutPath string, runner G
 	if strings.TrimSpace(status) != "" {
 		return ManagedCheckout{}, dirtyWorktreeConflict(checkoutPath, runner)
 	}
+	return resolveManagedCheckoutRefs(checkoutPath, runner)
+}
+
+// resolveManagedCheckoutRefs validates branch, upstream, and commit resolution
+// without inspecting the worktree. Repair needs these blockers on a dirty
+// checkout, where inspectManagedCheckout reports the worktree first and returns
+// before reaching them.
+func resolveManagedCheckoutRefs(checkoutPath string, runner GitRunner) (ManagedCheckout, error) {
 	branch, err := runner.RunGit("-C", checkoutPath, "symbolic-ref", "--quiet", "--short", "HEAD")
 	if err != nil || strings.TrimSpace(branch) == "" {
 		return ManagedCheckout{}, conflictf(CheckoutConflictDetachedHead, checkoutPath, "checkout conflict: %s is in detached HEAD state", checkoutPath)

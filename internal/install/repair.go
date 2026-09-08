@@ -98,6 +98,13 @@ func (s *RepairService) Apply(repository state.RepositoryEntry) (RepairResult, e
 		result.Clean = true
 		return result, nil
 	}
+	// Snapshot the index before any mutation. restoreTracked rewrites it through
+	// `git checkout HEAD` and `git reset HEAD`, so rolling back renames alone
+	// would silently discard the user's staged content.
+	indexTree, err := s.snapshotIndex(checkoutPath)
+	if err != nil {
+		return result, err
+	}
 	if err := s.ensureTrashRoot(); err != nil {
 		return result, err
 	}
@@ -113,8 +120,12 @@ func (s *RepairService) Apply(repository state.RepositoryEntry) (RepairResult, e
 	moves := []StagedMove{}
 	rollback := func(original error) (RepairResult, error) {
 		result.RolledBack = rollbackStagedMoves(moves, s.rename)
-		if len(result.RolledBack) != len(moves) {
+		indexErr := s.restoreIndex(checkoutPath, indexTree)
+		if len(result.RolledBack) != len(moves) || indexErr != nil {
 			result.CleanupPending = stagingRoot
+			if indexErr != nil {
+				return result, fmt.Errorf("%w; rollback restored %d of %d staged paths but the Git index was not restored: %v; recovery data retained at %s", original, len(result.RolledBack), len(moves), indexErr, stagingRoot)
+			}
 			return result, fmt.Errorf("%w; rollback restored %d of %d staged paths; recovery data retained at %s", original, len(result.RolledBack), len(moves), stagingRoot)
 		}
 		if cleanupErr := s.removeAll(stagingRoot); cleanupErr != nil {
@@ -149,6 +160,10 @@ func (s *RepairService) Apply(repository state.RepositoryEntry) (RepairResult, e
 	if _, err := inspectManagedCheckout(audit.Identity, checkoutPath, s.runner); err != nil {
 		return rollback(fmt.Errorf("repair did not clear the checkout: %w", err))
 	}
+	// Prove every recorded link still resolves before the recovery data goes away.
+	if err := s.reauditReferences(audit.Repository); err != nil {
+		return rollback(fmt.Errorf("repair broke a recorded reference: %w", err))
+	}
 	// Only after the checkout verifies clean, so rollback never needs a pruned parent.
 	s.pruneEmptyParents(checkoutPath, moves)
 	if err := s.removeAll(stagingRoot); err != nil {
@@ -179,17 +194,25 @@ func (s *RepairService) prepare(repository state.RepositoryEntry) (ReferenceAudi
 	if !pathInside(s.paths.ReposDir, checkoutPath) || filepath.Clean(checkoutPath) == filepath.Clean(s.paths.ReposDir) {
 		return ReferenceAudit{}, CheckoutConflictError{}, fmt.Errorf("unsafe repair checkout path %s", checkoutPath)
 	}
-	checkout, inspectErr := inspectManagedCheckout(audit.Identity, checkoutPath, s.runner)
-	if inspectErr == nil {
-		// A clean worktree still has to be usable; local commits are not repairable.
-		if err := requireFastForward(checkout, checkout.UpstreamCommit, s.runner); err != nil {
-			return ReferenceAudit{}, CheckoutConflictError{}, err
-		}
-		return audit, CheckoutConflictError{}, nil
-	}
-	conflict, ok := AsCheckoutConflict(inspectErr)
-	if !ok || !conflict.Repairable() {
+	_, inspectErr := inspectManagedCheckout(audit.Identity, checkoutPath, s.runner)
+	conflict, isConflict := AsCheckoutConflict(inspectErr)
+	if inspectErr != nil && (!isConflict || !conflict.Repairable()) {
 		return ReferenceAudit{}, CheckoutConflictError{}, inspectErr
+	}
+	// The branch, upstream, and ancestry blockers are not repairable and must be
+	// rejected before any mutation. inspectManagedCheckout reports the worktree
+	// first and returns before reaching them, so a dirty checkout would otherwise
+	// start staging and only discover them during final verification, or repair
+	// would report success while update still fails.
+	refs, err := resolveManagedCheckoutRefs(checkoutPath, s.runner)
+	if err != nil {
+		return ReferenceAudit{}, CheckoutConflictError{}, err
+	}
+	if err := requireFastForward(refs, refs.UpstreamCommit, s.runner); err != nil {
+		return ReferenceAudit{}, CheckoutConflictError{}, err
+	}
+	if inspectErr == nil {
+		return audit, CheckoutConflictError{}, nil
 	}
 	if len(conflict.Entries) == 0 {
 		return ReferenceAudit{}, CheckoutConflictError{}, fmt.Errorf("repair blocked: %s has worktree changes git could not enumerate", checkoutPath)
@@ -202,7 +225,46 @@ func (s *RepairService) prepare(repository state.RepositoryEntry) (ReferenceAudi
 			return ReferenceAudit{}, CheckoutConflictError{}, fmt.Errorf("repair blocked: worktree path %q holds installed skill %q", entry.RelPath, skill)
 		}
 	}
+	if err := s.requireRestorableSkillFiles(checkoutPath, conflict.Entries, audit.Repository); err != nil {
+		return ReferenceAudit{}, CheckoutConflictError{}, err
+	}
 	return audit, conflict, nil
+}
+
+// requireRestorableSkillFiles refuses to stage an installed skill's SKILL.md
+// unless HEAD holds it as a regular file that the restore step can put back.
+// Tracked status alone is not enough: a staged addition is tracked but absent
+// from HEAD, so staging it would leave the recorded symlink dangling.
+func (s *RepairService) requireRestorableSkillFiles(checkoutPath string, entries []WorktreeEntry, repository state.RepositoryEntry) error {
+	affected := map[string]string{}
+	candidates := []string{}
+	for _, entry := range entries {
+		for _, skill := range repository.InstalledSkills {
+			recorded := strings.Trim(filepath.ToSlash(skill.RelativePath), "/")
+			if recorded == "" || entry.RelPath != recorded+"/SKILL.md" {
+				continue
+			}
+			affected[entry.RelPath] = skill.Name
+			candidates = append(candidates, entry.RelPath)
+		}
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+	modes, err := s.headBlobModes(checkoutPath, candidates)
+	if err != nil {
+		return err
+	}
+	for _, relative := range candidates {
+		mode, ok := modes[relative]
+		if !ok {
+			return fmt.Errorf("repair blocked: %q holds installed skill %q and is missing from HEAD", relative, affected[relative])
+		}
+		if !regularBlobMode(mode) {
+			return fmt.Errorf("repair blocked: %q holds installed skill %q and is not a regular file in HEAD", relative, affected[relative])
+		}
+	}
+	return nil
 }
 
 // restoreTracked returns tracked paths to their HEAD content. Paths that exist
@@ -218,14 +280,14 @@ func (s *RepairService) restoreTracked(checkoutPath string, entries []WorktreeEn
 	if len(tracked) == 0 {
 		return nil
 	}
-	inHead, err := s.pathsInHead(checkoutPath, tracked)
+	inHead, err := s.headBlobModes(checkoutPath, tracked)
 	if err != nil {
 		return err
 	}
 	restore := []string{}
 	unstage := []string{}
 	for _, relative := range tracked {
-		if inHead[relative] {
+		if _, ok := inHead[relative]; ok {
 			restore = append(restore, relative)
 			continue
 		}
@@ -248,21 +310,37 @@ func (s *RepairService) restoreTracked(checkoutPath string, entries []WorktreeEn
 	return nil
 }
 
-// pathsInHead reports which of the given checkout-relative paths exist in HEAD.
-func (s *RepairService) pathsInHead(checkoutPath string, relativePaths []string) (map[string]bool, error) {
-	args := append([]string{"-C", checkoutPath, "ls-tree", "-r", "-z", "--name-only", "HEAD", "--"}, relativePaths...)
+// headBlobModes maps each of the given checkout-relative paths that exists in
+// HEAD to its octal mode. The default ls-tree format is used rather than
+// --name-only because every record then starts with the mode digits, so the
+// trimming GitRunner cannot eat a leading space belonging to a filename.
+func (s *RepairService) headBlobModes(checkoutPath string, relativePaths []string) (map[string]string, error) {
+	args := append([]string{"-C", checkoutPath, "ls-tree", "-r", "-z", "HEAD", "--"}, relativePaths...)
 	output, err := s.runner.RunGit(args...)
 	if err != nil {
 		return nil, fmt.Errorf("resolve HEAD paths in %s: %w", checkoutPath, err)
 	}
-	present := map[string]bool{}
-	for _, name := range strings.Split(output, "\x00") {
-		name = strings.TrimSpace(name)
-		if name != "" {
-			present[name] = true
+	modes := map[string]string{}
+	for _, record := range strings.Split(output, "\x00") {
+		// <mode> SP <type> SP <object> TAB <path>
+		tab := strings.IndexByte(record, '\t')
+		if tab < 0 {
+			continue
 		}
+		fields := strings.Fields(record[:tab])
+		path := record[tab+1:]
+		if len(fields) != 3 || path == "" {
+			continue
+		}
+		modes[path] = fields[0]
 	}
-	return present, nil
+	return modes, nil
+}
+
+// regularBlobMode reports whether a HEAD mode is a regular file, as opposed to
+// a symlink, gitlink, or directory.
+func regularBlobMode(mode string) bool {
+	return mode == "100644" || mode == "100755"
 }
 
 // pruneEmptyParents removes directories left empty by staging. os.Remove only
@@ -282,6 +360,45 @@ func (s *RepairService) pruneEmptyParents(checkoutPath string, moves []StagedMov
 			directory = filepath.Dir(directory)
 		}
 	}
+}
+
+// snapshotIndex records the current index as a tree object so a failed repair
+// can put the index back exactly as the user left it.
+func (s *RepairService) snapshotIndex(checkoutPath string) (string, error) {
+	tree, err := s.runner.RunGit("-C", checkoutPath, "write-tree")
+	if err != nil {
+		return "", fmt.Errorf("snapshot Git index for %s: %w", checkoutPath, err)
+	}
+	tree = strings.TrimSpace(tree)
+	if tree == "" {
+		return "", fmt.Errorf("snapshot Git index for %s: empty tree", checkoutPath)
+	}
+	return tree, nil
+}
+
+// restoreIndex puts the index back to a snapshot without touching the worktree.
+func (s *RepairService) restoreIndex(checkoutPath, tree string) error {
+	if tree == "" {
+		return nil
+	}
+	if _, err := s.runner.RunGit("-C", checkoutPath, "read-tree", tree); err != nil {
+		return fmt.Errorf("restore Git index for %s: %w", checkoutPath, err)
+	}
+	return nil
+}
+
+// reauditReferences re-runs the ownership audit against fresh state.
+func (s *RepairService) reauditReferences(repository state.RepositoryEntry) error {
+	manifest, err := s.store.Load()
+	if err != nil {
+		return err
+	}
+	current, ok := manifest.GetRepository(repository.Host, repository.RepoPath)
+	if !ok {
+		return fmt.Errorf("managed repository %s/%s not found in state", repository.Host, repository.RepoPath)
+	}
+	_, err = AuditRepositoryReferences(s.paths, manifest, current)
+	return err
 }
 
 func (s *RepairService) ensureTrashRoot() error {

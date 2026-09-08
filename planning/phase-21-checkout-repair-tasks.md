@@ -27,7 +27,14 @@
   `reset --hard`, no in-place deletion.
 - Repair never touches `state.json`, symlinks, remote refs, or anything outside
   the managed checkout root. It requires the same ownership audit as update and
-  uninstall, and refuses when that audit fails.
+  uninstall, refuses when that audit fails, and re-runs it after restoring the
+  checkout before deleting recovery data.
+- Branch, upstream, and ancestry blockers are rejected before any mutation, even
+  on a dirty checkout, so repair never reports success while update still fails.
+- The Git index is snapshotted before mutation and restored on rollback.
+- Worktree enumeration uses porcelain v2 and preserves path bytes exactly.
+- An installed `SKILL.md` is only stageable when `HEAD` holds it as a regular
+  file that the restore step can put back.
 - Repair is idempotent. A clean checkout succeeds without mutating anything.
 - `skill-manager repair <git-url> [--dry-run]` always requires an explicit URL.
   No `--all`, no `--force`, and no interactive prompt, matching `uninstall`.

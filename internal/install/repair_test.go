@@ -12,25 +12,29 @@ import (
 	"github.com/dees91/agent-skill-manager/internal/state"
 )
 
-func TestParseWorktreeEntriesClassifiesAndOrders(t *testing.T) {
+func TestParseWorktreeEntriesClassifiesOrdersAndKeepsExactPaths(t *testing.T) {
 	output := strings.Join([]string{
-		"?? zeta.txt",
-		"!! .cache/",
-		" M skills/alpha/SKILL.md",
-		"R  renamed/new.txt",
+		"? zeta.txt",
+		"! .cache/",
+		"1 .M N... 100644 100644 100644 aaa bbb skills/alpha/SKILL.md",
+		"2 R. N... 100644 100644 100644 ccc ddd R100 renamed/new.txt",
 		"renamed/old.txt",
-		"A  staged.txt",
+		"1 A. N... 000000 100644 100644 eee fff staged.txt",
+		"?  leading space.txt",
+		"1 .M N... 100644 100644 100644 ggg hhh dir/two words.txt",
 	}, "\x00")
 
 	entries := parseWorktreeEntries(output)
 
 	want := []WorktreeEntry{
-		{RelPath: ".cache", Class: WorktreeEntryIgnored, Status: "!!", IsDir: true},
-		{RelPath: "renamed/new.txt", Class: WorktreeEntryTracked, Status: "R "},
-		{RelPath: "renamed/old.txt", Class: WorktreeEntryTracked, Status: "R "},
-		{RelPath: "skills/alpha/SKILL.md", Class: WorktreeEntryTracked, Status: " M"},
-		{RelPath: "staged.txt", Class: WorktreeEntryTracked, Status: "A "},
-		{RelPath: "zeta.txt", Class: WorktreeEntryUntracked, Status: "??"},
+		{RelPath: " leading space.txt", Class: WorktreeEntryUntracked, Status: "?"},
+		{RelPath: ".cache", Class: WorktreeEntryIgnored, Status: "!", IsDir: true},
+		{RelPath: "dir/two words.txt", Class: WorktreeEntryTracked, Status: ".M"},
+		{RelPath: "renamed/new.txt", Class: WorktreeEntryTracked, Status: "R."},
+		{RelPath: "renamed/old.txt", Class: WorktreeEntryTracked, Status: "R."},
+		{RelPath: "skills/alpha/SKILL.md", Class: WorktreeEntryTracked, Status: ".M"},
+		{RelPath: "staged.txt", Class: WorktreeEntryTracked, Status: "A."},
+		{RelPath: "zeta.txt", Class: WorktreeEntryUntracked, Status: "?"},
 	}
 	if len(entries) != len(want) {
 		t.Fatalf("parseWorktreeEntries() = %#v, want %d entries", entries, len(want))
@@ -40,6 +44,32 @@ func TestParseWorktreeEntriesClassifiesAndOrders(t *testing.T) {
 			t.Fatalf("entry %d = %#v, want %#v", i, entry, want[i])
 		}
 	}
+}
+
+func TestRepairPreservesWhitespaceInFilenames(t *testing.T) {
+	fixture := newUpdateGitFixture(t)
+	strayPath := filepath.Join(fixture.checkoutPath, " stray.txt")
+	mustWriteFile(t, strayPath, "lead")
+
+	plan, err := NewRepairService(fixture.paths, nil).Plan(fixture.repository)
+	if err != nil {
+		t.Fatalf("Plan() error = %v", err)
+	}
+	if len(plan.Entries) != 1 || plan.Entries[0].RelPath != " stray.txt" {
+		t.Fatalf("Plan() entries = %#v, want the exact leading-space path", plan.Entries)
+	}
+
+	result, err := NewRepairService(fixture.paths, nil).Apply(fixture.repository)
+	if err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+	if !result.Clean || len(result.StagedEntries) != 1 {
+		t.Fatalf("Apply() = %#v, want the file staged", result)
+	}
+	if _, err := os.Lstat(strayPath); !os.IsNotExist(err) {
+		t.Fatalf("%q survived repair: %v", strayPath, err)
+	}
+	assertTrashEmpty(t, fixture)
 }
 
 func TestCheckoutConflictKeepsMessageAndClassifiesKind(t *testing.T) {
@@ -438,4 +468,128 @@ func TestRepairServiceRefusesToStageAnInstalledSkillDirectory(t *testing.T) {
 		t.Fatalf("installed skill directory was disturbed: %v", statErr)
 	}
 	assertTrashEmpty(t, fixture)
+}
+
+func TestRepairRefusesStagedInstalledSkillFileMissingFromHead(t *testing.T) {
+	fixture := newUpdateGitFixture(t)
+	mustWriteFile(t, filepath.Join(fixture.checkoutPath, "skills", "beta", "SKILL.md"), "# beta\n")
+	mustSymlink(t, filepath.Join(fixture.checkoutPath, "skills", "beta"), filepath.Join(fixture.paths.ClaudeUserSkills, "beta"))
+	fixture.gitCheckout("add", "skills/beta/SKILL.md")
+	repository := fixture.repository
+	repository.InstalledSkills = append(repository.InstalledSkills, state.InstalledSkillEntry{
+		Name:         "beta",
+		RelativePath: "skills/beta",
+		Tools:        []model.Tool{model.ToolClaude},
+	})
+	if err := state.New(fixture.paths).Save(state.Manifest{Repositories: []state.RepositoryEntry{repository}}); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	_, err := NewRepairService(fixture.paths, nil).Apply(repository)
+
+	if err == nil || !strings.Contains(err.Error(), "is missing from HEAD") {
+		t.Fatalf("Apply() error = %v, want a refusal naming the missing HEAD blob", err)
+	}
+	if _, statErr := os.Lstat(filepath.Join(fixture.checkoutPath, "skills", "beta", "SKILL.md")); statErr != nil {
+		t.Fatalf("installed skill file was disturbed: %v", statErr)
+	}
+	if target, readErr := os.Readlink(filepath.Join(fixture.paths.ClaudeUserSkills, "beta")); readErr != nil {
+		t.Fatalf("managed symlink was disturbed: %v (target %q)", readErr, target)
+	}
+	assertTrashEmpty(t, fixture)
+}
+
+func TestRepairRollbackRestoresTheGitIndex(t *testing.T) {
+	fixture := newUpdateGitFixture(t)
+	mustWriteFile(t, filepath.Join(fixture.checkoutPath, ".gitignore"), "staged-version/\n")
+	fixture.gitCheckout("add", ".gitignore")
+	mustWriteFile(t, filepath.Join(fixture.checkoutPath, ".gitignore"), "worktree-version/\n")
+	stagedBlob := fixture.gitCheckout("rev-parse", ":.gitignore")
+
+	service := NewRepairService(fixture.paths, nil)
+	realRunner := service.runner
+	service.runner = &failingVerifyRunner{inner: realRunner, checkoutPath: fixture.checkoutPath}
+
+	result, err := service.Apply(fixture.repository)
+
+	if err == nil || !strings.Contains(err.Error(), "repair did not clear the checkout") {
+		t.Fatalf("Apply() error = %v, want the injected verification failure", err)
+	}
+	if restored := fixture.gitCheckout("rev-parse", ":.gitignore"); restored != stagedBlob {
+		t.Fatalf("index blob = %q, want the original staged blob %q", restored, stagedBlob)
+	}
+	if contents := readFileTest(t, filepath.Join(fixture.checkoutPath, ".gitignore")); contents != "worktree-version/\n" {
+		t.Fatalf(".gitignore = %q, want the original worktree content", contents)
+	}
+	if result.CleanupPending != "" {
+		t.Fatalf("CleanupPending = %q, want a complete rollback", result.CleanupPending)
+	}
+	assertTrashEmpty(t, fixture)
+}
+
+func TestRepairRefusesDirtyCheckoutsWithNonRepairableRefBlockers(t *testing.T) {
+	tests := []struct {
+		name   string
+		break_ func(t *testing.T, fixture updateGitFixture)
+		want   string
+	}{
+		{
+			name: "local-only commit",
+			break_: func(t *testing.T, fixture updateGitFixture) {
+				mustWriteFile(t, filepath.Join(fixture.checkoutPath, "committed.txt"), "local")
+				fixture.gitCheckout("add", "committed.txt")
+				fixture.gitCheckout("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "local")
+			},
+			want: "cannot fast-forward",
+		},
+		{
+			name:   "detached head",
+			break_: func(t *testing.T, fixture updateGitFixture) { fixture.gitCheckout("checkout", "--detach") },
+			want:   "detached HEAD",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newUpdateGitFixture(t)
+			test.break_(t, fixture)
+			strayPath := filepath.Join(fixture.checkoutPath, "stray.txt")
+			mustWriteFile(t, strayPath, "block")
+
+			_, planErr := NewRepairService(fixture.paths, nil).Plan(fixture.repository)
+			if planErr == nil || !strings.Contains(planErr.Error(), test.want) {
+				t.Fatalf("Plan() error = %v, want %q", planErr, test.want)
+			}
+			result, applyErr := NewRepairService(fixture.paths, nil).Apply(fixture.repository)
+			if applyErr == nil || !strings.Contains(applyErr.Error(), test.want) {
+				t.Fatalf("Apply() error = %v, want %q", applyErr, test.want)
+			}
+			if result.Clean || len(result.StagedEntries) != 0 {
+				t.Fatalf("Apply() = %#v, want no mutation", result)
+			}
+			if _, err := os.Lstat(strayPath); err != nil {
+				t.Fatalf("refused repair still moved %s: %v", strayPath, err)
+			}
+			assertTrashEmpty(t, fixture)
+		})
+	}
+}
+
+// failingVerifyRunner fails the second worktree status check, which is the
+// verification repair runs after restoring tracked paths.
+type failingVerifyRunner struct {
+	inner        GitRunner
+	checkoutPath string
+	statusCalls  int
+}
+
+func (r *failingVerifyRunner) RunGit(args ...string) (string, error) {
+	joined := strings.Join(args, " ")
+	if strings.Contains(joined, "status --porcelain --untracked-files=all --ignored") {
+		r.statusCalls++
+		if r.statusCalls > 1 {
+			return "M injected", nil
+		}
+	}
+	return r.inner.RunGit(args...)
 }

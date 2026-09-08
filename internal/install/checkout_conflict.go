@@ -170,7 +170,7 @@ func conflictf(kind CheckoutConflictKind, path, format string, args ...any) Chec
 // offending entries when git can still report them.
 func dirtyWorktreeConflict(checkoutPath string, runner GitRunner) CheckoutConflictError {
 	conflict := conflictf(CheckoutConflictDirtyWorktree, checkoutPath, "checkout conflict: %s has tracked, untracked, or ignored worktree changes", checkoutPath)
-	status, err := runner.RunGit("-C", checkoutPath, "status", "--porcelain", "-z", "--untracked-files=all", "--ignored")
+	status, err := runner.RunGit("-C", checkoutPath, "status", "--porcelain=v2", "-z", "--untracked-files=all", "--ignored")
 	if err != nil {
 		return conflict
 	}
@@ -178,14 +178,24 @@ func dirtyWorktreeConflict(checkoutPath string, runner GitRunner) CheckoutConfli
 	return conflict
 }
 
-// parseWorktreeEntries parses NUL-separated `git status --porcelain -z` records.
-// Rename and copy records carry the original path as the following record.
+// Porcelain v2 status prefixes for untracked and ignored records.
+const (
+	worktreeStatusUntracked = "?"
+	worktreeStatusIgnored   = "!"
+)
+
+// parseWorktreeEntries parses NUL-separated `git status --porcelain=v2 -z`
+// records. Version 2 is required rather than v1: every v2 record starts with
+// `1`, `2`, `u`, `?`, or `!`, so the output can never begin with whitespace.
+// A v1 record may start with the space of an "X " status code, which the
+// trimming GitRunner would silently remove, making it indistinguishable from a
+// filename that begins with a space. Path bytes are preserved exactly; only the
+// documented trailing directory slash is stripped.
 func parseWorktreeEntries(output string) []WorktreeEntry {
 	records := strings.Split(output, "\x00")
 	entries := []WorktreeEntry{}
 	seen := map[string]bool{}
 	add := func(status, path string) {
-		path = strings.TrimSpace(path)
 		if path == "" || seen[path] {
 			return
 		}
@@ -199,19 +209,32 @@ func parseWorktreeEntries(output string) []WorktreeEntry {
 	}
 	for index := 0; index < len(records); index++ {
 		record := records[index]
-		if index == 0 && len(record) > 2 && record[2] != ' ' {
-			// Trimmed git output drops the leading space of an "X " status code.
-			record = " " + record
-		}
-		if len(record) < 4 {
+		if len(record) < 3 || record[1] != ' ' {
 			continue
 		}
-		status := record[:2]
-		add(status, record[3:])
-		if status[0] == 'R' || status[0] == 'C' {
+		switch record[0] {
+		case '?':
+			add(worktreeStatusUntracked, record[2:])
+		case '!':
+			add(worktreeStatusIgnored, record[2:])
+		case '1':
+			if status, path, ok := splitStatusRecord(record, 8); ok {
+				add(status, path)
+			}
+		case '2':
+			status, path, ok := splitStatusRecord(record, 9)
+			if !ok {
+				continue
+			}
+			add(status, path)
+			// A rename or copy carries its original path as the next record.
 			if index+1 < len(records) {
 				index++
 				add(status, records[index])
+			}
+		case 'u':
+			if status, path, ok := splitStatusRecord(record, 10); ok {
+				add(status, path)
 			}
 		}
 	}
@@ -219,11 +242,22 @@ func parseWorktreeEntries(output string) []WorktreeEntry {
 	return entries
 }
 
+// splitStatusRecord returns the XY field and the path of a porcelain v2 record
+// with the given number of space-separated fields before the path. The path is
+// never split, so spaces inside it are preserved.
+func splitStatusRecord(record string, fields int) (string, string, bool) {
+	parts := strings.SplitN(record, " ", fields+1)
+	if len(parts) != fields+1 {
+		return "", "", false
+	}
+	return parts[1], parts[fields], true
+}
+
 func worktreeEntryClass(status string) string {
 	switch status {
-	case "??":
+	case worktreeStatusUntracked:
 		return WorktreeEntryUntracked
-	case "!!":
+	case worktreeStatusIgnored:
 		return WorktreeEntryIgnored
 	default:
 		return WorktreeEntryTracked
