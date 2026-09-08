@@ -7,11 +7,14 @@ import {
   DeleteSkillSet,
   ExtendSources,
   GetSnapshot,
+  InspectSources,
   MeasureContextBudgets,
   PrepareGitInstall,
   PreviewExtend,
+  PreviewRepair,
   PreviewSkillSetToggle,
   PreviewUninstall,
+  RepairSource,
   ReviewInstall,
   SetSkillFavorite,
   ToggleBoth,
@@ -49,6 +52,10 @@ export type SourceMutationResult = gui.SourceMutationResult
 export type UninstallPreview = gui.UninstallPreview
 export type ExtendPreview = gui.ExtendPreview
 export type ExtendPreviewSource = gui.ExtendPreviewSource
+export type SourceHealth = gui.SourceHealth
+export type SourceMutationFailure = gui.SourceMutationFailure
+export type RepairPreview = gui.RepairPreview
+export type RepairEntry = gui.RepairEntry
 export const MANAGED_TOOLS = ['claude', 'codex', 'muse', 'grok'] as const
 export type ManagedTool = (typeof MANAGED_TOOLS)[number]
 const TOOL_DISPLAY_NAMES: Record<ManagedTool, string> = { claude: 'Claude', codex: 'Codex', muse: 'Muse', grok: 'Grok' }
@@ -100,6 +107,9 @@ export interface Backend {
   uninstallSource(sourceID: string, confirmation: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   previewExtend(tool: string): Promise<ExtendPreview>
   extendSources(tool: string, includeReadOnly: boolean): Promise<SourceMutationResult>
+  inspectSources(): Promise<SourceHealth[]>
+  previewRepair(sourceID: string): Promise<RepairPreview>
+  repairSource(sourceID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
 }
 
 const generatedBackend: Backend = {
@@ -130,6 +140,9 @@ const generatedBackend: Backend = {
   uninstallSource: UninstallSource,
   previewExtend: PreviewExtend,
   extendSources: ExtendSources,
+  inspectSources: InspectSources,
+  previewRepair: PreviewRepair,
+  repairSource: RepairSource,
 }
 
 async function activeBackend(): Promise<Backend> {
@@ -167,6 +180,9 @@ export const wailsBackend: Backend = {
   uninstallSource: async (...args) => (await activeBackend()).uninstallSource(...args),
   previewExtend: async (...args) => (await activeBackend()).previewExtend(...args),
   extendSources: async (...args) => (await activeBackend()).extendSources(...args),
+  inspectSources: async (...args) => (await activeBackend()).inspectSources(...args),
+  previewRepair: async (...args) => (await activeBackend()).previewRepair(...args),
+  repairSource: async (...args) => (await activeBackend()).repairSource(...args),
 }
 
 export function projectPending(snapshot: Snapshot, pending: PendingChange[], contextBudgets: ContextBudgetReports, skillSets = snapshot.skillSets, skillSetsWarning = snapshot.skillSetsWarning): Snapshot {

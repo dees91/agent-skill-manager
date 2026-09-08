@@ -323,6 +323,68 @@ describe('Skill Manager desktop app', () => {
     await waitFor(() => expect(backend.updateSource).toHaveBeenCalledWith('git:fixture', false))
   })
 
+  it('offers repair from a failed update and clears the blocking paths', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.inspectSources = vi.fn(async () => [])
+    backend.updateAllSources = vi.fn(async () => new gui.SourceMutationResult({
+      message: 'Update stopped after 0 source(s).',
+      completed: [],
+      failure: new gui.SourceMutationFailure({
+        stage: 'update',
+        group: 'demo/skills',
+        sourceId: 'git:fixture',
+        message: 'checkout conflict: /home/.skill-manager/repos/github.com/demo/skills has tracked, untracked, or ignored worktree changes',
+        cause: 'The managed checkout has 1 worktree path (1 untracked).',
+        kind: 'dirty-worktree',
+        remedy: 'Repair stages these paths into the Skill Manager trash and restores the checkout.',
+        repairable: true,
+      }),
+      snapshot: fixtureSnapshot(),
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Update all' }))
+
+    const updateDialog = screen.getByRole('dialog')
+    await user.click(within(updateDialog).getByRole('button', { name: 'Update all' }))
+    expect(await within(updateDialog).findByText(/The managed checkout has 1 worktree path/)).toBeInTheDocument()
+
+    await user.click(within(updateDialog).getByRole('button', { name: /Repair demo\/skills/ }))
+    const repairDialog = await screen.findByRole('dialog')
+    expect(within(repairDialog).getByRole('heading', { name: 'Repair demo/skills?' })).toBeInTheDocument()
+    expect(await within(repairDialog).findByText('generated/trace_processor')).toBeInTheDocument()
+    expect(within(repairDialog).getByText(/1 untracked/)).toBeInTheDocument()
+    await waitFor(() => expect(backend.previewRepair).toHaveBeenCalledWith('git:fixture'))
+
+    await user.click(within(repairDialog).getByRole('button', { name: 'Repair checkout' }))
+    await waitFor(() => expect(backend.repairSource).toHaveBeenCalledWith('git:fixture', false))
+  })
+
+  it('marks a dirty source as needing repair before any update is attempted', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.inspectSources = vi.fn(async () => [new gui.SourceHealth({
+      sourceId: 'git:fixture',
+      group: 'demo/skills',
+      status: 'needs-repair',
+      kind: 'dirty-worktree',
+      cause: 'The managed checkout has 2 worktree paths (1 untracked, 1 ignored).',
+      remedy: 'Repair stages these paths into the Skill Manager trash and restores the checkout.',
+      repairable: true,
+    })])
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+
+    expect(await screen.findByText(/Needs repair — The managed checkout has 2 worktree paths/)).toBeInTheDocument()
+    expect(screen.getByText('Managed Git')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Repair demo/skills' }))
+    expect(await screen.findByRole('heading', { name: 'Repair demo/skills?' })).toBeInTheDocument()
+  })
+
   it('inspects Git and reviews an exact install matrix', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

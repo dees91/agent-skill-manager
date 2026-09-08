@@ -87,6 +87,19 @@ to seed the wiki. It summarizes their roles; it does not replace them.
     weighted BM25F and bounded fuzzy matching, capability negotiation,
     path-free results, legacy list compatibility, and first-party skill
     migration.
+- [`planning/phase-19-muse-support-tasks.md`](../../../planning/phase-19-muse-support-tasks.md)
+  - `documented`: Muse as an independent third managed tool, its
+    `XDG_CONFIG_HOME`-aware path, additive `list --json` cell, and unchanged
+    manifest version.
+- [`planning/phase-20-grok-support-tasks.md`](../../../planning/phase-20-grok-support-tasks.md)
+  - `documented`: `MANAGED_TOOLS`-driven frontend refactor first, then Grok as
+    an independent fourth managed tool at `~/.grok/skills` with a labeled
+    filesystem context estimate.
+- [`planning/phase-21-checkout-repair-tasks.md`](../../../planning/phase-21-checkout-repair-tasks.md)
+  - `documented`: typed checkout conflict kinds with unchanged message text,
+    dirty worktree as the only repairable class, trash-staged repair with HEAD
+    restore and rollback, explicit URL and no prompt in the CLI, and explicit
+    GUI source health with a confirmed repair.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.

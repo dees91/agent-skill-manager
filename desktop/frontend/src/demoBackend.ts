@@ -43,6 +43,7 @@ class DemoBackend implements Backend {
     { sourceId: 'git:demo', kind: 'git', group: 'example-labs/engineering-skills', location: 'https://github.com/example-labs/engineering-skills', skillCount: 4, claudeCount: 4, codexCount: 4, museCount: 1, grokCount: 0, installedAt: new Date().toISOString(), commit: 'a7c21f93d1b7', canUpdate: true, updateMode: 'Managed Git', updateHint: 'Use Update to fetch changes.' },
     { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, museCount: 1, grokCount: 0, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
   ]
+  private repairNeeded = new Set(['git:demo'])
 
   async getSnapshot(includeReadOnly: boolean) { return this.snapshot(includeReadOnly) }
 
@@ -252,6 +253,38 @@ class DemoBackend implements Backend {
   async extendSources(tool: string) {
     return this.sourceResult(`Extended ${this.sources.length} source(s) to ${tool}: 0 created, 0 already installed.`)
   }
+  async inspectSources() {
+    return this.sources.filter((source) => source.kind === 'git').map((source) => {
+      const blocked = this.repairNeeded.has(source.sourceId)
+      return {
+        sourceId: source.sourceId,
+        group: source.group,
+        status: blocked ? 'needs-repair' : 'ok',
+        kind: blocked ? 'dirty-worktree' : '',
+        cause: blocked ? 'The managed checkout has 2 worktree paths (1 untracked, 1 ignored).' : '',
+        remedy: blocked ? 'Repair stages these paths into the Skill Manager trash and restores the checkout.' : '',
+        repairable: blocked,
+      }
+    }) as never
+  }
+  async previewRepair(sourceID: string) {
+    const source = this.sources.find((item) => item.sourceId === sourceID)!
+    const clean = !this.repairNeeded.has(sourceID)
+    return {
+      sourceId: sourceID,
+      group: source.group,
+      clean,
+      entries: clean ? [] : DEMO_REPAIR_ENTRIES,
+      trackedCount: 0,
+      untrackedCount: clean ? 0 : 1,
+      ignoredCount: clean ? 0 : 1,
+    } as never
+  }
+  async repairSource(sourceID: string) {
+    const source = this.sources.find((item) => item.sourceId === sourceID)!
+    if (!this.repairNeeded.delete(sourceID)) return this.sourceResult(`${source.group} was already clean.`)
+    return this.sourceResult(`Repaired ${source.group} and staged 2 paths.`)
+  }
 
   private sourceResult(message: string) {
     return { message, completed: [], snapshot: this.snapshot(false) } as never
@@ -274,6 +307,11 @@ class DemoBackend implements Backend {
     })
   }
 }
+
+const DEMO_REPAIR_ENTRIES = [
+  { path: 'profilers/android-profiler/bin/trace_processor', class: 'untracked' },
+  { path: '.cache/index', class: 'ignored' },
+]
 
 export const demoBackend: Backend = new DemoBackend()
 

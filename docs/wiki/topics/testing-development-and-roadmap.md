@@ -194,6 +194,12 @@ from the tracked PNG under repository settings.
 - Phase 19: Muse as a third managed tool across CLI, TUI, install/update/
   uninstall, Skill Advisor, labeled filesystem context estimate, macOS GUI,
   first-party skill, and documentation with manifest version 2 unchanged.
+- Phase 20: `MANAGED_TOOLS`-driven frontend refactor followed by Grok as an
+  independent fourth managed tool across every interface and document.
+- Phase 21: typed checkout conflict kinds with unchanged message text, the
+  `repair` command and service with trash staging, HEAD restore and rollback,
+  classified `update` guidance, explicit desktop source health, and a confirmed
+  path-free repair dialog.
 
 All Phase 13 tasks are complete after clean-commit packaging, successful public
 CI, repository security configuration, and `v0.4.1` prerelease publication.

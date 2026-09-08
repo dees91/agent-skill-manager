@@ -244,6 +244,7 @@ Update commands:
 Update safety:
 
 - Require the managed checkout, matching origin, a normal current branch tracking `origin/*`, no local-only commits or divergence, and no tracked, untracked, or ignored worktree changes.
+- Checkout blockers are classified (Iteration 21). A dirty worktree is repairable through `repair`; every other blocker is explained and left for the user.
 - Audit every recorded active/disabled skill symlink and reject missing, changed, duplicate, or extra managed-directory references into the checkout.
 - Fetch `origin`, require a fast-forward, and verify each installed relative skill path still contains a regular `SKILL.md` in the target commit before merging.
 - Do not auto-install newly discovered skills. Do not move or rewrite existing active/disabled symlinks during update.
@@ -575,6 +576,19 @@ for skills that are OFF for every other recorded tool, and stops at the
 first failure with an `extend --tool <tool> failed for source <group>`
 error, keeping the completed prefix in state. `--dry-run` is strict and
 never clones, links, or writes `state.json`.
+
+Repair a blocked managed checkout (Iteration 21):
+
+```bash
+skill-manager repair <git-url> [--dry-run]
+```
+
+`repair` always requires an explicit Git URL. There is no `--all`, no
+`--force`, and no interactive prompt; `--dry-run` is the preview and must not
+move a file or change a Git ref. Output lists the offending checkout-relative
+paths grouped as tracked, untracked, and ignored. `update` explains a
+classified conflict on failure and prints the exact `repair` command when the
+blocker is repairable.
 
 ## Build and Distribution
 
@@ -950,6 +964,47 @@ lookup with an additive CLI-only ranked retrieval surface. Existing `list
 - Keep TUI, desktop, toggle state, receipt persistence, install/source
   ownership, and existing human/list interfaces unchanged.
 
+### Managed Checkout Diagnosis and Repair (Iteration 21)
+
+Iteration 21 turns opaque checkout conflicts into named diagnoses and adds one
+confirmed repair for the only repairable class.
+
+- Every checkout blocker carries a stable kind alongside its unchanged message:
+  `symlink`, `not-directory`, `not-a-checkout`, `nested-checkout`, `identity`,
+  `origin-missing`, `origin-mismatch`, `dirty-worktree`, `detached-head`,
+  `no-upstream`, `foreign-upstream`, `unresolved-ref`, and `diverged`.
+- Only `dirty-worktree` is repairable. Detached HEAD, missing or foreign
+  upstream, origin mismatch, divergence, and managed reference drift are
+  explained with manual guidance and are never repaired automatically.
+- Repair moves every offending checkout-relative path into
+  `~/.skill-manager/trash/repair-*` with `rename`, restores tracked paths from
+  `HEAD`, unstages index-only paths, verifies the checkout, prunes directories
+  left empty, then deletes the staging copy. Staging exists for rollback; the
+  staged copies do not survive a successful repair.
+- Do not add `git clean`, `reset --hard`, forced checkouts, or in-place
+  deletion. Repair never writes `state.json`, moves symlinks, or changes remote
+  refs, and it never leaves the managed checkout root.
+- Repair requires the same ownership audit as update and uninstall. It refuses
+  to stage a recorded skill directory, an ancestor of one, or an untracked
+  `SKILL.md` that `HEAD` cannot restore. A stray file inside a skill directory
+  is repairable.
+- Repair is idempotent. A clean, fast-forwardable checkout succeeds without
+  mutating anything.
+- A managed checkout whose installed `SKILL.md` was deleted locally stays
+  blocked by the shared ownership audit; that pre-existing limitation is
+  unchanged by this iteration.
+- The desktop app surfaces the diagnosis twice: a `Needs repair` state in the
+  Sources table and a cause plus `Repair` action in the dialog after a failed
+  update. Source health is an explicit read-only inspection, never part of the
+  shared snapshot reload, because enumerating ignored worktree content across
+  every checkout is too expensive for routine refreshes.
+- Repair is a separately confirmed source operation in the existing exclusive
+  source lane. It is blocked while Skills toggles are pending. The repair
+  confirmation lists paths and needs no typed group name, because it removes
+  generated files rather than an installation.
+- Repair previews report checkout-relative paths only. No absolute filesystem
+  path crosses the desktop bridge.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1038,6 +1093,12 @@ Backend tests should cover:
   Pending independence, and non-blocking uninstall impact
 - Native macOS About metadata parsing, required-field validation, and exact
   version/description projection from the desktop build configuration
+- Checkout conflict classification with unchanged message text, porcelain
+  worktree entry parsing, and repair staging, HEAD restore, idempotency,
+  refusal of non-repairable blockers, installed-skill protection, rollback,
+  cleanup reporting, and absence of destructive Git commands
+- GUI source health inspection, path-free repair preview, confirmed repair,
+  repairable failure classification, and the source-lane and pending guards
 
 TUI can be tested at the model/update layer. Full terminal rendering tests are optional for MVP.
 
@@ -1086,6 +1147,8 @@ Keep [planning/phase-18-advisor-search-tasks.md](./planning/phase-18-advisor-sea
 Keep [planning/phase-19-muse-support-tasks.md](./planning/phase-19-muse-support-tasks.md) as the source of truth for Iteration 19 Muse tool support task status.
 
 Keep [planning/phase-20-grok-support-tasks.md](./planning/phase-20-grok-support-tasks.md) as the source of truth for Iteration 20 Grok tool support task status.
+
+Keep [planning/phase-21-checkout-repair-tasks.md](./planning/phase-21-checkout-repair-tasks.md) as the source of truth for Iteration 21 managed checkout diagnosis and repair task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

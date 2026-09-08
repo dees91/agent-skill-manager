@@ -62,8 +62,22 @@ Pending or filesystem visibility.
 Source operations have a separate exclusive lane. They refuse to start while
 toggle changes are pending, block other mutations and app close while active,
 and emit phase progress. Install revalidates exact matrix selections before
-apply. Update and uninstall resolve opaque IDs against the current manifest;
-uninstall additionally requires an exact group-name confirmation.
+apply. Update, repair, and uninstall resolve opaque IDs against the current
+manifest; uninstall additionally requires an exact group-name confirmation.
+
+Source health is an explicit read-only inspection (`InspectSources`), never part
+of `reloadLocked`, because enumerating ignored worktree content across every
+managed checkout is too expensive for the Dashboard and Skills refreshes that
+share the snapshot. `SourcesView` calls it on mount and after every source
+mutation and merges the result by `sourceId` into a `Needs repair` or `Blocked`
+row state.
+
+`SourceMutationFailure` carries `sourceId`, `kind`, `cause`, `remedy`, and
+`repairable`, so the update dialog explains a blocker and offers `Repair` from
+structured data instead of a regex over the message. `PreviewRepair` returns
+checkout-relative paths only; no absolute filesystem path crosses the bridge.
+The repair confirmation lists the paths and needs no typed group name, because
+it removes generated files rather than an installation.
 
 Dormant Discover reads go through `internal/skillssh` and a versioned normalized
 cache. Search terms/results are memory-only and legacy cache queries are

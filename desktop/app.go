@@ -155,6 +155,21 @@ func (a *App) UpdateAllSources(includeReadOnly bool) gui.SourceMutationResult {
 	return a.service.UpdateAllSources(includeReadOnly)
 }
 
+// InspectSources reports the read-only health of every managed Git source.
+func (a *App) InspectSources() ([]gui.SourceHealth, error) {
+	return a.service.InspectSources()
+}
+
+// PreviewRepair reports the checkout-relative paths a repair would stage.
+func (a *App) PreviewRepair(sourceID string) (gui.RepairPreview, error) {
+	return a.service.PreviewRepair(sourceID)
+}
+
+// RepairSource clears worktree changes blocking one managed Git checkout.
+func (a *App) RepairSource(sourceID string, includeReadOnly bool) gui.SourceMutationResult {
+	return a.service.RepairSource(sourceID, includeReadOnly)
+}
+
 // PreviewExtend reports the read-only impact of linking every managed source to one tool.
 func (a *App) PreviewExtend(tool string) (gui.ExtendPreview, error) {
 	return a.service.PreviewExtend(tool)

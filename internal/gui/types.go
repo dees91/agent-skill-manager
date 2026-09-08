@@ -284,9 +284,44 @@ type SourceMutationItem struct {
 type SourceMutationFailure struct {
 	Stage          string `json:"stage"`
 	Group          string `json:"group,omitempty"`
+	SourceID       string `json:"sourceId,omitempty"`
 	Message        string `json:"message"`
+	Cause          string `json:"cause,omitempty"`
+	Kind           string `json:"kind,omitempty"`
+	Remedy         string `json:"remedy,omitempty"`
+	Repairable     bool   `json:"repairable,omitempty"`
 	RolledBack     int    `json:"rolledBack,omitempty"`
 	CleanupPending string `json:"cleanupPending,omitempty"`
+}
+
+// SourceHealth is the explicit read-only diagnosis of one managed Git source.
+// Status is "ok", "needs-repair", or "blocked".
+type SourceHealth struct {
+	SourceID   string `json:"sourceId"`
+	Group      string `json:"group"`
+	Status     string `json:"status"`
+	Kind       string `json:"kind,omitempty"`
+	Cause      string `json:"cause,omitempty"`
+	Remedy     string `json:"remedy,omitempty"`
+	Repairable bool   `json:"repairable"`
+}
+
+// RepairEntry is one checkout-relative path that blocks a managed checkout.
+type RepairEntry struct {
+	Path  string `json:"path"`
+	Class string `json:"class"`
+}
+
+// RepairPreview is the validated impact displayed before a confirmed repair.
+// It never carries absolute filesystem paths.
+type RepairPreview struct {
+	SourceID       string        `json:"sourceId"`
+	Group          string        `json:"group"`
+	Clean          bool          `json:"clean"`
+	Entries        []RepairEntry `json:"entries"`
+	TrackedCount   int           `json:"trackedCount"`
+	UntrackedCount int           `json:"untrackedCount"`
+	IgnoredCount   int           `json:"ignoredCount"`
 }
 
 // SourceMutationResult returns the completed prefix and a fresh projection.

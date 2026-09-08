@@ -198,6 +198,21 @@ path sources are live links, so they do not need an update operation. Uninstall
 removes a complete recorded source; Skill Manager does not uninstall one skill
 from a source at a time.
 
+When a skill writes generated files into its own checkout, update stops with a
+named cause and the exact command to clear it:
+
+```bash
+skill-manager repair https://github.com/example/agent-skills --dry-run
+skill-manager repair https://github.com/example/agent-skills
+```
+
+`repair` lists the blocking checkout-relative paths, moves them into
+`~/.skill-manager/trash` so a failed repair rolls back, restores tracked files
+from the last fetched commit, and then deletes the staged copy. It only clears
+worktree changes. Detached HEAD, local commits, a changed origin, and link
+drift are explained but never resolved for you. The desktop app shows the same
+diagnosis as a `Needs repair` state on the Sources screen.
+
 Link every recorded source to one more tool, mirroring ON/OFF state, without
 reinstalling each source:
 
@@ -387,6 +402,10 @@ These rules apply to every interface:
   prefix to state.
 - Git uninstall audits owned links and checkout safety before it stages and
   removes them.
+- Repair only clears worktree changes from a managed checkout. It stages every
+  path through `~/.skill-manager/trash`, never runs `git clean` or
+  `reset --hard`, never leaves the checkout root, and refuses to move an
+  installed skill directory.
 - Local-source uninstall never stages, edits, moves, or deletes the source
   folder.
 - Skill Manager does not edit `SKILL.md`, provider plugin caches, or external

@@ -445,6 +445,11 @@ func TestRunUpdateAllStopsOnFirstFailureAndKeepsCompletedPrefix(t *testing.T) {
 	if !strings.Contains(stdout.String(), "up-to-date owner/a-update") || !strings.Contains(stderr.String(), "owner/b-update") {
 		t.Fatalf("update all stdout=%q stderr=%q, want completed prefix and second failure", stdout.String(), stderr.String())
 	}
+	for _, want := range []string{"cause: The managed checkout has 1 worktree path", "untracked (1):", "local.txt", "skill-manager repair " + secondURL} {
+		if !strings.Contains(stderr.String(), want) {
+			t.Fatalf("update all stderr=%q, want %q", stderr.String(), want)
+		}
+	}
 	firstCommit := gitOutputForTest(t, checkoutPathForTest(t, p, firstURL), "rev-parse", "HEAD")
 	updatedManifest := loadState(t, p)
 	updatedFirst, _ := updatedManifest.GetRepository("github.com", "owner/a-update")
@@ -2146,5 +2151,105 @@ func assertGroupRow(t *testing.T, rows map[string]string, group, rowCount, claud
 	}
 	if got := strings.Join(fields[17:], " "); got != source {
 		t.Fatalf("group row %q source = %q, want %q", row, got, source)
+	}
+}
+
+func TestRunRepairDryRunListsBlockersWithoutMutating(t *testing.T) {
+	const repoURL = "https://github.com/owner/repair-dry"
+	source := createSourceRepo(t, "alpha")
+	withGitInsteadOf(t, repoURL, source)
+	p := paths.ForHome(t.TempDir())
+	var installOut, installErr strings.Builder
+	if code := RunWithPaths([]string{"install", repoURL, "--tool", "claude"}, &installOut, &installErr, p); code != 0 {
+		t.Fatalf("install code=%d stderr=%q", code, installErr.String())
+	}
+	checkout := checkoutPathForTest(t, p, repoURL)
+	strayPath := filepath.Join(checkout, "generated", "trace_processor")
+	if err := os.MkdirAll(filepath.Dir(strayPath), 0o755); err != nil {
+		t.Fatalf("create stray parent: %v", err)
+	}
+	if err := os.WriteFile(strayPath, []byte("binary\n"), 0o644); err != nil {
+		t.Fatalf("write stray file: %v", err)
+	}
+
+	var stdout, stderr strings.Builder
+	code := RunWithPaths([]string{"repair", repoURL, "--dry-run"}, &stdout, &stderr, p)
+
+	if code != 0 {
+		t.Fatalf("repair --dry-run code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	for _, want := range []string{"dry-run: repair owner/repair-dry", "untracked (1):", "generated/trace_processor", "no files were moved"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("repair --dry-run stdout=%q, want %q", stdout.String(), want)
+		}
+	}
+	if _, err := os.Lstat(strayPath); err != nil {
+		t.Fatalf("dry-run moved %s: %v", strayPath, err)
+	}
+	if entries, err := os.ReadDir(p.TrashDir); err == nil && len(entries) != 0 {
+		t.Fatalf("dry-run created trash entries: %#v", entries)
+	}
+}
+
+func TestRunRepairClearsCheckoutAndUnblocksUpdate(t *testing.T) {
+	const repoURL = "https://github.com/owner/repair-apply"
+	source := createSourceRepo(t, "alpha")
+	withGitInsteadOf(t, repoURL, source)
+	p := paths.ForHome(t.TempDir())
+	var installOut, installErr strings.Builder
+	if code := RunWithPaths([]string{"install", repoURL, "--tool", "claude"}, &installOut, &installErr, p); code != 0 {
+		t.Fatalf("install code=%d stderr=%q", code, installErr.String())
+	}
+	checkout := checkoutPathForTest(t, p, repoURL)
+	strayPath := filepath.Join(checkout, "stray.txt")
+	if err := os.WriteFile(strayPath, []byte("block\n"), 0o644); err != nil {
+		t.Fatalf("write stray file: %v", err)
+	}
+
+	var stdout, stderr strings.Builder
+	code := RunWithPaths([]string{"repair", repoURL}, &stdout, &stderr, p)
+
+	if code != 0 {
+		t.Fatalf("repair code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "repaired owner/repair-apply") || !strings.Contains(stdout.String(), "stray.txt") {
+		t.Fatalf("repair stdout=%q, want the repaired report", stdout.String())
+	}
+	if _, err := os.Lstat(strayPath); !os.IsNotExist(err) {
+		t.Fatalf("stray file survived repair: %v", err)
+	}
+	if entries, err := os.ReadDir(p.TrashDir); err == nil && len(entries) != 0 {
+		t.Fatalf("staging residue: %#v", entries)
+	}
+
+	var updateOut, updateErr strings.Builder
+	if code := RunWithPaths([]string{"update", repoURL}, &updateOut, &updateErr, p); code != 0 {
+		t.Fatalf("update after repair code=%d stderr=%q", code, updateErr.String())
+	}
+
+	var repeatOut, repeatErr strings.Builder
+	if code := RunWithPaths([]string{"repair", repoURL}, &repeatOut, &repeatErr, p); code != 0 {
+		t.Fatalf("second repair code=%d stderr=%q", code, repeatErr.String())
+	}
+	if !strings.Contains(repeatOut.String(), "nothing to repair") {
+		t.Fatalf("second repair stdout=%q, want an idempotent no-op", repeatOut.String())
+	}
+}
+
+func TestRunRepairParserAndSelectionErrors(t *testing.T) {
+	tests := [][]string{
+		{"repair"},
+		{"repair", "--dry-run"},
+		{"repair", "https://github.com/owner/repo", "extra"},
+		{"repair", "https://github.com/owner/repo", "--bad"},
+	}
+	p := paths.ForHome(t.TempDir())
+	for _, args := range tests {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var stdout, stderr strings.Builder
+			if code := RunWithPaths(args, &stdout, &stderr, p); code == 0 {
+				t.Fatalf("%v code=0 stdout=%q, want a usage error", args, stdout.String())
+			}
+		})
 	}
 }

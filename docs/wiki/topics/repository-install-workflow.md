@@ -92,6 +92,36 @@ same ownership audit and transactional removal service.
   the manifest's installed skill/tool set and existing ON/OFF link locations.
 - Successful updates persist the target commit as `lastSeenCommit`. Update-all
   is deterministic, stops on the first failure, and keeps the completed prefix.
+- Every blocker is a typed `CheckoutConflictError` carrying a stable `Kind`
+  alongside its unchanged message, so the CLI and the desktop app can explain
+  the cause without parsing error text (`implemented`,
+  `internal/install/checkout_conflict.go`).
+
+## Managed Checkout Repair
+
+- `skill-manager repair <git-url> [--dry-run]` clears the one repairable
+  blocker: `dirty-worktree`. An explicit URL is always required and there is no
+  `--all`, `--force`, or interactive prompt (`documented`, `implemented`).
+- Repair runs the same ownership audit as update and uninstall, re-asserts that
+  the checkout sits inside `~/.skill-manager/repos`, and sanitizes every
+  reported path against absolute, `..`, backslash, and `.git/` components.
+- Offending paths are enumerated from `git status --porcelain -z
+  --untracked-files=all --ignored`. Because `RunGit` trims its output, the first
+  record's leading status space is restored before parsing.
+- Apply renames every path into `~/.skill-manager/trash/repair-*/worktree/`,
+  restores tracked paths with `git checkout --quiet HEAD --`, unstages
+  index-only paths with `git reset --quiet HEAD --`, re-verifies the checkout,
+  prunes directories left empty, then deletes staging. Any failure rolls the
+  staged moves back in reverse and reports retained recovery data.
+- Repair refuses to stage a recorded skill directory, an ancestor of one, or an
+  untracked `SKILL.md` that `HEAD` cannot restore. A stray generated file inside
+  a skill directory is repairable, which is the common real-world case.
+- Repair is idempotent, never writes `state.json`, never moves symlinks, and
+  never issues `git clean`, `reset --hard`, or a forced checkout (`implemented`,
+  guarded by a regression test).
+- A managed checkout whose installed `SKILL.md` was deleted locally stays
+  blocked by the shared ownership audit (`open`: the same pre-existing
+  limitation blocks update and uninstall).
 - Dry-run never fetches or changes remote-tracking refs. It checks the current
   checkout and cached upstream and reports that exact remote preflight remains
   unavailable until a real update.

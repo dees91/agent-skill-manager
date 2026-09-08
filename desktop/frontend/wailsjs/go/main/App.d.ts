@@ -18,15 +18,21 @@ export function ExtendSources(arg1:string,arg2:boolean):Promise<gui.SourceMutati
 
 export function GetSnapshot(arg1:boolean):Promise<gui.Snapshot>;
 
+export function InspectSources():Promise<Array<gui.SourceHealth>>;
+
 export function MeasureContextBudgets():Promise<gui.Snapshot>;
 
 export function PrepareGitInstall(arg1:string):Promise<gui.InstallDraft>;
 
 export function PreviewExtend(arg1:string):Promise<gui.ExtendPreview>;
 
+export function PreviewRepair(arg1:string):Promise<gui.RepairPreview>;
+
 export function PreviewSkillSetToggle(arg1:string,arg2:Array<string>):Promise<gui.SkillSetTogglePreview>;
 
 export function PreviewUninstall(arg1:string):Promise<gui.UninstallPreview>;
+
+export function RepairSource(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;
 
 export function ReviewInstall(arg1:string,arg2:Array<gui.InstallCellRequest>):Promise<gui.InstallReview>;
 
