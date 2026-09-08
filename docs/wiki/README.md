@@ -15,7 +15,8 @@ the project's authoritative product and planning documents.
 
 - Go source and tests under `internal/` and `main.go`.
 - Product decisions in `AGENTS.md`.
-- User-facing behavior in `README.md`.
+- First-launch guidance in `README.md` and detailed user-facing behavior in
+  `docs/usage.md`; source-build instructions in `CONTRIBUTING.md`.
 - Iteration scope and task status under `planning/`.
 - Git history, command output, and external references used for a task.
 - Wiki maintenance may read and summarize these sources, but must not change
@@ -46,7 +47,8 @@ When sources disagree, use this order:
 2. `AGENTS.md` for accepted product intent and invariants.
 3. The relevant planning file for iteration scope and task status.
 4. Current code and tests for what the program actually does.
-5. `README.md` for the documented user-facing contract.
+5. `README.md` and `docs/usage.md` for the documented user-facing contract,
+   and `CONTRIBUTING.md` for source builds and checks.
 6. Wiki source digests and topic pages.
 7. Older discussion or assistant synthesis.
 

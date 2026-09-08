@@ -13,16 +13,65 @@ The complete project requires:
 - Git;
 - Xcode command-line tools for Wails builds.
 
-Clone the repository and run:
+Clone the repository:
 
 ```bash
-go test ./...
+git clone https://github.com/dees91/agent-skill-manager.git
+cd agent-skill-manager
+```
+
+### Build and install the CLI
+
+The CLI/TUI needs Go 1.26.6 or newer, Git, and Make. From the repository root:
+
+```bash
+make build
+./bin/skill-manager help
+```
+
+To install the current checkout as `skill-manager`:
+
+```bash
+make dev
+export PATH="$HOME/.local/bin:$PATH"
+skill-manager --version
+```
+
+`make dev` creates the destination directory and installs at
+`~/.local/bin/skill-manager`. Add the `export PATH` line once to `~/.zshrc`
+(or your shell's startup file) for new terminals. Set `BIN` for another target:
+
+```bash
+make dev BIN="$HOME/bin/skill-manager"
+```
+
+Source builds normally report `dev`; release archives embed their version.
+Use this Make workflow to get the documented `skill-manager` command name;
+`go install github.com/dees91/agent-skill-manager@latest` names its binary
+`agent-skill-manager` after the module path.
+
+### Build the desktop app
+
+Install the complete prerequisites above, including Xcode command-line tools.
+Initial dependency installation requires network access. From the repository
+root:
+
+```bash
 make gui-test
+make gui-build
+open "desktop/build/bin/Skill Manager.app"
 ```
 
 `make gui-test` uses `npm ci`, then typechecks, tests, and builds the frontend
 before compiling the desktop module. Do not rely on an existing ignored
 `frontend/dist` directory.
+
+This produces an ad-hoc-signed Apple Silicon app. It is not Developer ID signed
+or notarized; see the [first-launch instructions](README.md#3-open-the-app).
+Use `make gui-dev` for the Wails development loop.
+
+Backend tests use temporary home directories and local or fake Git repositories.
+Frontend tests use an in-memory backend with synthetic data.
 
 ## Project Contract
 
@@ -72,7 +121,7 @@ checkout. The packaging command does not create tags, push commits, or change
 GitHub releases:
 
 ```bash
-make release-package RELEASE_VERSION=0.4.1
+make release-package RELEASE_VERSION=0.7.0
 ```
 
 It verifies version metadata, root/desktop/frontend tests and vet, frontend

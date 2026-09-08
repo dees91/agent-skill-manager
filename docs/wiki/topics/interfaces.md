@@ -87,7 +87,7 @@ Git repositories only.
   after a per-source link preview that surfaces blocked sources; confirm
   stays disabled while any source is blocked or no new links are planned,
   and the batch stops at the first failure with a fresh snapshot.
-- Discover is excluded from the `v0.5.0` public preview navigation and public
+- Discover is excluded from the `v0.7.0` public preview navigation and public
   Wails binding. Its experimental Go adapter/domain remains in the repository.
 - Dashboard context metrics are filesystem estimates by default; **Run provider
   diagnostics** is the only UI action that executes local Claude/Codex
@@ -114,8 +114,10 @@ The visual contract and evidence confidence live in
 [`../../../DESIGN.md`](../../../DESIGN.md); the preserved source raster is under
 [`../../design/references/`](../../design/references/).
 
-Exact command examples and flag placement belong in the user-facing
-[`../../../README.md`](../../../README.md).
+The [README](../../../README.md) introduces the app and first launch. Exact
+command examples, flag placement, keyboard controls, and troubleshooting belong
+in the user-facing [guide](../../usage.md). Source-build instructions live in
+[Contributing](../../../CONTRIBUTING.md).
 
 Skill Set CRUD and use are GUI-only in Phase 14; no CLI commands or TUI keys
 are added.
@@ -127,7 +129,7 @@ search capability.
 
 ## TUI Model
 
-- One row per skill with Claude, Codex, and Group columns.
+- One row per skill with Claude, Codex, Muse, Grok, and Group columns.
 - The active tool column determines the target of `Space` and `u`.
 - Read-only rows are hidden until requested.
 - Details show description, row group/source, tool-specific state and paths,

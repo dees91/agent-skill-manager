@@ -18,9 +18,10 @@ mitigation is available.
 
 ## Supported Versions
 
-The current `0.4.x` public preview and the current `main` branch receive
-best-effort support. The desktop application is supported only on the macOS
-target described in [README.md](README.md).
+The current public preview release and the current `main` branch receive
+best-effort support. Older previews are superseded by the current preview.
+The desktop application is supported only on the macOS target described in
+[README.md](README.md#quick-start).
 
 ## Security Boundaries
 

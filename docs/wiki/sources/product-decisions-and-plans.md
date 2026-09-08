@@ -12,8 +12,17 @@ to seed the wiki. It summarizes their roles; it does not replace them.
     semantics, source/group labels, TUI/CLI behavior, safety boundaries, and
     documentation rules.
 - [`README.md`](../../../README.md)
-  - `documented`: current user-facing commands, TUI keys, behavior, conflicts,
-    safety notes, and development commands.
+  - `documented`: desktop-first product introduction, demo, macOS quick start,
+    concise terminal alternative, support, and license/privacy links.
+- [`docs/usage.md`](../../usage.md)
+  - `documented`: detailed installation, GUI workflows, commands, TUI controls,
+    Skill Advisor, paths, safety/recovery, compatibility, and data-flow guidance.
+- [`CONTRIBUTING.md`](../../../CONTRIBUTING.md)
+  - `documented`: source-build prerequisites, CLI installation through Make,
+    desktop development, repository checks, and release packaging.
+- [`planning/readme-editorial-tasks.md`](../../../planning/readme-editorial-tasks.md)
+  - `user-confirmed`: README structure, extraction of the operator guide,
+    privacy path correction, current-preview support policy, and verification.
 - [`planning/phase-1-mvp-tasks.md`](../../../planning/phase-1-mvp-tasks.md)
   - `documented`: MVP dependency graph, acceptance criteria, completion notes,
     and task status. All Phase 1 tasks are marked `done`.

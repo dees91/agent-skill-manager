@@ -11,7 +11,7 @@ make build
 make dev
 make gui-test
 make gui-build
-make release-package RELEASE_VERSION=0.5.0
+make release-package RELEASE_VERSION=0.7.0
 ```
 
 - `go run .` is suitable for repository-local checks.
@@ -22,6 +22,21 @@ make release-package RELEASE_VERSION=0.5.0
   as a non-publishing source-validation layer.
 - Release packaging requires a clean Apple Silicon macOS checkout and leaves
   only ignored archives and checksums under `dist/release/`.
+
+### Public Documentation
+
+- README is the concise desktop-first introduction and first-launch path.
+  `docs/usage.md` owns detailed operator content; `CONTRIBUTING.md` owns builds.
+- README ships in the CLI archive without the guide. Its guide/support links
+  use full GitHub URLs so archive readers can reach the documentation.
+- `scripts/package-release.sh` matches the literal README sentence prefix
+  `The current source version is` followed by the backtick-quoted release
+  version. Editorial changes must preserve this packaging input.
+- Root-package `go install` names the executable `agent-skill-manager` after
+  the module path. The documented `make dev` workflow creates `skill-manager`,
+  makes the target directory, and supports a `BIN` override for isolated checks.
+- Download examples filter the checksum manifest to the one selected archive,
+  so users need not download both the desktop and terminal distributions.
 
 ### Repository Marketing Media
 

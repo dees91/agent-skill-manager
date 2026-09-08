@@ -39,8 +39,8 @@ page is added, removed, renamed, or materially repurposed.
   - canonical local source identity, direct/recursive discovery, link-in-place
     install, manifest ownership, source-preserving uninstall, and dry-run.
 - [topics/interfaces.md](topics/interfaces.md)
-  - command surface, TUI interaction model, filters, details, and bulk-toggle
-    semantics.
+  - public README/user-guide routing, command surface, TUI interaction model,
+    filters, details, and bulk-toggle semantics.
 - [topics/desktop-gui.md](topics/desktop-gui.md)
   - native app scope/stack, identifier-only bindings, pending and source
     operation sessions, global context-budget metrics, saved Skill Sets,
@@ -67,8 +67,9 @@ page is added, removed, renamed, or materially repurposed.
 ## Sources
 
 - [sources/product-decisions-and-plans.md](sources/product-decisions-and-plans.md)
-  - digest and routing map for `AGENTS.md`, `README.md`, `DESIGN.md`, and the
-    twenty-one iteration plans.
+  - digest and routing map for `AGENTS.md`, the public README and user guide,
+    contributing instructions, `DESIGN.md`, the twenty-one iteration plans,
+    and the README editorial refresh.
 - [sources/implementation-snapshot-2026-08-11.md](sources/implementation-snapshot-2026-08-11.md)
   - dated package-level source inspection and verification status used to seed
     the initial topic pages.

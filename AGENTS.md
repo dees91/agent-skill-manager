@@ -1119,7 +1119,24 @@ TUI can be tested at the model/update layer. Full terminal rendering tests are o
 
 ## Documentation Rules
 
-Keep [README.md](./README.md) user-facing and practical.
+Keep [README.md](./README.md) as a concise, desktop-first introduction with
+visual evidence, a macOS quick start, a terminal alternative, and legal/privacy
+links at the end. This presentation order does not change the CLI/TUI product
+contracts above.
+
+Keep [docs/usage.md](./docs/usage.md) as the detailed user guide for installation
+alternatives, GUI workflows, CLI commands, TUI keys, Skill Advisor, paths,
+safety, and troubleshooting. Keep source-build instructions in
+[CONTRIBUTING.md](./CONTRIBUTING.md). Keep release download links, archive names,
+and checksum examples synchronized between README and the user guide.
+
+Keep [SECURITY.md](./SECURITY.md) as the support and vulnerability-reporting
+policy: the current public preview and `main` receive best-effort support with
+no guaranteed response or remediation time. Keep [PRIVACY.md](./PRIVACY.md)
+aligned with every supported provider path and actual data flow.
+
+The editorial refresh is tracked in
+[planning/readme-editorial-tasks.md](./planning/readme-editorial-tasks.md).
 
 Keep this file as the agent-facing source of truth for architecture and product decisions.
 

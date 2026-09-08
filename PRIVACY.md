@@ -5,10 +5,13 @@ analytics, crash reporting, advertising, or background polling.
 
 ## Local Data Read
 
-The application scans the following locations under the current user's home:
+The application scans these global locations. Paths are relative to the current
+user's home, except for Muse's optional absolute `XDG_CONFIG_HOME` override:
 
 - `~/.claude/skills`
 - `~/.agents/skills`
+- `~/.config/muse/skills` (`$XDG_CONFIG_HOME/muse/skills` when set to an absolute path)
+- `~/.grok/skills`
 - `~/.codex/skills/.system`
 - `~/.claude/plugins/cache`
 - `~/.agents/.skill-lock.json`

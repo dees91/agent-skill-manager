@@ -660,3 +660,56 @@ or merge were made. Updated the repository workflow review status locally.
   the unauthenticated public download URLs.
 - `observed`: `releases/latest` returns 404 for this repository because every
   release is a prerelease. That is expected, not a publication defect.
+
+## [2026-09-08] maintenance | Restructure README around first launch
+
+- Applied the user-approved desktop-first editorial plan: demo and concrete
+  benefits, numbered macOS quick start, reversible-toggle explanation, a short
+  terminal alternative, documentation/support, then license/privacy/notices.
+  README decreased from 458 to 181 lines, retaining the existing GIF and one
+  Skills screenshot with descriptive alternative text.
+- Added `docs/usage.md` for GUI workflows, terminal installation, commands, TUI
+  controls, Skill Advisor, paths, safety, and troubleshooting. Moved source-build
+  instructions to `CONTRIBUTING.md`; kept other synthetic screenshots with the
+  workflows they explain. Updated the agent contract, wiki routing, current
+  overview, and `planning/readme-editorial-tasks.md`.
+- Corrected CLI destination/PATH setup and explained the module-derived
+  `agent-skill-manager` name from `go install`; the documented Make workflow
+  installs `skill-manager`. Preserved the README version sentence consumed by
+  release packaging and used full GitHub guide links for archive readers.
+- Added Muse/Grok and the absolute XDG override to the privacy path inventory.
+  Security support now follows the current public preview and `main`, with the
+  existing best-effort/no-SLA policy. Scoped content-preservation claims to
+  toggles/link installation and clarified that repair restores from `HEAD` and
+  discards worktree changes on success.
+- Verification passed: `make test-all` (including all 30 frontend tests), root
+  and desktop vet, `make vulncheck`, frontend npm audit, and `git diff --check`.
+  Dependency checks reported no vulnerabilities. A clean tracked-file export
+  built and installed the CLI with an isolated `BIN` destination and reported
+  `dev`.
+- Downloaded the published `v0.7.0` archives into temporary fixtures. Each
+  single-archive checksum command passed without the other artifact present;
+  modified copies failed as expected. The CLI installation example succeeded
+  with a missing destination and minimal PATH, reporting `skill-manager 0.7.0`.
+- Inspected GitHub-rendered Markdown in a local browser preview at 1280×900 and
+  390×844. Images loaded, in-page navigation worked, and both documents stayed
+  within the mobile viewport. Checked file/anchor links against the working
+  tree; full GitHub links to the new guide become live when the files reach
+  `main`. Native Gatekeeper approval was not re-exercised; its instructions were
+  checked against Apple guidance. No product code or release artifacts changed.
+
+## [2026-09-08] verification | Approve README publication
+
+- The user explicitly authorized publication of the completed README/editorial
+  change to the existing public `dees91/agent-skill-manager` repository.
+- A separate-model review approved the documentation with no blocking factual,
+  installation, safety, routing, or plan-fulfillment findings. It checked the
+  README, extracted guide, contributor instructions, privacy/support policies,
+  and wiki/task records against the accepted scope and verification evidence.
+- The local base matched `origin/main` at `4e664a1`; its CI had succeeded.
+  Effective branch rules permit an ordinary fast-forward push and prevent
+  deletion/non-fast-forward changes. The authenticated repository owner and
+  publication target were verified before publishing.
+- This publication contains documentation only. The completed tests, isolated
+  installation checks, checksum checks, and rendering evidence recorded above
+  remain applicable; no new application version or binary release is needed.

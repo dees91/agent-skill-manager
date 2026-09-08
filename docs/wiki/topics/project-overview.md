@@ -10,25 +10,19 @@
 - Its core promise is visibility plus reversible control: show what each tool
   can see, temporarily remove toggleable entries from discovery paths, and
   restore the exact original entry later.
-- The current implementation covers the Phase 1 MVP, Phase 2 group/bulk
-  toggles, Phase 3 Git repository installation, Phase 4 fast-forward update
-  plus whole-repository uninstall, Phase 5 link-in-place local sources, and
-  Phase 6 Wails/React desktop management, Phase 7 global skill-catalog context
-  visibility, Phase 8 managed source lifecycle in the desktop app, Phase 9
-  experimental skills.sh discovery with exact selected-skill installation,
-  Phase 10 active-first source-grouped Skills workspace, and Phase 11 public
-  namespace, documentation, synthetic assets, clean-checkout verification, and
-  history hygiene. Phase 12 adds locally verified Apple Silicon desktop and CLI
-  archives; Phase 13 hardens privacy/licensing and publishes `v0.4.1` as the
-  first public binary preview. The `v0.4.2` maintenance preview supersedes it
-  with security and dependency updates plus an empty-profile GUI fix. The
-  published `v0.5.0` feature preview packages Phases 14 through 16: saved
-  task-oriented Skill Sets, a public first-party Skill Advisor with tool-neutral
-  receipt/lease activation, and private managed-skill favorites with a
-  favorite-first macOS Skills filter. Current source adds Phase 17's native
-  build-version About dialog and Phase 18's deterministic local ranked Skill
-  Advisor retrieval; those post-release changes are not part of the published
-  `v0.5.0` artifact.
+- The current public preview is `v0.7.0`, covering Phases 1 through 21:
+  live discovery and reversible toggles, groups and bulk staging, managed Git
+  and local sources, macOS GUI and context estimates, saved Skill Sets,
+  favorites, Skill Advisor with ranked retrieval, four-tool support, and
+  managed checkout diagnosis/repair. See the
+  [release history](../../releases/) and [iteration plans](../../../planning/).
+- `user-confirmed`: README leads with the macOS app, existing demo, and a
+  numbered quick start. Detailed operator instructions live in
+  [the user guide](../../usage.md), while source builds live in
+  [Contributing](../../../CONTRIBUTING.md). This editorial order does not change
+  the CLI/TUI product contracts.
+- `documented`: the current public preview and `main` receive best-effort
+  security support without a guaranteed response or remediation time.
 
 ## Product Shape
 
@@ -42,7 +36,7 @@
   managed-only Sources over the same scan, staging,
   install/update/uninstall, and state boundaries as the terminal interfaces.
   The experimental Discover domain is dormant and has no public
-  binding/navigation in `v0.5.0`. The Dashboard shows approximate Claude,
+  binding/navigation in `v0.7.0`. The Dashboard shows approximate Claude,
   Codex, Muse, and Grok startup catalog cost and runs provider diagnostics only after
   an explicit action. Skills keeps applied ON rows prominent and collapses the
   much larger OFF catalog by source while preserving pending Apply semantics.
@@ -75,7 +69,9 @@
 ## Authority Map
 
 - Product intent and invariants: [`../../../AGENTS.md`](../../../AGENTS.md).
-- User-facing commands and behavior: [`../../../README.md`](../../../README.md).
+- First launch and product introduction: [`../../../README.md`](../../../README.md).
+- Detailed user-facing commands and behavior: [`../../usage.md`](../../usage.md).
+- Source builds and checks: [`../../../CONTRIBUTING.md`](../../../CONTRIBUTING.md).
 - Iteration status: [`../../../planning/`](../../../planning/).
 - Actual runtime behavior: source and tests under [`../../../internal/`](../../../internal/).
 - Cross-source synthesis and history: this wiki.
