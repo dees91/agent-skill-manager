@@ -627,3 +627,13 @@ Follow-up review finding, reproduced before fixing:
   reversing what was moved. `git checkout HEAD -- <path>` also writes the index
   and can create files and parent directories, so every effect of the restore
   step needs its own inverse.
+
+## [2026-09-08] verification | PR 15 final re-review
+
+Verified `1871341`, including rollback fix `e2dd40e`. All independent review
+reproductions pass, including the deletion and rename failures from the last
+round. Resolved the last GitHub thread; all five findings are now resolved.
+No new P1/P2 findings. Published a ready-to-merge verdict as a review comment
+(the authenticated account is the PR author). Root/desktop Go tests and vet,
+CLI build, and both CI jobs pass. Temporary tests were removed; no code changes
+or merge were made. Updated the repository workflow review status locally.

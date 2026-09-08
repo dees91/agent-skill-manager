@@ -165,14 +165,20 @@ in [PR #15](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestrev
 Re-review of `2fdaa34` independently reran all four original reproductions:
 all pass, and the four GitHub review threads are resolved.
 
-`observed`, `open`: an additional P2 remains in repair rollback. Paths absent
+`observed`, resolved in `e2dd40e` and verified on `1871341`: the additional
+P2 concerned repair rollback. Paths absent
 before repair are skipped during staging but recreated by tracked restoration.
 A post-restore verification failure leaves those files behind despite reporting
 complete rollback. Temporary real-Git tests reproduced both an unstaged
 `.gitignore` deletion being undone and a staged rename gaining an extra
 untracked source path. Track original absence and undo repair-created paths
 on rollback. See the [re-review](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestreview-5138750585).
-The review verdict is changes required before merge.
+Final re-review on `1871341` reran all original reproductions, including both
+rollback cases; all pass. The last thread is resolved, with no new P1/P2
+findings. Root/desktop Go tests and vet, CLI build, and both CI jobs pass.
+[Final verdict: ready to merge](https://github.com/dees91/agent-skill-manager/pull/15#pullrequestreview-5139224488).
+The verdict is a review comment because the authenticated account is the PR
+author; no formal self-approval or merge was performed.
 
 ## Whole-Repository Uninstall
 
