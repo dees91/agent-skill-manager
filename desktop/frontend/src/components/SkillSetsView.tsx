@@ -50,8 +50,6 @@ interface EditorState {
   query: string
 }
 
-type ToolChoice = '' | ManagedTool | 'all'
-
 export default function SkillSetsView(props: SkillSetsViewProps) {
   const { snapshot, busy, backend, editorRequest } = props
   const [query, setQuery] = useState('')
@@ -59,7 +57,7 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [addSkillName, setAddSkillName] = useState<string | null>(null)
   const [toggleSet, setToggleSet] = useState<SkillSet | null>(null)
-  const [toolChoice, setToolChoice] = useState<ToolChoice>('')
+  const [toolSelection, setToolSelection] = useState<ManagedTool[]>([])
   const [preview, setPreview] = useState<SkillSetTogglePreview | null>(null)
   const [previewBusy, setPreviewBusy] = useState(false)
   const [deleteSet, setDeleteSet] = useState<SkillSet | null>(null)
@@ -115,14 +113,16 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
     void runMutation(action, () => setEditor(null))
   }
 
-  const selectToolChoice = async (choice: ToolChoice) => {
-    if (!toggleSet || !choice) return
-    setToolChoice(choice)
+  const updateToolSelection = async (next: ManagedTool[]) => {
+    if (!toggleSet) return
+    const ordered = MANAGED_TOOLS.filter((tool) => next.includes(tool))
+    setToolSelection(ordered)
     setPreview(null)
     setDialogError(null)
+    if (ordered.length === 0) return
     setPreviewBusy(true)
     try {
-      setPreview(await backend.previewSkillSetToggle(toggleSet.setId, toolsForChoice(choice)))
+      setPreview(await backend.previewSkillSetToggle(toggleSet.setId, ordered))
     } catch (reason) {
       setDialogError(errorMessage(reason))
     } finally {
@@ -130,12 +130,15 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
     }
   }
 
+  const toggleTool = (tool: ManagedTool) => void updateToolSelection(toolSelection.includes(tool) ? toolSelection.filter((selected) => selected !== tool) : [...toolSelection, tool])
+  const toggleAllTools = () => void updateToolSelection(toolSelection.length === MANAGED_TOOLS.length ? [] : [...MANAGED_TOOLS])
+
   const stageToggle = async () => {
-    if (!toggleSet || !toolChoice || !preview) return
+    if (!toggleSet || toolSelection.length === 0 || !preview) return
     props.onBusy(true)
     setDialogError(null)
     try {
-      const result = await backend.toggleSkillSet(toggleSet.setId, toolsForChoice(toolChoice))
+      const result = await backend.toggleSkillSet(toggleSet.setId, toolSelection)
       props.onAction(result)
       props.onAnnounce(result.message)
       setToggleSet(null)
@@ -148,7 +151,7 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
 
   const openToggle = (set: SkillSet) => {
     setToggleSet(set)
-    setToolChoice('')
+    setToolSelection([])
     setPreview(null)
     setDialogError(null)
   }
@@ -185,7 +188,7 @@ export default function SkillSetsView(props: SkillSetsViewProps) {
 
       {editor && <SkillSetEditor snapshot={snapshot} editor={editor} busy={busy} error={dialogError} onChange={setEditor} onClose={() => setEditor(null)} onSave={saveEditor} />}
       {addSkillName && <AddSkillDialog skillName={addSkillName} sets={snapshot.skillSets} busy={busy} onClose={() => setAddSkillName(null)} onNew={() => { const name = addSkillName; setAddSkillName(null); openEditor(undefined, [name]) }} onExisting={(set) => { const name = addSkillName; setAddSkillName(null); openEditor(set, [name]) }} />}
-      {toggleSet && <ToggleDialog set={toggleSet} choice={toolChoice} preview={preview} previewBusy={previewBusy} busy={busy} error={dialogError} onChoice={(choice) => void selectToolChoice(choice)} onClose={() => setToggleSet(null)} onConfirm={() => void stageToggle()} />}
+      {toggleSet && <ToggleDialog set={toggleSet} selection={toolSelection} preview={preview} previewBusy={previewBusy} busy={busy} error={dialogError} onToggleTool={toggleTool} onToggleAll={toggleAllTools} onClose={() => setToggleSet(null)} onConfirm={() => void stageToggle()} />}
       {deleteSet && <ConfirmDeleteDialog set={deleteSet} busy={busy} error={dialogError} onClose={() => setDeleteSet(null)} onConfirm={() => void runMutation(() => backend.deleteSkillSet(deleteSet.setId), () => setDeleteSet(null))} />}
     </section>
   )
@@ -243,10 +246,11 @@ function AddSkillDialog({ skillName, sets, busy, onClose, onNew, onExisting }: {
   return <SetModal title={`Add ${skillName} to a Skill Set`} onClose={onClose} busy={busy}><p className="dialog-description">Choose a saved recipe to edit, or start a new one with this skill selected.</p><div className="add-to-set-list">{sets.map((set) => <button className="set-picker-row" key={set.setId} onClick={() => onExisting(set)}><ListChecks size={15} /><span><strong>{set.name}</strong><small>{set.members.length} skills</small></span></button>)}</div><DialogActions onClose={onClose} busy={busy}><button className="primary-button" onClick={onNew}><Plus size={15} /> New Skill Set</button></DialogActions></SetModal>
 }
 
-function ToggleDialog({ set, choice, preview, previewBusy, busy, error, onChoice, onClose, onConfirm }: { set: SkillSet; choice: ToolChoice; preview: SkillSetTogglePreview | null; previewBusy: boolean; busy: boolean; error: string | null; onChoice: (choice: ToolChoice) => void; onClose: () => void; onConfirm: () => void }) {
+function ToggleDialog({ set, selection, preview, previewBusy, busy, error, onToggleTool, onToggleAll, onClose, onConfirm }: { set: SkillSet; selection: ManagedTool[]; preview: SkillSetTogglePreview | null; previewBusy: boolean; busy: boolean; error: string | null; onToggleTool: (tool: ManagedTool) => void; onToggleAll: () => void; onClose: () => void; onConfirm: () => void }) {
   useDialogEscape(onClose, busy || previewBusy)
   const totalSkipped = preview ? preview.counts.skippedMissing + preview.counts.skippedReadOnly + preview.counts.skippedConflict : 0
-  return <SetModal title={`Toggle ${set.name}`} onClose={onClose} busy={busy || previewBusy}><p className="dialog-description">Choose the tool scope for this use. The result is staged in Pending and will not touch files until Apply.</p><div className="set-tool-choice" role="group" aria-label="Tool scope for Skill Set">{([...MANAGED_TOOLS, 'all'] as ToolChoice[]).map((value) => <button key={value} className={choice === value ? 'active' : ''} aria-pressed={choice === value} onClick={() => onChoice(value)} disabled={busy || previewBusy}>{value === 'all' ? 'All' : value ? toolDisplayName(value) : ''}</button>)}</div>{previewBusy && <div className="set-preview-loading" role="status">Calculating smart-toggle preview…</div>}{preview && <div className={`set-toggle-preview direction-${preview.direction}`}><ArrowUpDown size={19} /><div><strong>{preview.direction === 'none' ? 'No eligible cells' : `${titleCase(preview.direction)} ${preview.counts.changed + preview.counts.removed} pending change${preview.counts.changed + preview.counts.removed === 1 ? '' : 's'}`}</strong><p>{preview.eligible} eligible cell{preview.eligible === 1 ? '' : 's'} in {preview.tools.map(titleCase).join(' + ')}.</p>{totalSkipped > 0 && <small>{totalSkipped} skipped · {preview.counts.skippedMissing} missing · {preview.counts.skippedReadOnly} read-only · {preview.counts.skippedConflict} conflict</small>}</div></div>}{error && <DialogError message={error} />}<DialogActions onClose={onClose} busy={busy || previewBusy}><button className="primary-button" disabled={busy || previewBusy || !preview || preview.direction === 'none' || preview.counts.changed + preview.counts.removed === 0} onClick={onConfirm}><ArrowUpDown size={15} /> Stage {preview?.direction === 'enable' ? 'enable' : preview?.direction === 'disable' ? 'disable' : 'changes'}</button></DialogActions></SetModal>
+  const allSelected = selection.length === MANAGED_TOOLS.length
+  return <SetModal title={`Toggle ${set.name}`} onClose={onClose} busy={busy || previewBusy}><p className="dialog-description">Choose one or more tools for this use. The result is staged in Pending and will not touch files until Apply.</p><div className="set-tool-choice" role="group" aria-label="Tool scope for Skill Set">{MANAGED_TOOLS.map((tool) => <button key={tool} className={selection.includes(tool) ? 'active' : ''} aria-pressed={selection.includes(tool)} onClick={() => onToggleTool(tool)} disabled={busy || previewBusy}>{toolDisplayName(tool)}</button>)}<button className={allSelected ? 'active' : ''} aria-pressed={allSelected ? true : selection.length > 0 ? 'mixed' : false} onClick={onToggleAll} disabled={busy || previewBusy}>All</button></div>{selection.length === 0 && <p className="set-tool-hint">Select at least one tool.</p>}{previewBusy && <div className="set-preview-loading" role="status">Calculating smart-toggle preview…</div>}{preview && <div className={`set-toggle-preview direction-${preview.direction}`}><ArrowUpDown size={19} /><div><strong>{preview.direction === 'none' ? 'No eligible cells' : `${titleCase(preview.direction)} ${preview.counts.changed + preview.counts.removed} pending change${preview.counts.changed + preview.counts.removed === 1 ? '' : 's'}`}</strong><p>{preview.eligible} eligible cell{preview.eligible === 1 ? '' : 's'} in {preview.tools.map(titleCase).join(' + ')}.</p>{totalSkipped > 0 && <small>{totalSkipped} skipped · {preview.counts.skippedMissing} missing · {preview.counts.skippedReadOnly} read-only · {preview.counts.skippedConflict} conflict</small>}</div></div>}{error && <DialogError message={error} />}<DialogActions onClose={onClose} busy={busy || previewBusy}><button className="primary-button" disabled={busy || previewBusy || !preview || preview.direction === 'none' || preview.counts.changed + preview.counts.removed === 0} onClick={onConfirm}><ArrowUpDown size={15} /> Stage {preview?.direction === 'enable' ? 'enable' : preview?.direction === 'disable' ? 'disable' : 'changes'}</button></DialogActions></SetModal>
 }
 
 function ConfirmDeleteDialog({ set, busy, error, onClose, onConfirm }: { set: SkillSet; busy: boolean; error: string | null; onClose: () => void; onConfirm: () => void }) {
@@ -282,7 +286,6 @@ function SetModal({ title, onClose, busy, wide = false, children }: { title: str
 function DialogActions({ onClose, busy, children }: { onClose: () => void; busy: boolean; children: React.ReactNode }) { return <div className="dialog-actions"><button className="secondary-button" disabled={busy} onClick={onClose}>Cancel</button>{children}</div> }
 function DialogError({ message }: { message: string }) { return <div className="dialog-error" role="alert"><AlertTriangle size={14} /><span>{message}</span></div> }
 function useDialogEscape(onClose: () => void, busy: boolean) { useEffect(() => { const handler = (event: KeyboardEvent) => { if (event.key === 'Escape' && !busy) onClose() }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler) }, [busy, onClose]) }
-function toolsForChoice(choice: ToolChoice): ManagedTool[] { return choice === 'all' ? [...MANAGED_TOOLS] : choice ? [choice] : [] }
 function titleCase(value: string) { return value ? value[0].toUpperCase() + value.slice(1) : value }
 function statusLabel(value: string) { return value.split('-').map(titleCase).join(' ') }
 function errorMessage(reason: unknown) { return reason instanceof Error ? reason.message : String(reason) }

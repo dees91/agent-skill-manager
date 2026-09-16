@@ -838,8 +838,9 @@ changing CLI, TUI, source ownership, or filesystem toggle semantics.
 - A `Skill Set` has a stable opaque identifier, a unique user-facing name, an
   optional `When to use` description, and a sorted unique list of skill
   basenames. It is distinct from the automatically detected source `Group`.
-- Membership is tool-agnostic. Each use explicitly selects Claude, Codex, Muse, Grok, or
-  both and stages changes through the existing Pending/Apply workflow.
+- Membership is tool-agnostic. Each use explicitly selects one or more of
+  Claude, Codex, Muse, and Grok, in any combination (All selects or clears every
+  tool), and stages changes through the existing Pending/Apply workflow.
 - A set uses the existing smart-toggle rule: all eligible effective cells ON
   targets OFF; otherwise eligible OFF cells target ON. Sets may overlap and do
   not own or reference-count active skills.

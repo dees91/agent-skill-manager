@@ -14,8 +14,10 @@
 
 - `Skill Set` is a user-defined collection of skill names plus an optional
   `When to use` description. It is separate from source-derived `Group`.
-- Membership is tool-agnostic. Every use explicitly selects Claude, Codex, or
-  both, then stages changes through the existing Pending/Apply model.
+- Membership is tool-agnostic. Every use explicitly selects one or more tools
+  in any combination (originally Claude, Codex, or both; later extended to
+  Muse and Grok and to arbitrary combinations), then stages changes through the
+  existing Pending/Apply model.
 - Sets are overlapping smart-toggle recipes, not active profiles and not
   reference-counted owners of skills.
 - Missing members remain recorded as unavailable and reconnect when the same
