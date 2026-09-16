@@ -38,9 +38,13 @@ func (s *Service) InspectSources() ([]SourceHealth, error) {
 }
 
 func inspectRepositoryHealth(service *install.UpdateService, repository state.RepositoryEntry) SourceHealth {
-	entry := SourceHealth{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: SourceHealthOK}
+	entry := SourceHealth{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: SourceHealthOK, NewSkills: []string{}}
 	_, err := service.PlanLocal(repository)
 	if err == nil {
+		// A discovery failure only hides the hint; update reports it as a warning.
+		if newSkills, discoveryErr := install.NewSkills(repository); discoveryErr == nil {
+			entry.NewSkills = discoveredSkillNames(newSkills)
+		}
 		return entry
 	}
 	var conflict install.CheckoutConflictError
@@ -175,4 +179,12 @@ func newSourceMutationFailure(stage, sourceID, group string, err error) *SourceM
 		failure.Repairable = conflict.Repairable()
 	}
 	return failure
+}
+
+func discoveredSkillNames(skills []install.DiscoveredSkill) []string {
+	names := make([]string, len(skills))
+	for i, skill := range skills {
+		names[i] = skill.Name
+	}
+	return names
 }

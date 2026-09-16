@@ -728,3 +728,15 @@ or merge were made. Updated the repository workflow review status locally.
   fresh-context reviewer), a top-level `AGENTS.md` route, a PR template
   checkbox covering the body itself, and a non-blocking tracked `pre-push` hook
   enabled by `make setup`. Older duplicate mentions now point to the new rules.
+
+## [2026-09-16] implementation | Report skills added to managed repositories
+
+- Diagnosed an installed repository whose upstream gained skills after install:
+  update fetched them, but nothing reported them because update intentionally
+  never installs new skills. Reinstalling the same URL was the only path.
+- With user approval, added Iteration 22: `install.NewSkills`, update result
+  reporting, CLI output with the exact `install --skill` command, GUI health
+  `newSkills`, and a Sources `Install new` action preselecting only those cells.
+  The no-auto-install rule is unchanged and no dismiss state was added.
+- Updated `AGENTS.md`, `CLAUDE.md`, the new phase 22 plan, `docs/usage.md`, and
+  the repository install, desktop GUI, interfaces, and product decisions pages.

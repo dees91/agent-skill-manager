@@ -72,6 +72,15 @@ share the snapshot. `SourcesView` calls it on mount and after every source
 mutation and merges the result by `sourceId` into a `Needs repair` or `Blocked`
 row state.
 
+Healthy sources also carry `newSkills` (Iteration 22): skills in the checkout
+that are not recorded as installed. The row lists them and offers `Install new`,
+which opens `InstallDialog` with a `NewSkillsTarget`. The dialog calls
+`prepareGitInstall` on the recorded location (reusing the checkout without
+pulling), lists the new skills first, and preselects only their `available`
+cells for tools with a non-zero source count. There is no dismiss state; the
+hint disappears once the skills are installed and health reloads. Update
+results carry per-source `newSkills` and mention the count in the message.
+
 `SourceMutationFailure` carries `sourceId`, `kind`, `cause`, `remedy`, and
 `repairable`, so the update dialog explains a blocker and offers `Repair` from
 structured data instead of a regex over the message. `PreviewRepair` returns

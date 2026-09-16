@@ -23,6 +23,11 @@ type UpdateResult struct {
 	CurrentCommit  string
 	Updated        bool
 	UpToDate       bool
+	// NewSkills lists skills in the updated checkout that are not recorded as
+	// installed. Update never installs them; NewSkillsError reports a discovery
+	// failure without failing the completed update.
+	NewSkills      []DiscoveredSkill
+	NewSkillsError string
 }
 
 // UpdateService validates and fast-forwards managed repository checkouts.
@@ -128,6 +133,11 @@ func (s *UpdateService) Apply(repository state.RepositoryEntry) (UpdateResult, e
 		return result, err
 	}
 	result.Repository = current
+	if newSkills, err := NewSkills(current); err != nil {
+		result.NewSkillsError = err.Error()
+	} else {
+		result.NewSkills = newSkills
+	}
 	return result, nil
 }
 

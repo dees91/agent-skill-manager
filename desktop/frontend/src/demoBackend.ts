@@ -264,6 +264,7 @@ class DemoBackend implements Backend {
         cause: blocked ? 'The managed checkout has 2 worktree paths (1 untracked, 1 ignored).' : '',
         remedy: blocked ? 'Repair stages these paths into the Skill Manager trash and restores the checkout.' : '',
         repairable: blocked,
+        newSkills: [],
       }
     }) as never
   }

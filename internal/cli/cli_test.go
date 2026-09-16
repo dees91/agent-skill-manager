@@ -404,6 +404,79 @@ func TestRunUpdateFastForwardsSelectedRepository(t *testing.T) {
 	}
 }
 
+func TestRunUpdateReportsNewSkillsWithoutInstallingThem(t *testing.T) {
+	const gitURL = "https://github.com/owner/update-new"
+	source := createSourceRepo(t, "alpha")
+	withGitInsteadOf(t, gitURL, source)
+	p := paths.ForHome(t.TempDir())
+	var installOut, installErr strings.Builder
+	if code := RunWithPaths([]string{"install", gitURL, "--tool", "claude"}, &installOut, &installErr, p); code != 0 {
+		t.Fatalf("install code=%d stdout=%q stderr=%q", code, installOut.String(), installErr.String())
+	}
+	for _, name := range []string{"beta", "gamma"} {
+		if err := os.MkdirAll(filepath.Join(source, "skills", name), 0o755); err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+		if err := os.WriteFile(filepath.Join(source, "skills", name, "SKILL.md"), []byte("# "+name+"\n"), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	runGitForTest(t, source, "add", ".")
+	runGitForTest(t, source, "commit", "-m", "Add beta and gamma")
+	wantReport := "new skills in owner/update-new (not installed): beta, gamma\n" +
+		"  install: skill-manager install " + gitURL + " --skill beta --skill gamma --tool claude\n"
+
+	var dryOut, dryErr strings.Builder
+	if code := RunWithPaths([]string{"update", gitURL, "--dry-run"}, &dryOut, &dryErr, p); code != 0 || dryErr.Len() != 0 {
+		t.Fatalf("dry-run code=%d stdout=%q stderr=%q", code, dryOut.String(), dryErr.String())
+	}
+	if strings.Contains(dryOut.String(), "new skills") {
+		t.Fatalf("dry-run stdout = %q, want no upstream-only skills without fetch", dryOut.String())
+	}
+
+	var stdout, stderr strings.Builder
+	if code := RunWithPaths([]string{"update", gitURL}, &stdout, &stderr, p); code != 0 || stderr.Len() != 0 {
+		t.Fatalf("update code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), wantReport) {
+		t.Fatalf("stdout = %q, want %q", stdout.String(), wantReport)
+	}
+	if _, err := os.Lstat(filepath.Join(p.ClaudeUserSkills, "beta")); !os.IsNotExist(err) {
+		t.Fatalf("beta link exists or stat failed: %v", err)
+	}
+
+	dryOut.Reset()
+	if code := RunWithPaths([]string{"update", gitURL, "--dry-run"}, &dryOut, &dryErr, p); code != 0 {
+		t.Fatalf("second dry-run code=%d stderr=%q", code, dryErr.String())
+	}
+	if !strings.Contains(dryOut.String(), wantReport) {
+		t.Fatalf("dry-run stdout = %q, want local new skills %q", dryOut.String(), wantReport)
+	}
+}
+
+func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
+	repository := state.RepositoryEntry{
+		OriginalURL: "https://github.com/owner/all",
+		Group:       model.GroupLabel("owner/all"),
+		InstalledSkills: []state.InstalledSkillEntry{
+			{Name: "alpha", RelativePath: "alpha", Tools: []model.Tool{model.ToolClaude, model.ToolCodex}},
+			{Name: "beta", RelativePath: "beta", Tools: []model.Tool{model.ToolMuse, model.ToolGrok}},
+		},
+	}
+	var stdout, stderr strings.Builder
+	reportNewSkills(&stdout, &stderr, repository, []install.DiscoveredSkill{{Name: "retro"}}, "")
+	want := "new skills in owner/all (not installed): retro\n  install: skill-manager install https://github.com/owner/all --skill retro\n"
+	if stdout.String() != want || stderr.Len() != 0 {
+		t.Fatalf("stdout = %q stderr = %q, want %q", stdout.String(), stderr.String(), want)
+	}
+
+	stdout.Reset()
+	reportNewSkills(&stdout, &stderr, repository, nil, "duplicate skill names discovered: x")
+	if stdout.Len() != 0 || stderr.String() != "warning: could not check for new skills in owner/all: duplicate skill names discovered: x\n" {
+		t.Fatalf("stdout = %q stderr = %q, want warning", stdout.String(), stderr.String())
+	}
+}
+
 func TestRunUpdateAllStopsOnFirstFailureAndKeepsCompletedPrefix(t *testing.T) {
 	const firstURL = "https://github.com/owner/a-update"
 	const secondURL = "https://github.com/owner/b-update"

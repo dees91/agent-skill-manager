@@ -228,6 +228,20 @@ path sources are live links, so they do not need an update operation. Uninstall
 removes a complete recorded source; Skill Manager does not uninstall one skill
 from a source at a time.
 
+Update never installs skills that a repository gained after you installed it.
+It lists them instead, with the command that adds them for the tools the
+repository already uses. The dry-run lists skills already in the local
+checkout:
+
+```text
+updated example/agent-skills: 1a2b3c4 -> 5d6e7f8
+new skills in example/agent-skills (not installed): new-skill, other-skill
+  install: skill-manager install https://github.com/example/agent-skills --skill new-skill --skill other-skill
+```
+
+The desktop Sources screen shows the same skills on the repository row with an
+`Install new` action that opens the install matrix with only them preselected.
+
 When a skill writes generated files into its own checkout, update stops with a
 named cause and the exact command to clear it:
 

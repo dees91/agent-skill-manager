@@ -46,6 +46,54 @@ func TestInspectSourcesReportsRepairableAndCleanHealth(t *testing.T) {
 	}
 }
 
+func TestInspectSourcesAndUpdateReportNewSkills(t *testing.T) {
+	fixture := newRepairFixture(t)
+	writeRepairFile(t, filepath.Join(fixture.sourcePath, "skills", "retro", "SKILL.md"), "---\nname: retro\ndescription: Retro\n---\n")
+	runGitRepair(t, "-C", fixture.sourcePath, "add", ".")
+	runGitRepair(t, "-C", fixture.sourcePath, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add retro")
+	runGitRepair(t, "-C", fixture.sourcePath, "push", "origin", "main")
+	service := New(fixture.paths)
+
+	before, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(before) != 1 || before[0].NewSkills == nil || len(before[0].NewSkills) != 0 {
+		t.Fatalf("health = %#v, want no new skills before update", before)
+	}
+
+	result := service.UpdateSource(before[0].SourceID, false)
+	if result.Failure != nil {
+		t.Fatalf("UpdateSource() failure = %#v", result.Failure)
+	}
+	if len(result.Completed) != 1 || strings.Join(result.Completed[0].NewSkills, ",") != "retro" {
+		t.Fatalf("completed = %#v, want retro reported", result.Completed)
+	}
+	if !strings.Contains(result.Message, "1 new skill(s) available to install.") {
+		t.Fatalf("message = %q, want new skill count", result.Message)
+	}
+	if _, err := os.Lstat(filepath.Join(fixture.paths.ClaudeUserSkills, "retro")); !os.IsNotExist(err) {
+		t.Fatalf("retro link exists or stat failed: %v", err)
+	}
+
+	after, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(after) != 1 || after[0].Status != SourceHealthOK || strings.Join(after[0].NewSkills, ",") != "retro" {
+		t.Fatalf("health = %#v, want retro as a new skill", after)
+	}
+
+	writeRepairFile(t, filepath.Join(fixture.checkoutPath, "generated", "trace_processor"), "binary")
+	dirty, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(dirty) != 1 || dirty[0].Status != SourceHealthNeedsRepair || len(dirty[0].NewSkills) != 0 {
+		t.Fatalf("health = %#v, want no new skills on an unhealthy source", dirty)
+	}
+}
+
 func TestInspectSourcesReportsNonRepairableBlockers(t *testing.T) {
 	fixture := newRepairFixture(t)
 	runGitRepair(t, "-C", fixture.checkoutPath, "checkout", "--detach")
@@ -173,6 +221,7 @@ func TestRepairRejectsPendingSkillChanges(t *testing.T) {
 type repairFixture struct {
 	paths        paths.Paths
 	checkoutPath string
+	sourcePath   string
 }
 
 func newRepairFixture(t *testing.T) repairFixture {
@@ -232,7 +281,7 @@ func newRepairFixture(t *testing.T) repairFixture {
 	if err := state.New(p).Save(manifest); err != nil {
 		t.Fatalf("save state: %v", err)
 	}
-	return repairFixture{paths: p, checkoutPath: checkoutPath}
+	return repairFixture{paths: p, checkoutPath: checkoutPath, sourcePath: sourcePath}
 }
 
 func runGitRepair(t *testing.T, args ...string) string {

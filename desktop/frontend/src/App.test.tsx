@@ -385,6 +385,59 @@ describe('Skill Manager desktop app', () => {
     expect(await screen.findByRole('heading', { name: 'Repair demo/skills?' })).toBeInTheDocument()
   })
 
+  it('shows new skills on a healthy source and preselects only them for install', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.inspectSources = vi.fn(async () => [new gui.SourceHealth({ sourceId: 'git:fixture', group: 'demo/skills', status: 'ok', repairable: false, newSkills: ['beta'] })])
+    backend.prepareGitInstall = vi.fn(async () => new gui.InstallDraft({
+      draftId: 'draft:new',
+      kind: 'git',
+      group: 'demo/skills',
+      location: 'https://github.com/demo/skills',
+      candidates: [
+        installCandidate('alpha', 'already-on', 'already-on', 'already-off', 'already-on'),
+        installCandidate('beta', 'available', 'available', 'available', 'conflict'),
+      ],
+      cloned: false,
+      reused: true,
+      retainedClone: false,
+      cancelled: false,
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+
+    expect(await screen.findByText('1 new skill not installed — beta')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Install new skills from demo/skills' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install new skills' })
+    await waitFor(() => expect(backend.prepareGitInstall).toHaveBeenCalledWith('https://github.com/demo/skills'))
+    expect(await within(dialog).findByText(/1 new skill listed first and preselected/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('checkbox', { name: 'beta claude' })).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'beta muse' })).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'beta grok' })).not.toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'alpha claude' })).not.toBeChecked()
+    await user.click(within(dialog).getByRole('button', { name: 'Review 3 targets' }))
+    await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:new', expect.arrayContaining([
+      { tool: 'claude', skillName: 'beta' },
+      { tool: 'codex', skillName: 'beta' },
+      { tool: 'muse', skillName: 'beta' },
+    ])))
+  })
+
+  it('hides new skills while a source needs repair', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.inspectSources = vi.fn(async () => [new gui.SourceHealth({ sourceId: 'git:fixture', group: 'demo/skills', status: 'needs-repair', kind: 'dirty-worktree', cause: 'The managed checkout has 1 worktree path (1 untracked).', repairable: true, newSkills: ['beta'] })])
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+
+    expect(await screen.findByText(/Needs repair/)).toBeInTheDocument()
+    expect(screen.queryByText(/new skill/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Install new skills from demo/skills' })).not.toBeInTheDocument()
+  })
+
   it('inspects Git and reviews an exact install matrix', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

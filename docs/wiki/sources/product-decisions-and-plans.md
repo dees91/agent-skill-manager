@@ -109,6 +109,10 @@ to seed the wiki. It summarizes their roles; it does not replace them.
     dirty worktree as the only repairable class, trash-staged repair with HEAD
     restore and rollback, explicit URL and no prompt in the CLI, and explicit
     GUI source health with a confirmed repair.
+- [`planning/phase-22-new-skill-discovery-tasks.md`](../../../planning/phase-22-new-skill-discovery-tasks.md)
+  - `documented`: update still never installs new repository skills but
+    reports them by name in the CLI with an install command, in GUI source
+    health, and through a preselected `Install new` matrix; no dismiss state.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.

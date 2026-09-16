@@ -280,6 +280,12 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 			fmt.Fprintf(stdout, "current commit: %s\n", plan.Checkout.HeadCommit)
 			fmt.Fprintln(stdout, "would fetch origin and fast-forward after remote skill-path preflight")
 			fmt.Fprintln(stdout, "remote target unavailable without fetch; no Git refs were changed")
+			newSkills, discoveryErr := install.NewSkills(plan.Repository)
+			discoveryError := ""
+			if discoveryErr != nil {
+				discoveryError = discoveryErr.Error()
+			}
+			reportNewSkills(stdout, stderr, plan.Repository, newSkills, discoveryError)
 		}
 		return 0
 	}
@@ -300,6 +306,7 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 			upToDate++
 			fmt.Fprintf(stdout, "up-to-date %s: %s\n", repositoryGroup(repository), result.CurrentCommit)
 		}
+		reportNewSkills(stdout, stderr, result.Repository, result.NewSkills, result.NewSkillsError)
 	}
 	fmt.Fprintf(stdout, "updated %d repository(s); %d up-to-date\n", updated, upToDate)
 	if updated > 0 {
@@ -882,6 +889,50 @@ func groupSources(summary model.GroupSummary) string {
 		return model.SourceUnknown.String()
 	}
 	return summary.SourceText
+}
+
+// reportNewSkills lists skills present in a managed checkout but not recorded
+// as installed, with the install commands that add them for the tools the
+// repository already uses. Update itself never installs them.
+func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry, newSkills []install.DiscoveredSkill, discoveryError string) {
+	if discoveryError != "" {
+		fmt.Fprintf(stderr, "warning: could not check for new skills in %s: %s\n", repositoryGroup(repository), discoveryError)
+		return
+	}
+	if len(newSkills) == 0 {
+		return
+	}
+	names := make([]string, len(newSkills))
+	for i, skill := range newSkills {
+		names[i] = skill.Name
+	}
+	fmt.Fprintf(stdout, "new skills in %s (not installed): %s\n", repositoryGroup(repository), strings.Join(names, ", "))
+	command := "skill-manager install " + repositoryURL(repository) + " --skill " + strings.Join(names, " --skill ")
+	tools := recordedRepositoryTools(repository)
+	if len(tools) == 0 || len(tools) == len(model.Tools()) {
+		fmt.Fprintf(stdout, "  install: %s\n", command)
+		return
+	}
+	for _, tool := range tools {
+		fmt.Fprintf(stdout, "  install: %s --tool %s\n", command, tool)
+	}
+}
+
+// recordedRepositoryTools returns the known recorded tools in canonical order.
+func recordedRepositoryTools(repository state.RepositoryEntry) []model.Tool {
+	recorded := map[model.Tool]bool{}
+	for _, skill := range repository.InstalledSkills {
+		for _, tool := range skill.Tools {
+			recorded[tool] = true
+		}
+	}
+	tools := []model.Tool{}
+	for _, tool := range model.Tools() {
+		if recorded[tool] {
+			tools = append(tools, tool)
+		}
+	}
+	return tools
 }
 
 func repositoryGroup(repo state.RepositoryEntry) string {

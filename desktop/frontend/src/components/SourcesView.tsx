@@ -45,8 +45,16 @@ interface SourcesViewProps {
 }
 
 type InstallMode = 'git' | 'local'
-type Dialog = 'install' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | 'repair' | null
+type Dialog = 'install' | 'install-new' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | 'repair' | null
 type ColumnSelectionState = 'ON' | 'OFF' | 'MIXED' | 'N/A'
+
+// NewSkillsTarget starts the install dialog from a recorded Git source and
+// preselects only its not-yet-installed skills for the tools it already uses.
+interface NewSkillsTarget {
+  gitURL: string
+  skills: string[]
+  tools: ManagedTool[]
+}
 
 export default function SourcesView(props: SourcesViewProps) {
   const { sources, pendingCount, busy, progress, backend, includeReadOnly, onBusy, onResult, onAnnounce } = props
@@ -196,8 +204,9 @@ export default function SourcesView(props: SourcesViewProps) {
                   <td><div className="source-identity"><span>{source.kind === 'git' ? <GitBranch size={15} /> : <HardDrive size={15} />}</span><div><strong>{source.group}</strong><code>{source.location}</code></div></div></td>
                   <td><strong className="source-count">{source.skillCount}</strong></td>
                   <td><div className="target-counts">{MANAGED_TOOLS.map((tool) => <span key={tool}>{toolDisplayName(tool)} {toolSourceCount(source, tool)}</span>)}</div></td>
-                  <td><div className="source-update-mode"><span className={updateModeDotClass(source, health.get(source.sourceId))} /><div><strong>{source.updateMode}</strong><small>{source.updateHint}</small>{source.commit && <code>Commit {shortCommit(source.commit)}</code>}{sourceHealthNote(health.get(source.sourceId))}</div></div></td>
+                  <td><div className="source-update-mode"><span className={updateModeDotClass(source, health.get(source.sourceId))} /><div><strong>{source.updateMode}</strong><small>{source.updateHint}</small>{source.commit && <code>Commit {shortCommit(source.commit)}</code>}{sourceHealthNote(health.get(source.sourceId))}{newSkillsNote(health.get(source.sourceId))}</div></div></td>
                   <td><div className="source-row-actions">
+                    {newSkillsOf(health.get(source.sourceId)).length > 0 && <button aria-label={`Install new skills from ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('install-new', source)}><PackagePlus size={12} /> Install new</button>}
                     {health.get(source.sourceId)?.repairable && <button aria-label={`Repair ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => void prepareRepair(source)}><Wrench size={12} /> Repair</button>}
                     {source.canUpdate && <button aria-label={`Update ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('update-one', source)}><RefreshCw size={12} /> Update</button>}
                     <button aria-label={`Uninstall ${source.group}`} className="ghost-button compact-button destructive" disabled={busy || pendingCount > 0} onClick={() => void prepareUninstall(source)}><Trash2 size={12} /> Uninstall</button>
@@ -211,6 +220,9 @@ export default function SourcesView(props: SourcesViewProps) {
 
       {dialog === 'install' && (
         <InstallDialog backend={backend} busy={busy} progress={progress} includeReadOnly={includeReadOnly} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} onAnnounce={onAnnounce} />
+      )}
+      {dialog === 'install-new' && selectedSource && (
+        <InstallDialog backend={backend} busy={busy} progress={progress} includeReadOnly={includeReadOnly} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} onAnnounce={onAnnounce} newSkills={newSkillsTarget(selectedSource, health.get(selectedSource.sourceId))} />
       )}
       {(dialog === 'update-all' || dialog === 'update-one') && (
         <ConfirmDialog title={dialog === 'update-all' ? 'Update all repositories?' : `Update ${selectedSource?.group}?`} description={dialog === 'update-all' ? 'Repositories are processed in deterministic order and the batch stops at the first failure.' : 'Skill Manager will fetch origin, validate installed paths, and fast-forward only.'} confirmLabel={dialog === 'update-all' ? 'Update all' : 'Update'} busy={busy} progress={progress} error={dialogError} failure={dialogFailure} onRepair={repairFromFailure} onClose={closeDialog} onConfirm={() => void runMutation(() => dialog === 'update-all' ? backend.updateAllSources(includeReadOnly) : backend.updateSource(selectedSource!.sourceId, includeReadOnly))} />
@@ -229,9 +241,10 @@ export default function SourcesView(props: SourcesViewProps) {
   )
 }
 
-function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy, onResult, onError, onClose, onAnnounce }: {
+function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy, onResult, onError, onClose, onAnnounce, newSkills }: {
   backend: Backend; busy: boolean; progress: SourceProgress | null; includeReadOnly: boolean; error: string | null
   onBusy: (busy: boolean) => void; onResult: (result: SourceMutationResult) => void; onError: (error: string | null) => void; onClose: () => void; onAnnounce: (message: string) => void
+  newSkills?: NewSkillsTarget
 }) {
   const [mode, setMode] = useState<InstallMode>('git')
   const [gitURL, setGitURL] = useState('')
@@ -241,16 +254,17 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
   const initialFocus = useRef<HTMLInputElement>(null)
 
   useEffect(() => { initialFocus.current?.focus() }, [])
+  useEffect(() => { if (newSkills) void inspect() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useDialogEscape(onClose, busy)
 
   const inspect = async () => {
     onBusy(true); onError(null)
     try {
-      const next = mode === 'git' ? await backend.prepareGitInstall(gitURL) : await backend.chooseLocalInstall()
+      const next = newSkills ? await backend.prepareGitInstall(newSkills.gitURL) : mode === 'git' ? await backend.prepareGitInstall(gitURL) : await backend.chooseLocalInstall()
       if (next.cancelled) return
-      setDraft(next)
+      setDraft(newSkills ? newSkillsFirst(next, newSkills.skills) : next)
       setReview(null)
-      setSelections(new Set(next.candidates.flatMap((candidate) => MANAGED_TOOLS.map((tool) => candidate[tool]).filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
+      setSelections(newSkills ? newSkillSelections(next, newSkills) : new Set(next.candidates.flatMap((candidate) => MANAGED_TOOLS.map((tool) => candidate[tool]).filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
       if (next.cloned) onAnnounce('Repository cloned for inspection. The checkout will be retained if you cancel.')
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -295,8 +309,12 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
   }
 
   return (
-    <Modal title="Install source" onClose={onClose} busy={busy} wide>
-      {!draft ? <>
+    <Modal title={newSkills ? 'Install new skills' : 'Install source'} onClose={onClose} busy={busy} wide>
+      {!draft && newSkills ? <>
+        {busy && <ProgressState progress={progress} />}
+        {error && <DialogError message={error} />}
+        <DialogActions onClose={onClose} busy={busy}>{error && <button className="primary-button" disabled={busy} onClick={() => void inspect()}>Retry</button>}</DialogActions>
+      </> : !draft ? <>
         <div className="source-mode-tabs" role="tablist" aria-label="Source type">
           <button role="tab" aria-selected={mode === 'git'} className={mode === 'git' ? 'active' : ''} onClick={() => setMode('git')}><GitBranch size={14} /> Git repository</button>
           <button role="tab" aria-selected={mode === 'local'} className={mode === 'local' ? 'active' : ''} onClick={() => setMode('local')}><FolderOpen size={14} /> Local folder</button>
@@ -307,6 +325,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
         {busy && <ProgressState progress={progress} />}
         <DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy || (mode === 'git' && !gitURL.trim())} onClick={() => void inspect()}>{mode === 'git' ? 'Clone & inspect' : 'Choose folder'}</button></DialogActions>
       </> : <>
+        {newSkills && <div className="dialog-note"><PackagePlus size={14} /><p>{newSkills.skills.length} new skill{newSkills.skills.length === 1 ? '' : 's'} listed first and preselected for {joinList(newSkills.tools.map(toolDisplayName), 'and')}: {newSkills.skills.join(', ')}. Installed skills keep their current state.</p></div>}
         <div className="draft-summary"><div><span>{draft.kind === 'git' ? <GitBranch size={14} /> : <HardDrive size={14} />}</span><div><strong>{draft.group}</strong><code>{draft.location}</code></div></div><small>{draft.candidates.length} skill{draft.candidates.length === 1 ? '' : 's'} discovered</small></div>
         <InstallMatrix draft={draft} selections={selections} busy={busy} onToggle={toggle} onSetToolSelection={setToolSelection} />
         {review && <ReviewSummary review={review} />}
@@ -525,6 +544,33 @@ function repairCountsLabel(preview: RepairPreview): string {
 function updateModeDotClass(source: ManagedSource, health?: SourceHealth): string {
   if (health && health.status !== 'ok') return 'status-dot blocked'
   return source.canUpdate ? 'status-dot git' : 'status-dot'
+}
+
+function newSkillsOf(health?: SourceHealth): string[] {
+  if (!health || health.status !== 'ok') return []
+  return health.newSkills ?? []
+}
+
+function newSkillsNote(health?: SourceHealth) {
+  const names = newSkillsOf(health)
+  if (names.length === 0) return null
+  const shown = names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3} more` : names.join(', ')
+  return <span className="source-health new-skills">{names.length} new skill{names.length === 1 ? '' : 's'} not installed — {shown}</span>
+}
+
+function newSkillsTarget(source: ManagedSource, health?: SourceHealth): NewSkillsTarget {
+  const used = MANAGED_TOOLS.filter((tool) => toolSourceCount(source, tool) > 0)
+  return { gitURL: source.location, skills: newSkillsOf(health), tools: used.length > 0 ? used : [...MANAGED_TOOLS] }
+}
+
+function newSkillsFirst(draft: InstallDraft, skills: string[]): InstallDraft {
+  const wanted = new Set(skills)
+  return { ...draft, candidates: [...draft.candidates.filter((candidate) => wanted.has(candidate.name)), ...draft.candidates.filter((candidate) => !wanted.has(candidate.name))] } as InstallDraft
+}
+
+function newSkillSelections(draft: InstallDraft, target: NewSkillsTarget): Set<string> {
+  const wanted = new Set(target.skills)
+  return new Set(draft.candidates.filter((candidate) => wanted.has(candidate.name)).flatMap((candidate) => target.tools.filter((tool) => candidate[tool].status === 'available').map((tool) => key(candidate.name, tool))))
 }
 
 function sourceHealthNote(health?: SourceHealth) {
