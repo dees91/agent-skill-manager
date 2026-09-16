@@ -750,3 +750,28 @@ or merge were made. Updated the repository workflow review status locally.
   warnings. Update items and source health now carry a path-free
   `newSkillsError`, the update message counts unchecked sources, and the row
   shows the cause.
+
+## [2026-09-16] release | Prepare and publish v0.8.0 public preview
+
+- Selected a minor prerelease for the completed Iteration 22 new skill
+  discovery work, keeping the Apple Silicon, ad-hoc-signed preview limitations.
+- Bumped `desktop/wails.json`, `desktop/frontend/package.json`, its lockfile,
+  and the current-version guidance in README, `docs/usage.md`, CONTRIBUTING,
+  and the wiki to `0.8.0`; added `docs/releases/v0.8.0.md`. Third-party notices
+  regenerated unchanged.
+- `observed`: `make notices-check` fails in a fresh checkout until the frontend
+  `dist` exists, because the desktop module embeds it and `go list` then drops
+  desktop dependencies. CI builds the frontend first; run `npm ci` and
+  `npm run build` before the check locally.
+- Tagged `b569133` after the full local Apple Silicon packaging gate and public
+  Root Go plus Desktop/frontend CI succeeded for that exact commit; no open PRs
+  or Dependabot alerts remained.
+- Uploaded the desktop ZIP, CLI tarball, and SHA-256 manifest to a draft,
+  downloaded them back, and verified digests against the local manifest,
+  archive contents including LICENSE and notices, absence of absolute or
+  parent paths and symlinks, ad-hoc signatures, arm64 Mach-O format, bundle
+  identifier `io.github.dees91.skillmanager`, versions,
+  `LSMinimumSystemVersion` 13.0, `skill-manager --version`, the new skill
+  report in the CLI binary, and an isolated-home desktop launch.
+- Published the draft as a non-latest GitHub prerelease and re-verified both
+  archives from the unauthenticated public download URLs.
