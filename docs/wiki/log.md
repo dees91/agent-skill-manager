@@ -803,3 +803,25 @@ or merge were made. Updated the repository workflow review status locally.
   also drives row filtering and placement.
 - Updated `AGENTS.md`, `DESIGN.md`, the phase 14 plan, `docs/usage.md`, and the
   saved Skill Sets page.
+
+## [2026-09-16] release | Prepare and publish v0.9.0 public preview
+
+- Selected a minor prerelease for the completed Iteration 23 install as OFF work
+  and the Skill Set tool combination refinement, keeping the Apple Silicon,
+  ad-hoc-signed preview limitations.
+- Bumped `desktop/wails.json`, `desktop/frontend/package.json`, its lockfile,
+  and the current-version guidance in README, `docs/usage.md`, CONTRIBUTING,
+  and the wiki to `0.9.0`; added `docs/releases/v0.9.0.md`. Third-party notices
+  regenerated unchanged.
+- Tagged `9bc680b` after the full local Apple Silicon packaging gate and public
+  Root Go plus Desktop/frontend CI succeeded for that exact commit; no open PRs
+  or Dependabot alerts remained.
+- Uploaded the desktop ZIP, CLI tarball, and SHA-256 manifest to a draft,
+  downloaded them back, and verified digests against the local manifest,
+  archive contents including LICENSE and notices, absence of absolute or parent
+  paths and symlinks, ad-hoc signatures, arm64 Mach-O format, bundle identifier
+  `io.github.dees91.skillmanager`, versions, `LSMinimumSystemVersion` 13.0,
+  `skill-manager --version`, `install --off` from the downloaded CLI against a
+  synthetic source in an isolated home, and an isolated-home desktop launch.
+- Published the draft as a non-latest GitHub prerelease and re-verified both
+  archives from the unauthenticated public download URLs.
