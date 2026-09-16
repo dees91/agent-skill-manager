@@ -8,6 +8,14 @@ The first version is a local, simple, reversible TUI plus a minimal CLI. It must
 
 This repository is intentionally greenfield. The planning discussion happened before implementation. Preserve these decisions unless the user explicitly changes them.
 
+## Public Text
+
+This repository is public. Pull request bodies, commit messages, issues,
+docs, wiki, plans, and fixtures describe behavior for every user with synthetic
+examples. Review that public text with
+[docs/contributing/public-text.md](./docs/contributing/public-text.md) before
+`git push` and before creating or editing a pull request, issue, or release.
+
 ## Mandatory Wiki Routing
 
 This project has an LLM-maintained wiki under `docs/wiki/`.
@@ -43,7 +51,7 @@ For MVP, use these paths from `$HOME` directly. Do not add config file support i
 The application must not depend on a captured machine inventory. It scans the
 filesystem each run and supports any valid skills found under the fixed paths.
 Tests, demo data, screenshots, and documentation examples use synthetic homes,
-repositories, skill names, and counts.
+repositories, skill names, and counts (see [Public Text](#public-text)).
 
 ## Core Product Decisions
 
@@ -748,7 +756,7 @@ changing runtime skill-management semantics.
 - Publish under MIT with practical security, privacy, and contribution docs.
 - Keep public examples, test fixtures, screenshots, plans, and wiki synthesis
   free of real home inventories, private paths, machine fingerprints, and
-  credentials.
+  credentials. The current rules live in [Public Text](#public-text).
 - Build the ignored frontend `dist` before compiling the embedded desktop
   module so a clean checkout is sufficient.
 - GitHub Actions remain out of scope for this iteration.

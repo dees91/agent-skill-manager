@@ -13,12 +13,17 @@ The complete project requires:
 - Git;
 - Xcode command-line tools for Wails builds.
 
-Clone the repository:
+Clone the repository and enable its Git hooks:
 
 ```bash
 git clone https://github.com/dees91/agent-skill-manager.git
 cd agent-skill-manager
+make setup
 ```
+
+`make setup` points `core.hooksPath` at `.githooks/`. The `pre-push` hook only
+prints the public text being pushed next to the review criteria; it never
+blocks a push.
 
 ### Build and install the CLI
 
@@ -141,6 +146,8 @@ prerelease. GitHub Actions and automatic publishing are intentionally absent.
 ## Pull Requests
 
 Keep changes focused and explain their user-visible behavior, safety impact,
-tests, and any deferred follow-up. Do not include state manifests, real home
-paths, private repository URLs, credentials, local screenshots, build outputs,
-or `.DS_Store` files.
+tests, and any deferred follow-up. Start the body from
+`.github/PULL_REQUEST_TEMPLATE.md`. The repository is public: review the pull
+request body, commit messages, docs, and fixtures with
+[Public Text Review](docs/contributing/public-text.md), and leave out state
+manifests, build outputs, and `.DS_Store` files.

@@ -25,6 +25,13 @@ make release-package RELEASE_VERSION=0.7.0
 
 ### Public Documentation
 
+- Public text (PR bodies, commits, issues, docs, wiki, plans, fixtures) is
+  reviewed with `docs/contributing/public-text.md`, routed from the top of
+  `AGENTS.md` so every agent reaches it. Leaks of an author's own case are
+  judgement calls no pattern detects, so the tracked `.githooks/pre-push`
+  (enabled by `make setup`) only prints the pushed commit messages and
+  public-text files next to the criteria and never blocks. PR bodies bypass Git
+  entirely, so they depend on the `AGENTS.md` route and the PR template.
 - README is the concise desktop-first introduction and first-launch path.
   `docs/usage.md` owns detailed operator content; `CONTRIBUTING.md` owns builds.
 - README ships in the CLI archive without the guide. Its guide/support links

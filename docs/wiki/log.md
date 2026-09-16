@@ -713,3 +713,18 @@ or merge were made. Updated the repository workflow review status locally.
 - This publication contains documentation only. The completed tests, isolated
   installation checks, checksum checks, and rendering evidence recorded above
   remain applicable; no new application version or binary release is needed.
+
+## [2026-09-16] decision | Public text review for every agent
+
+- Public text can describe its author's own case (source names, counts, checks
+  run on their installation) instead of the general behavior. Synthetic data
+  rules already existed in `AGENTS.md`, `CONTRIBUTING.md`, and the PR template,
+  but they were scattered, and a PR body sent with `--body-file` never shows the
+  template.
+- Rejected a detection script: a leaked case is a narrative judgement, not a
+  pattern. Rejected provider-specific agent hooks: the fix must work for any
+  agent.
+- Added `docs/contributing/public-text.md` (steps and criteria, with an optional
+  fresh-context reviewer), a top-level `AGENTS.md` route, a PR template
+  checkbox covering the body itself, and a non-blocking tracked `pre-push` hook
+  enabled by `make setup`. Older duplicate mentions now point to the new rules.

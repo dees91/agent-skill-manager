@@ -13,8 +13,10 @@ provider subprocesses, network access, local data, and third-party sources.
 - [ ] Desktop/frontend checks pass when affected.
 - [ ] Documentation, planning status, and wiki synthesis are updated when the
       product contract changed.
-- [ ] Examples and fixtures contain no private paths, repositories, credentials,
-      real skill inventories, or machine-specific data.
+- [ ] This body, commit messages, docs, and fixtures pass the
+      [public text review](https://github.com/dees91/agent-skill-manager/blob/main/docs/contributing/public-text.md): the problem is
+      described as a class, examples are synthetic, and verification cites
+      tests rather than the author's installation.
 
 ## Deferred work
 
