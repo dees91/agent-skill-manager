@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/dees91/agent-skill-manager/internal/model"
@@ -27,7 +26,7 @@ func createPlannedLinks(p paths.Paths, links []LinkPlan, symlink func(string, st
 	for _, link := range links {
 		parent := filepath.Dir(link.LinkPath())
 		mode := os.FileMode(0o755)
-		if pathInsideDir(p.StateDir, parent) {
+		if pathInside(p.StateDir, parent) {
 			mode = 0o700
 		}
 		if err := os.MkdirAll(parent, mode); err != nil {
@@ -84,9 +83,4 @@ func rollbackCreated(created []LinkPlan) []LinkPlan {
 		}
 	}
 	return rolledBack
-}
-
-func pathInsideDir(dir, candidate string) bool {
-	relative, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(candidate))
-	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
