@@ -53,6 +53,9 @@ type PlanOptions struct {
 	Tools      []model.Tool
 	SkillNames []string
 	Cells      []InstallCell
+	// Off plans new links directly at the tool's disabled path, so the skill
+	// never appears in the active skills directory until it is enabled.
+	Off bool
 }
 
 // InstallCell identifies one exact skill/tool target. When Cells is non-empty,
@@ -67,11 +70,21 @@ type selectedInstallCell struct {
 	Tool  model.Tool
 }
 
-// LinkPlan is one symlink the installer should create.
+// LinkPlan is one symlink the installer should create. TargetPath is always
+// the active skills path; DisabledPath is set when the link is created OFF.
 type LinkPlan struct {
-	Skill      DiscoveredSkill
-	Tool       model.Tool
-	TargetPath string
+	Skill        DiscoveredSkill
+	Tool         model.Tool
+	TargetPath   string
+	DisabledPath string
+}
+
+// LinkPath is where the symlink is created on disk.
+func (l LinkPlan) LinkPath() string {
+	if l.DisabledPath != "" {
+		return l.DisabledPath
+	}
+	return l.TargetPath
 }
 
 // AlreadyInstalled records an idempotent install preflight result.
@@ -90,6 +103,7 @@ type InstallPlan struct {
 	Group            model.GroupLabel
 	Links            []LinkPlan
 	AlreadyInstalled []AlreadyInstalled
+	Off              bool
 }
 
 // PreflightConflict records a target that blocks install planning.
@@ -153,6 +167,7 @@ func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, 
 		CheckoutPath: checkoutPath,
 		Group:        identity.Group,
 		Links:        []LinkPlan{},
+		Off:          options.Off,
 	}
 	plan.AlreadyInstalled = []AlreadyInstalled{}
 	var conflicts []PreflightConflict
@@ -171,7 +186,7 @@ func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, 
 				})
 				continue
 			}
-			link, already, conflict := planSkillTool(p, manifest, skill, tool)
+			link, already, conflict := planSkillToolWithOptions(p, manifest, skill, tool, options.Off)
 			if conflict != nil {
 				conflicts = append(conflicts, *conflict)
 				continue
@@ -430,6 +445,35 @@ func planSkillTool(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill
 	}
 
 	return &LinkPlan{Skill: skill, Tool: tool, TargetPath: targetPath}, nil, nil
+}
+
+// planSkillToolWithOptions plans one cell and, for an OFF install, moves a new
+// link to the disabled path after checking that path is free.
+func planSkillToolWithOptions(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill, tool model.Tool, off bool) (*LinkPlan, *AlreadyInstalled, *PreflightConflict) {
+	link, already, blocked := planSkillTool(p, manifest, skill, tool)
+	if link == nil || !off {
+		return link, already, blocked
+	}
+	disabledPath, err := state.New(p).DisabledPath(tool, skill.Name)
+	if err != nil {
+		return nil, nil, conflict(skill, tool, link.TargetPath, "cannot resolve disabled path", "", link.Skill.Path, "", err.Error())
+	}
+	info, err := os.Lstat(disabledPath)
+	if err == nil {
+		existing := "file"
+		switch {
+		case info.Mode()&os.ModeSymlink != 0:
+			existing = "symlink"
+		case info.IsDir():
+			existing = "directory"
+		}
+		return nil, nil, conflict(skill, tool, link.TargetPath, "disabled path already exists", existing, link.Skill.Path, disabledPath, "")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, nil, conflict(skill, tool, link.TargetPath, "cannot inspect disabled path", "", link.Skill.Path, disabledPath, err.Error())
+	}
+	link.DisabledPath = disabledPath
+	return link, nil, nil
 }
 
 func conflict(skill DiscoveredSkill, tool model.Tool, targetPath, reason, existing, expected, disabled, description string) *PreflightConflict {

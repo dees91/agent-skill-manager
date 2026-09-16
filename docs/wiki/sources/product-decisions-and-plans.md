@@ -113,6 +113,11 @@ to seed the wiki. It summarizes their roles; it does not replace them.
   - `documented`: update still never installs new repository skills but
     reports them by name in the CLI with an install command, in GUI source
     health, and through a preselected `Install new` matrix; no dismiss state.
+- [`planning/phase-23-install-as-off-tasks.md`](../../../planning/phase-23-install-as-off-tasks.md)
+  - `documented`: one CLI `--off` flag and one desktop switch create new links
+    directly at the disabled path with manual-disable-identical records in one
+    save; existing cells keep their state; failed Git install saves now roll
+    back created links.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.

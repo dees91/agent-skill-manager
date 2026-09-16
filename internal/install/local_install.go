@@ -18,6 +18,7 @@ type LocalInstallPlan struct {
 	Source           LocalSource
 	Links            []LinkPlan
 	AlreadyInstalled []AlreadyInstalled
+	Off              bool
 }
 
 // LocalApplyResult describes local symlink application and state persistence.
@@ -35,6 +36,7 @@ type LocalApplyService struct {
 	now          func() time.Time
 	symlink      func(string, string) error
 	saveManifest func(state.Manifest) error
+	classify     managedClassifier
 	backedUp     bool
 }
 
@@ -47,6 +49,7 @@ func NewLocalApplyService(p paths.Paths) *LocalApplyService {
 		now:          time.Now,
 		symlink:      os.Symlink,
 		saveManifest: store.Save,
+		classify:     defaultManagedClassifier(p),
 	}
 }
 
@@ -66,7 +69,7 @@ func PlanLocalInstall(p paths.Paths, manifest state.Manifest, source LocalSource
 		}
 	}
 
-	plan := LocalInstallPlan{Source: source, Links: []LinkPlan{}, AlreadyInstalled: []AlreadyInstalled{}}
+	plan := LocalInstallPlan{Source: source, Links: []LinkPlan{}, AlreadyInstalled: []AlreadyInstalled{}, Off: options.Off}
 	conflicts := []PreflightConflict{}
 	if len(missingSkills) == 0 {
 		for _, selected := range selectedCells {
@@ -82,7 +85,7 @@ func PlanLocalInstall(p paths.Paths, manifest state.Manifest, source LocalSource
 				})
 				continue
 			}
-			link, already, conflict := planSkillTool(p, manifest, skill, tool)
+			link, already, conflict := planSkillToolWithOptions(p, manifest, skill, tool, options.Off)
 			if conflict != nil {
 				conflicts = append(conflicts, *conflict)
 				continue
@@ -162,14 +165,10 @@ func (s *LocalApplyService) Apply(plan LocalInstallPlan) (LocalApplyResult, erro
 		result.RolledBack = rollbackCreated(result.Created)
 		return result, combineRollbackError(original, result.Created, result.RolledBack)
 	}
-	for _, link := range plan.Links {
-		if err := os.MkdirAll(filepath.Dir(link.TargetPath), 0o755); err != nil {
-			return rollback(fmt.Errorf("create symlink parent %s: %w", filepath.Dir(link.TargetPath), err))
-		}
-		if err := s.symlink(link.Skill.Path, link.TargetPath); err != nil {
-			return rollback(fmt.Errorf("create symlink %s -> %s: %w", link.TargetPath, link.Skill.Path, err))
-		}
-		result.Created = append(result.Created, link)
+	created, err := createPlannedLinks(s.paths, plan.Links, s.symlink)
+	result.Created = created
+	if err != nil {
+		return rollback(err)
 	}
 
 	entry, err := localSourceEntryForPlan(plan, manifest, s.now().UTC())
@@ -177,6 +176,7 @@ func (s *LocalApplyService) Apply(plan LocalInstallPlan) (LocalApplyResult, erro
 		return rollback(err)
 	}
 	manifest.UpsertLocalSource(entry)
+	addDisabledRecords(&manifest, result.Created, s.classify, s.now().UTC())
 	if err := s.saveManifest(manifest); err != nil {
 		return rollback(fmt.Errorf("save local install state: %w", err))
 	}
@@ -237,9 +237,9 @@ func (s *ApplyService) validateInstallCells(plan InstallPlan) error {
 		if err := s.validateLinkPlan(plan.CheckoutPath, link); err != nil {
 			return err
 		}
-		targetKey := filepath.Clean(link.TargetPath)
+		targetKey := filepath.Clean(link.LinkPath())
 		if seenTargets[targetKey] {
-			return fmt.Errorf("duplicate install target %s", link.TargetPath)
+			return fmt.Errorf("duplicate install target %s", link.LinkPath())
 		}
 		seenTargets[targetKey] = true
 		cellKey := repositoryCellKey(link.Tool, link.Skill.Name)
@@ -249,6 +249,11 @@ func (s *ApplyService) validateInstallCells(plan InstallPlan) error {
 		seenCells[cellKey] = true
 		if err := validatePathFreeForApply(link.TargetPath); err != nil {
 			return fmt.Errorf("validate install target %s: %w", link.TargetPath, err)
+		}
+		if link.DisabledPath != "" {
+			if err := validatePathFreeForApply(link.DisabledPath); err != nil {
+				return fmt.Errorf("validate install disabled path %s: %w", link.DisabledPath, err)
+			}
 		}
 	}
 	for _, already := range plan.AlreadyInstalled {

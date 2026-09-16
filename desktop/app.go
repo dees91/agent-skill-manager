@@ -135,9 +135,10 @@ func (a *App) ChooseLocalInstall() (gui.InstallDraft, error) {
 	return a.service.PrepareLocalInstall(selected)
 }
 
-// ReviewInstall preflights an exact skill/tool matrix selection.
-func (a *App) ReviewInstall(draftID string, selections []gui.InstallCellRequest) (gui.InstallReview, error) {
-	return a.service.ReviewInstall(draftID, selections)
+// ReviewInstall preflights an exact skill/tool matrix selection, optionally
+// creating new links disabled.
+func (a *App) ReviewInstall(draftID string, selections []gui.InstallCellRequest, off bool) (gui.InstallReview, error) {
+	return a.service.ReviewInstall(draftID, selections, off)
 }
 
 // ApplyInstall applies one immutable reviewed selection.

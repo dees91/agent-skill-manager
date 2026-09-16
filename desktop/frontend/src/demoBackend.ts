@@ -224,10 +224,12 @@ class DemoBackend implements Backend {
   async chooseLocalInstall() {
     return { draftId: 'draft:local', kind: 'local', group: 'local-pack', location: '/Users/example/Developer/local-pack', candidates: demoCandidates(), cloned: false, reused: false, retainedClone: false, cancelled: false } as never
   }
-  async reviewInstall(draftID: string, selections: never[]) {
-    return { reviewId: 'review:demo', draftId: draftID, group: 'example-labs/new-skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true } as never
+  private reviewedOff = false
+  async reviewInstall(draftID: string, selections: never[], off: boolean) {
+    this.reviewedOff = off
+    return { reviewId: 'review:demo', draftId: draftID, group: 'example-labs/new-skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true, off } as never
   }
-  async applyInstall() { return this.sourceResult('Installed demo source.') }
+  async applyInstall() { return this.sourceResult(this.reviewedOff ? 'Installed demo source as OFF.' : 'Installed demo source.') }
   async measureContextBudgets() {
     this.diagnosticsMeasured = true
     return this.snapshot(false)

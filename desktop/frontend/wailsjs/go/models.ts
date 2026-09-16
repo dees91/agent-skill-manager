@@ -1038,6 +1038,7 @@ export namespace gui {
 	    alreadyOffCount: number;
 	    conflicts: InstallConflict[];
 	    ready: boolean;
+	    off: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstallReview(source);
@@ -1054,6 +1055,7 @@ export namespace gui {
 	        this.alreadyOffCount = source["alreadyOffCount"];
 	        this.conflicts = this.convertValues(source["conflicts"], InstallConflict);
 	        this.ready = source["ready"];
+	        this.off = source["off"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

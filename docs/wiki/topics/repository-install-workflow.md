@@ -58,6 +58,17 @@ renamed, or deleted to make room.
   group, skill paths/tools, install time, and last seen commit in `state.json`.
 - Existing matching installed skill/tool records are merged rather than
   duplicated.
+- A failed state save removes the links this apply created (since Iteration
+  23; Git previously kept them while local install already rolled back).
+- **Install as OFF** (`PlanOptions.Off`, CLI `--off`, desktop switch) plans each
+  new link at `LinkPlan.DisabledPath` and conflicts when that path exists.
+  `createPlannedLinks` creates the link there in a 0700 parent, and
+  `addDisabledRecords` writes the record a manual disable would write, labelled
+  by `scan.Scanner.ManagedSymlinkClassifier` after the source entry is upserted
+  so local-source, Git-origin (including non-GitHub hosts), and Skills CLI lock
+  labels match. Manifest and records share one save. Existing ON and OFF cells
+  keep their state, and the unchanged reference audits accept the result
+  (`implemented`, `internal/install/link_create.go`).
 
 ## Desktop Workflow
 

@@ -775,3 +775,19 @@ or merge were made. Updated the repository workflow review status locally.
   report in the CLI binary, and an isolated-home desktop launch.
 - Published the draft as a non-latest GitHub prerelease and re-verified both
   archives from the unauthenticated public download URLs.
+
+## [2026-09-16] implementation | Install skills as OFF
+
+- Added Iteration 23 with user approval: CLI `install --off` and a desktop
+  **Install as OFF** switch for the whole selection, in both Install source and
+  Install new.
+- Links are created directly at the disabled path, never in the active skills
+  directory. `scan.Scanner.ManagedSymlinkClassifier` labels each record the way
+  a manual disable would; a parity test compares both paths on a non-GitHub
+  origin, and the unchanged reference audits, uninstall planning, and enable
+  accept the result.
+- Closed a gap found while planning: a failed Git install state save left its
+  created links behind. It now rolls them back like local install.
+- Updated `AGENTS.md`, `CLAUDE.md`, the phase 23 plan, `docs/usage.md`, and the
+  repository install, local install, toggle lifecycle, desktop GUI, interfaces,
+  and product decisions pages.

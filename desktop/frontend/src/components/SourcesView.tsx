@@ -8,6 +8,7 @@ import {
   HardDrive,
   LoaderCircle,
   PackagePlus,
+  PowerOff,
   RefreshCw,
   Search,
   Trash2,
@@ -251,6 +252,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
   const [draft, setDraft] = useState<InstallDraft | null>(null)
   const [review, setReview] = useState<InstallReview | null>(null)
   const [selections, setSelections] = useState<Set<string>>(new Set())
+  const [installOff, setInstallOff] = useState(false)
   const initialFocus = useRef<HTMLInputElement>(null)
 
   useEffect(() => { initialFocus.current?.focus() }, [])
@@ -273,7 +275,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
     if (!draft) return
     onBusy(true); onError(null)
     try {
-      const next = await backend.reviewInstall(draft.draftId, selectedRequests(selections))
+      const next = await backend.reviewInstall(draft.draftId, selectedRequests(selections), installOff)
       setReview(next)
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -327,12 +329,18 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       </> : <>
         {newSkills && <div className="dialog-note"><PackagePlus size={14} /><p>{newSkills.skills.length} new skill{newSkills.skills.length === 1 ? '' : 's'} listed first and preselected for {joinList(newSkills.tools.map(toolDisplayName), 'and')}: {newSkills.skills.join(', ')}. Installed skills keep their current state.</p></div>}
         <div className="draft-summary"><div><span>{draft.kind === 'git' ? <GitBranch size={14} /> : <HardDrive size={14} />}</span><div><strong>{draft.group}</strong><code>{draft.location}</code></div></div><small>{draft.candidates.length} skill{draft.candidates.length === 1 ? '' : 's'} discovered</small></div>
+        <div className="install-off-option">
+          <button className={`read-only-switch ${installOff ? 'on' : ''}`} role="switch" aria-checked={installOff} disabled={busy} onClick={() => { setReview(null); setInstallOff((current) => !current) }}>
+            <PowerOff size={14} /><span>Install as OFF</span><i />
+          </button>
+          <p>{installOff ? 'New links are created disabled. Agents will not see these skills until you turn them ON in Skills. Installed skills keep their state.' : 'New links are created ON and become visible to agents immediately.'}</p>
+        </div>
         <InstallMatrix draft={draft} selections={selections} busy={busy} onToggle={toggle} onSetToolSelection={setToolSelection} />
         {review && <ReviewSummary review={review} />}
         {error && <DialogError message={error} />}
         {busy && <ProgressState progress={progress} />}
         <DialogActions onClose={onClose} busy={busy} secondaryLabel="Cancel">
-          {!review?.ready ? <button className="primary-button" disabled={busy || selections.size === 0} onClick={() => void reviewSelection()}>Review {selections.size} target{selections.size === 1 ? '' : 's'}</button> : <button className="primary-button" disabled={busy} onClick={() => void apply()}>Install {review.createCount} link{review.createCount === 1 ? '' : 's'}</button>}
+          {!review?.ready ? <button className="primary-button" disabled={busy || selections.size === 0} onClick={() => void reviewSelection()}>Review {selections.size} target{selections.size === 1 ? '' : 's'}</button> : <button className="primary-button" disabled={busy} onClick={() => void apply()}>Install {review.createCount} link{review.createCount === 1 ? '' : 's'}{review.off ? ' as OFF' : ''}</button>}
         </DialogActions>
       </>}
     </Modal>
@@ -385,7 +393,7 @@ function InstallColumnHeader({ tool, draft, selections, busy, onSetToolSelection
 function ReviewSummary({ review }: { review: InstallReview }) {
   return <div className={review.ready ? 'install-review ready' : 'install-review conflict'}>
     <strong>{review.ready ? 'Ready to install' : `${review.conflicts.length} conflict${review.conflicts.length === 1 ? '' : 's'}`}</strong>
-    {review.ready ? <p>{review.createCount} new links · {review.alreadyOnCount} already ON · {review.alreadyOffCount} already OFF</p> : review.conflicts.map((conflict) => <p key={`${conflict.skillName}:${conflict.tool}`}>{conflict.skillName} {conflict.tool}: {conflict.reason}</p>)}
+    {review.ready ? <p>{review.createCount} new links{review.off ? ' (OFF)' : ''} · {review.alreadyOnCount} already ON · {review.alreadyOffCount} already OFF{review.off && review.alreadyOnCount > 0 ? ' · already ON targets stay ON' : ''}</p> : review.conflicts.map((conflict) => <p key={`${conflict.skillName}:${conflict.tool}`}>{conflict.skillName} {conflict.tool}: {conflict.reason}</p>)}
   </div>
 }
 

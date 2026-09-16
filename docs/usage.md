@@ -125,7 +125,10 @@ Muse and Grok always use filesystem estimates. See
 3. Inspect the source, then select the skill/tool cells to install. A column
    toggle selects or clears all eligible cells for that tool, including rows
    hidden by the search filter.
-4. Choose **Review**, check the proposed links and conflicts, then **Install**.
+4. Optionally turn on **Install as OFF** to add the selected skills disabled.
+   Agents will not see them until you turn them ON in Skills; skills that are
+   already installed keep their current state.
+5. Choose **Review**, check the proposed links and conflicts, then **Install**.
 
 Git inspection may clone a missing checkout before the final installation.
 Cancelling retains that checkout for a later retry. Local folders stay in
@@ -195,6 +198,18 @@ skill-manager install https://github.com/example/agent-skills --dry-run
 skill-manager install https://github.com/example/agent-skills --tool both
 skill-manager install git@github.com:example/agent-skills.git --tool codex --skill example-skill
 ```
+
+Add skills without making them visible to any tool yet. `--off` creates the
+links disabled; turn a skill ON later with `enable`:
+
+```bash
+skill-manager install https://github.com/example/agent-skills --off --dry-run
+skill-manager install https://github.com/example/agent-skills --off
+skill-manager enable --tool claude example-skill
+```
+
+`--off` never disables a skill that is already installed and ON; the output
+notes it and leaves it ON.
 
 Install a user-owned folder as live, in-place links:
 

@@ -24,6 +24,10 @@ filesystem until apply.
 Moving a symlink moves the symlink itself; it does not dereference or modify
 the repository it points to.
 
+Install as OFF (Iteration 23) reaches the same end state without a move: it
+creates the symlink directly at the disabled path and writes an identical
+record, so Enable, audits, and uninstall cannot tell the two apart.
+
 ## Enable
 
 1. Load the disabled record from `state.json`.

@@ -34,7 +34,7 @@ export function PreviewUninstall(arg1:string):Promise<gui.UninstallPreview>;
 
 export function RepairSource(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;
 
-export function ReviewInstall(arg1:string,arg2:Array<gui.InstallCellRequest>):Promise<gui.InstallReview>;
+export function ReviewInstall(arg1:string,arg2:Array<gui.InstallCellRequest>,arg3:boolean):Promise<gui.InstallReview>;
 
 export function SetSkillFavorite(arg1:string,arg2:boolean):Promise<gui.FavoriteMutationResult>;
 

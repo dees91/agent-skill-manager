@@ -422,7 +422,50 @@ describe('Skill Manager desktop app', () => {
       { tool: 'claude', skillName: 'beta' },
       { tool: 'codex', skillName: 'beta' },
       { tool: 'muse', skillName: 'beta' },
-    ])))
+    ]), false))
+  })
+
+  it('reviews and applies an install as OFF from the switch', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: /^Install source$/ }))
+    await user.type(screen.getByRole('textbox', { name: 'HTTPS or SSH Git URL' }), 'https://github.com/demo/skills')
+    await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
+    expect(await screen.findByText('alpha')).toBeInTheDocument()
+
+    const offSwitch = screen.getByRole('switch', { name: 'Install as OFF' })
+    expect(offSwitch).toHaveAttribute('aria-checked', 'false')
+    await user.click(screen.getByRole('button', { name: 'Review 4 targets' }))
+    expect(await screen.findByRole('button', { name: 'Install 4 links' })).toBeInTheDocument()
+
+    await user.click(offSwitch)
+    expect(offSwitch).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('button', { name: 'Install 4 links' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Agents will not see these skills until you turn them ON/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Review 4 targets' }))
+    await waitFor(() => expect(backend.reviewInstall).toHaveBeenLastCalledWith('draft:1', expect.any(Array), true))
+    expect(await screen.findByText(/4 new links \(OFF\)/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Install 4 links as OFF' }))
+    await waitFor(() => expect(backend.applyInstall).toHaveBeenCalledWith('review:1', false))
+  })
+
+  it('offers install as OFF when installing new skills', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.inspectSources = vi.fn(async () => [new gui.SourceHealth({ sourceId: 'git:fixture', group: 'demo/skills', status: 'ok', repairable: false, newSkills: ['alpha'] })])
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(await screen.findByRole('button', { name: 'Install new skills from demo/skills' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install new skills' })
+    await user.click(await within(dialog).findByRole('switch', { name: 'Install as OFF' }))
+    await user.click(within(dialog).getByRole('button', { name: /^Review \d+ targets?$/ }))
+    await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:1', expect.any(Array), true))
   })
 
   it('explains when new skills could not be checked', async () => {
@@ -520,7 +563,7 @@ describe('Skill Manager desktop app', () => {
     await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:bulk', expect.arrayContaining([
       { skillName: 'alpha', tool: 'claude' },
       { skillName: 'beta', tool: 'claude' },
-    ])))
+    ]), false))
     expect(screen.getByRole('textbox', { name: 'Filter discovered skills' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Claude all targets: ON (2 of 2 selected)' })).toBeDisabled()
     expect(screen.getByRole('checkbox', { name: 'alpha claude' })).toBeDisabled()
