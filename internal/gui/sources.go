@@ -259,7 +259,7 @@ func (s *Service) UpdateSource(sourceID string, includeReadOnly bool) SourceMuta
 		if updated.Updated {
 			status = "updated"
 		}
-		result.Completed = append(result.Completed, SourceMutationItem{SourceID: sourceID, Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit})
+		result.Completed = append(result.Completed, SourceMutationItem{SourceID: sourceID, Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit, NewSkills: discoveredSkillNames(updated.NewSkills), NewSkillsError: newSkillsWarning(repository, updated.NewSkillsError)})
 		result.Message = sourceUpdateMessage(result.Completed)
 		return nil
 	})
@@ -306,7 +306,7 @@ func (s *Service) UpdateAllSources(includeReadOnly bool) SourceMutationResult {
 			if updated.Updated {
 				status = "updated"
 			}
-			result.Completed = append(result.Completed, SourceMutationItem{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit})
+			result.Completed = append(result.Completed, SourceMutationItem{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit, NewSkills: discoveredSkillNames(updated.NewSkills), NewSkillsError: newSkillsWarning(repository, updated.NewSkillsError)})
 		}
 		result.Message = sourceUpdateMessage(result.Completed)
 		return nil
@@ -739,13 +739,24 @@ func referenceCounts(references []install.RepositoryReference) (int, int) {
 }
 
 func sourceUpdateMessage(items []SourceMutationItem) string {
-	updated, current := 0, 0
+	updated, current, newSkills, unchecked := 0, 0, 0, 0
 	for _, item := range items {
 		if item.Status == "updated" {
 			updated++
 		} else {
 			current++
 		}
+		newSkills += len(item.NewSkills)
+		if item.NewSkillsError != "" {
+			unchecked++
+		}
 	}
-	return fmt.Sprintf("Updated %d source(s); %d already up to date.", updated, current)
+	message := fmt.Sprintf("Updated %d source(s); %d already up to date.", updated, current)
+	if newSkills > 0 {
+		message += fmt.Sprintf(" %d new skill(s) available to install.", newSkills)
+	}
+	if unchecked > 0 {
+		message += fmt.Sprintf(" Could not check %d source(s) for new skills.", unchecked)
+	}
+	return message
 }

@@ -255,7 +255,7 @@ Update safety:
 - Checkout blockers are classified (Iteration 21). A dirty worktree is repairable through `repair`; every other blocker is explained and left for the user.
 - Audit every recorded active/disabled skill symlink and reject missing, changed, duplicate, or extra managed-directory references into the checkout.
 - Fetch `origin`, require a fast-forward, and verify each installed relative skill path still contains a regular `SKILL.md` in the target commit before merging.
-- Do not auto-install newly discovered skills. Do not move or rewrite existing active/disabled symlinks during update.
+- Do not auto-install newly discovered skills. Do not move or rewrite existing active/disabled symlinks during update. Iteration 22 reports them instead: after a successful update, and in dry-run from the local checkout, list skills whose names are not recorded and print the exact `install --skill` command.
 - Persist the successful target commit as `lastSeenCommit`.
 - Update dry-run must not fetch or change remote-tracking refs, checkout files, symlinks, or state. It must state that exact remote preflight is unavailable until real update.
 
@@ -665,6 +665,9 @@ preserving the CLI contracts and the ownership/safety rules above.
   with `Use Update to fetch changes.`, or `Linked folder` with `Changes are
   read directly; no update needed.` Do not use ambiguous standalone states
   such as `Ready` and `Live` for this distinction.
+- A healthy Git source with skills not yet recorded (Iteration 22) shows the
+  new skill count and names in the `Update mode` cell and an `Install new`
+  action that opens the install matrix with only those skills preselected.
 - Uninstall removes a whole recorded source and requires typing its group name
   in the confirmation dialog. Git uninstall removes the managed checkout;
   local uninstall always preserves the user-owned source directory.
@@ -1028,6 +1031,34 @@ confirmed repair for the only repairable class.
 - Repair previews report checkout-relative paths only. No absolute filesystem
   path crosses the desktop bridge.
 
+### New Skill Discovery for Managed Sources (Iteration 22)
+
+Iteration 22 makes skills that a managed Git repository gained after
+installation visible. It does not change the rule that update never installs.
+
+- A new skill is a skill discovered in the managed checkout whose name is not
+  recorded in the repository's `installedSkills`. Matching is by name, so a
+  recorded skill that moved to another path is not reported.
+- There is no dismiss or ignore list and no new state. A skill stops being new
+  only when it is installed.
+- `update` lists new skills per repository after a successful update and prints
+  `skill-manager install <url> --skill <name>...` with every argument
+  shell-quoted. It prints one command per recorded tool with `--tool <tool>`
+  unless the repository uses every tool. Skill names come from upstream
+  directory names, so a name with control characters is shown quoted and the
+  command is omitted. A discovery failure is a warning in the CLI and the GUI
+  and does not fail the update.
+- `update --dry-run` lists new skills already in the local checkout and still
+  does not fetch.
+- GUI source health carries `newSkills` for `ok` sources. The Sources row shows
+  them with an `Install new` action that reuses the Git install flow on the
+  recorded URL (reusing the checkout without pulling) and preselects new skills
+  for the tools the source already uses, never conflict or already-installed
+  cells. Update result messages mention how many new skills are available and
+  how many sources could not be checked. A healthy source whose check failed
+  shows the path-free cause instead of new skills.
+- Toggle, uninstall, extend, and repair semantics do not change.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1189,6 +1220,8 @@ Keep [planning/phase-19-muse-support-tasks.md](./planning/phase-19-muse-support-
 Keep [planning/phase-20-grok-support-tasks.md](./planning/phase-20-grok-support-tasks.md) as the source of truth for Iteration 20 Grok tool support task status.
 
 Keep [planning/phase-21-checkout-repair-tasks.md](./planning/phase-21-checkout-repair-tasks.md) as the source of truth for Iteration 21 managed checkout diagnosis and repair task status.
+
+Keep [planning/phase-22-new-skill-discovery-tasks.md](./planning/phase-22-new-skill-discovery-tasks.md) as the source of truth for Iteration 22 new skill discovery task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

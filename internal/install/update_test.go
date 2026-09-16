@@ -107,8 +107,12 @@ func TestUpdateServiceDoesNotAutoInstallNewSkills(t *testing.T) {
 	fixture := newUpdateGitFixture(t)
 	fixture.commitRemoteChange("add beta", map[string]string{"skills/beta/SKILL.md": "# beta\n"}, nil)
 
-	if _, err := NewUpdateService(fixture.paths, nil).Apply(fixture.repository); err != nil {
+	result, err := NewUpdateService(fixture.paths, nil).Apply(fixture.repository)
+	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
+	}
+	if len(result.NewSkills) != 1 || result.NewSkills[0].Name != "beta" || result.NewSkills[0].RelativePath != "skills/beta" || result.NewSkillsError != "" {
+		t.Fatalf("NewSkills = %#v (error %q), want beta", result.NewSkills, result.NewSkillsError)
 	}
 	if _, err := os.Lstat(filepath.Join(fixture.paths.ClaudeUserSkills, "beta")); !os.IsNotExist(err) {
 		t.Fatalf("beta link exists or stat failed: %v", err)
@@ -120,6 +124,19 @@ func TestUpdateServiceDoesNotAutoInstallNewSkills(t *testing.T) {
 	repository, _ := manifest.GetRepository("github.com", "owner/repo")
 	if len(repository.InstalledSkills) != 1 || repository.InstalledSkills[0].Name != "alpha" {
 		t.Fatalf("InstalledSkills = %#v, want alpha only", repository.InstalledSkills)
+	}
+}
+
+func TestUpdateServiceReportsNewSkillDiscoveryFailureWithoutFailing(t *testing.T) {
+	fixture := newUpdateGitFixture(t)
+	fixture.commitRemoteChange("add duplicate", map[string]string{"other/alpha/SKILL.md": "# alpha copy\n"}, nil)
+
+	result, err := NewUpdateService(fixture.paths, nil).Apply(fixture.repository)
+	if err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+	if !result.Updated || !strings.Contains(result.NewSkillsError, "duplicate skill names") || len(result.NewSkills) != 0 {
+		t.Fatalf("result = %#v, want updated with duplicate-name warning", result)
 	}
 }
 

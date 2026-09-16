@@ -46,6 +46,100 @@ func TestInspectSourcesReportsRepairableAndCleanHealth(t *testing.T) {
 	}
 }
 
+func TestInspectSourcesAndUpdateReportNewSkills(t *testing.T) {
+	fixture := newRepairFixture(t)
+	writeRepairFile(t, filepath.Join(fixture.sourcePath, "skills", "beta", "SKILL.md"), "---\nname: beta\ndescription: Beta\n---\n")
+	runGitRepair(t, "-C", fixture.sourcePath, "add", ".")
+	runGitRepair(t, "-C", fixture.sourcePath, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add beta")
+	runGitRepair(t, "-C", fixture.sourcePath, "push", "origin", "main")
+	service := New(fixture.paths)
+
+	before, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(before) != 1 || before[0].NewSkills == nil || len(before[0].NewSkills) != 0 {
+		t.Fatalf("health = %#v, want no new skills before update", before)
+	}
+
+	result := service.UpdateSource(before[0].SourceID, false)
+	if result.Failure != nil {
+		t.Fatalf("UpdateSource() failure = %#v", result.Failure)
+	}
+	if len(result.Completed) != 1 || strings.Join(result.Completed[0].NewSkills, ",") != "beta" {
+		t.Fatalf("completed = %#v, want beta reported", result.Completed)
+	}
+	if !strings.Contains(result.Message, "1 new skill(s) available to install.") {
+		t.Fatalf("message = %q, want new skill count", result.Message)
+	}
+	if _, err := os.Lstat(filepath.Join(fixture.paths.ClaudeUserSkills, "beta")); !os.IsNotExist(err) {
+		t.Fatalf("beta link exists or stat failed: %v", err)
+	}
+
+	after, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(after) != 1 || after[0].Status != SourceHealthOK || strings.Join(after[0].NewSkills, ",") != "beta" {
+		t.Fatalf("health = %#v, want beta as a new skill", after)
+	}
+
+	writeRepairFile(t, filepath.Join(fixture.checkoutPath, "generated", "trace_processor"), "binary")
+	dirty, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(dirty) != 1 || dirty[0].Status != SourceHealthNeedsRepair || len(dirty[0].NewSkills) != 0 {
+		t.Fatalf("health = %#v, want no new skills on an unhealthy source", dirty)
+	}
+}
+
+func TestNewSkillDiscoveryFailureIsAPathFreeWarning(t *testing.T) {
+	fixture := newRepairFixture(t)
+	writeRepairFile(t, filepath.Join(fixture.sourcePath, "other", "alpha", "SKILL.md"), "---\nname: alpha\ndescription: Copy\n---\n")
+	runGitRepair(t, "-C", fixture.sourcePath, "add", ".")
+	runGitRepair(t, "-C", fixture.sourcePath, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add duplicate")
+	runGitRepair(t, "-C", fixture.sourcePath, "push", "origin", "main")
+	service := New(fixture.paths)
+	before, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+
+	result := service.UpdateSource(before[0].SourceID, false)
+	if result.Failure != nil {
+		t.Fatalf("UpdateSource() failure = %#v, want a successful update", result.Failure)
+	}
+	if len(result.Completed) != 1 || !strings.Contains(result.Completed[0].NewSkillsError, "duplicate skill names") {
+		t.Fatalf("completed = %#v, want a duplicate-name warning", result.Completed)
+	}
+	if !strings.Contains(result.Message, "Could not check 1 source(s) for new skills.") {
+		t.Fatalf("message = %q, want the unchecked source count", result.Message)
+	}
+
+	health, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(health) != 1 || health[0].Status != SourceHealthOK || len(health[0].NewSkills) != 0 || !strings.Contains(health[0].NewSkillsError, "duplicate skill names") {
+		t.Fatalf("health = %#v, want a healthy source with a warning", health)
+	}
+	for _, text := range []string{result.Completed[0].NewSkillsError, health[0].NewSkillsError} {
+		if strings.Contains(text, fixture.paths.Home) {
+			t.Fatalf("warning leaks filesystem paths: %q", text)
+		}
+	}
+}
+
+func TestNewSkillsWarningRemovesTheCheckoutPath(t *testing.T) {
+	repository := state.RepositoryEntry{CheckoutPath: "/home/example/.skill-manager/repos/github.com/owner/repo"}
+	got := newSkillsWarning(repository, "discover skills in /home/example/.skill-manager/repos/github.com/owner/repo: open /home/example/.skill-manager/repos/github.com/owner/repo/skills: permission denied")
+	want := "discover skills in the managed checkout: open the managed checkout/skills: permission denied"
+	if got != want {
+		t.Fatalf("newSkillsWarning() = %q, want %q", got, want)
+	}
+}
+
 func TestInspectSourcesReportsNonRepairableBlockers(t *testing.T) {
 	fixture := newRepairFixture(t)
 	runGitRepair(t, "-C", fixture.checkoutPath, "checkout", "--detach")
@@ -173,6 +267,7 @@ func TestRepairRejectsPendingSkillChanges(t *testing.T) {
 type repairFixture struct {
 	paths        paths.Paths
 	checkoutPath string
+	sourcePath   string
 }
 
 func newRepairFixture(t *testing.T) repairFixture {
@@ -232,7 +327,7 @@ func newRepairFixture(t *testing.T) repairFixture {
 	if err := state.New(p).Save(manifest); err != nil {
 		t.Fatalf("save state: %v", err)
 	}
-	return repairFixture{paths: p, checkoutPath: checkoutPath}
+	return repairFixture{paths: p, checkoutPath: checkoutPath, sourcePath: sourcePath}
 }
 
 func runGitRepair(t *testing.T, args ...string) string {

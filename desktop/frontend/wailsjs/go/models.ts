@@ -1237,6 +1237,8 @@ export namespace gui {
 	    cause?: string;
 	    remedy?: string;
 	    repairable: boolean;
+	    newSkills: string[];
+	    newSkillsError?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SourceHealth(source);
@@ -1251,6 +1253,8 @@ export namespace gui {
 	        this.cause = source["cause"];
 	        this.remedy = source["remedy"];
 	        this.repairable = source["repairable"];
+	        this.newSkills = source["newSkills"];
+	        this.newSkillsError = source["newSkillsError"];
 	    }
 	}
 	export class SourceMutationFailure {
@@ -1289,6 +1293,8 @@ export namespace gui {
 	    status: string;
 	    before?: string;
 	    after?: string;
+	    newSkills?: string[];
+	    newSkillsError?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SourceMutationItem(source);
@@ -1301,6 +1307,8 @@ export namespace gui {
 	        this.status = source["status"];
 	        this.before = source["before"];
 	        this.after = source["after"];
+	        this.newSkills = source["newSkills"];
+	        this.newSkillsError = source["newSkillsError"];
 	    }
 	}
 	export class SourceMutationResult {

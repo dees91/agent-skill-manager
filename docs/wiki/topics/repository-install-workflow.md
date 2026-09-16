@@ -88,8 +88,18 @@ same ownership audit and transactional removal service.
 - Real update fetches `origin`, verifies fast-forward ancestry, and checks that
   every installed path still contains a regular `SKILL.md` in the target tree
   before merging with `--ff-only`.
-- Newly added repository skills are intentionally ignored; update preserves
-  the manifest's installed skill/tool set and existing ON/OFF link locations.
+- Newly added repository skills are never installed; update preserves the
+  manifest's installed skill/tool set and existing ON/OFF link locations.
+  Since Iteration 22 it reports them: `install.NewSkills` diffs discovered
+  names against `installedSkills` (by name, so moved recorded skills are not
+  new), `UpdateResult.NewSkills` carries them after the state save, and the CLI
+  prints the exact `install --skill` command, adding `--tool` per recorded tool
+  unless the repository uses every tool. Skill names are untrusted upstream
+  directory names, so every argument is shell-quoted and a name with control
+  characters suppresses the command. A discovery failure (such as a
+  duplicate name) is a warning, not an update failure. Dry-run reports the
+  local checkout only, since it never fetches (`implemented`,
+  `internal/install/new_skills.go`).
 - Successful updates persist the target commit as `lastSeenCommit`. Update-all
   is deterministic, stops on the first failure, and keeps the completed prefix.
 - Every blocker is a typed `CheckoutConflictError` carrying a stable `Kind`

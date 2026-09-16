@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/dees91/agent-skill-manager/internal/install"
 	"github.com/dees91/agent-skill-manager/internal/state"
@@ -38,9 +39,16 @@ func (s *Service) InspectSources() ([]SourceHealth, error) {
 }
 
 func inspectRepositoryHealth(service *install.UpdateService, repository state.RepositoryEntry) SourceHealth {
-	entry := SourceHealth{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: SourceHealthOK}
+	entry := SourceHealth{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: SourceHealthOK, NewSkills: []string{}}
 	_, err := service.PlanLocal(repository)
 	if err == nil {
+		// A discovery failure is a warning next to the healthy state.
+		newSkills, discoveryErr := install.NewSkills(repository)
+		if discoveryErr != nil {
+			entry.NewSkillsError = newSkillsWarning(repository, discoveryErr.Error())
+			return entry
+		}
+		entry.NewSkills = discoveredSkillNames(newSkills)
 		return entry
 	}
 	var conflict install.CheckoutConflictError
@@ -175,4 +183,20 @@ func newSourceMutationFailure(stage, sourceID, group string, err error) *SourceM
 		failure.Repairable = conflict.Repairable()
 	}
 	return failure
+}
+
+func discoveredSkillNames(skills []install.DiscoveredSkill) []string {
+	names := make([]string, len(skills))
+	for i, skill := range skills {
+		names[i] = skill.Name
+	}
+	return names
+}
+
+// newSkillsWarning keeps absolute checkout paths off the desktop bridge.
+func newSkillsWarning(repository state.RepositoryEntry, message string) string {
+	if message == "" || repository.CheckoutPath == "" {
+		return message
+	}
+	return strings.ReplaceAll(message, repository.CheckoutPath, "the managed checkout")
 }

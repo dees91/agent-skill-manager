@@ -19,7 +19,9 @@
   place.
 - `update [<git-url|local-path>] [--dry-run]` fast-forwards one managed Git
   repository or all recorded repositories when omitted; targeted local sources
-  report that no update is required.
+  report that no update is required. It lists skills a repository gained that
+  are not installed, with the exact `install --skill` command, and never
+  installs them.
 - `uninstall <git-url|local-path> [--dry-run]` removes one complete audited
   installation and always requires an explicit source. Local source data is
   preserved.
@@ -95,6 +97,9 @@ Git repositories only.
 - Its `Update mode` column explicitly describes `Managed Git` sources as
   updateable and `Linked folder` sources as direct/live links that need no
   update; it does not encode this distinction as generic health states.
+- A healthy Git source with skills not yet installed lists them in that cell
+  and offers `Install new`, which preselects only those skills in the install
+  matrix.
 - Source actions are unavailable with pending toggles and become an exclusive
   non-cancellable operation while phase progress is shown. App close is
   blocked until that operation completes.
