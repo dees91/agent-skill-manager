@@ -126,7 +126,7 @@ checkout. The packaging command does not create tags, push commits, or change
 GitHub releases:
 
 ```bash
-make release-package RELEASE_VERSION=0.8.0
+make release-package RELEASE_VERSION=0.9.0
 ```
 
 It verifies version metadata, root/desktop/frontend tests and vet, frontend

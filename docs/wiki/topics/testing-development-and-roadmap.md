@@ -11,7 +11,7 @@ make build
 make dev
 make gui-test
 make gui-build
-make release-package RELEASE_VERSION=0.8.0
+make release-package RELEASE_VERSION=0.9.0
 ```
 
 - `go run .` is suitable for repository-local checks.

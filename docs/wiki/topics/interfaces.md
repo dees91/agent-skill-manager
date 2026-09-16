@@ -89,7 +89,7 @@ Git repositories only.
   after a per-source link preview that surfaces blocked sources; confirm
   stays disabled while any source is blocked or no new links are planned,
   and the batch stops at the first failure with a fresh snapshot.
-- Discover is excluded from the `v0.8.0` public preview navigation and public
+- Discover is excluded from the `v0.9.0` public preview navigation and public
   Wails binding. Its experimental Go adapter/domain remains in the repository.
 - Dashboard context metrics are filesystem estimates by default; **Run provider
   diagnostics** is the only UI action that executes local Claude/Codex
