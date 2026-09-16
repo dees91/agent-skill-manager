@@ -80,6 +80,10 @@ pulling), lists the new skills first, and preselects only their `available`
 cells for tools with a non-zero source count. There is no dismiss state; the
 hint disappears once the skills are installed and health reloads. Update
 results carry per-source `newSkills` and mention the count in the message.
+A discovery failure (such as a duplicate skill name) travels as
+`newSkillsError` on both the update item and source health; the message counts
+unchecked sources and the healthy row shows the cause. `newSkillsWarning`
+replaces the checkout path so no absolute path crosses the bridge.
 
 `SourceMutationFailure` carries `sourceId`, `kind`, `cause`, `remedy`, and
 `repairable`, so the update dialog explains a blocker and offers `Repair` from

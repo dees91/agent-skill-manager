@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 
 	"github.com/dees91/agent-skill-manager/internal/install"
 	"github.com/dees91/agent-skill-manager/internal/model"
@@ -896,18 +898,30 @@ func groupSources(summary model.GroupSummary) string {
 // repository already uses. Update itself never installs them.
 func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry, newSkills []install.DiscoveredSkill, discoveryError string) {
 	if discoveryError != "" {
-		fmt.Fprintf(stderr, "warning: could not check for new skills in %s: %s\n", repositoryGroup(repository), discoveryError)
+		fmt.Fprintf(stderr, "warning: could not check for new skills in %s: %s\n", repositoryGroup(repository), printableText(discoveryError))
 		return
 	}
 	if len(newSkills) == 0 {
 		return
 	}
+	// Skill names come from upstream directory names, so the pasteable command
+	// quotes every argument and is omitted when a name cannot be shown safely.
 	names := make([]string, len(newSkills))
+	printable := true
 	for i, skill := range newSkills {
-		names[i] = skill.Name
+		names[i] = printableText(skill.Name)
+		printable = printable && names[i] == skill.Name
 	}
 	fmt.Fprintf(stdout, "new skills in %s (not installed): %s\n", repositoryGroup(repository), strings.Join(names, ", "))
-	command := "skill-manager install " + repositoryURL(repository) + " --skill " + strings.Join(names, " --skill ")
+	if !printable {
+		fmt.Fprintln(stdout, "  install command omitted: a skill name contains control characters")
+		return
+	}
+	args := []string{"skill-manager", "install", shellQuote(repositoryURL(repository))}
+	for _, skill := range newSkills {
+		args = append(args, "--skill", shellQuote(skill.Name))
+	}
+	command := strings.Join(args, " ")
 	tools := recordedRepositoryTools(repository)
 	if len(tools) == 0 || len(tools) == len(model.Tools()) {
 		fmt.Fprintf(stdout, "  install: %s\n", command)
@@ -916,6 +930,25 @@ func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry,
 	for _, tool := range tools {
 		fmt.Fprintf(stdout, "  install: %s --tool %s\n", command, tool)
 	}
+}
+
+// shellQuote returns value as one POSIX shell word.
+func shellQuote(value string) string {
+	if value != "" && !strings.ContainsAny(value, " \t\n'\"\\$`;&|<>()*?[]#~{}!=%^") {
+		return value
+	}
+	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
+}
+
+// printableText returns value unchanged when every rune is printable and a Go
+// quoted form otherwise, so terminal control sequences are never emitted.
+func printableText(value string) string {
+	for _, r := range value {
+		if !unicode.IsPrint(r) {
+			return strconv.Quote(value)
+		}
+	}
+	return value
 }
 
 // recordedRepositoryTools returns the known recorded tools in canonical order.

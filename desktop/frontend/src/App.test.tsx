@@ -425,6 +425,18 @@ describe('Skill Manager desktop app', () => {
     ])))
   })
 
+  it('explains when new skills could not be checked', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.inspectSources = vi.fn(async () => [new gui.SourceHealth({ sourceId: 'git:fixture', group: 'demo/skills', status: 'ok', repairable: false, newSkills: [], newSkillsError: 'duplicate skill names discovered: alpha (one/alpha, two/alpha)' })])
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+
+    expect(await screen.findByText('Could not check for new skills — duplicate skill names discovered: alpha (one/alpha, two/alpha)')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Install new skills from demo/skills' })).not.toBeInTheDocument()
+  })
+
   it('hides new skills while a source needs repair', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

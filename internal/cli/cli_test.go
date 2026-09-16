@@ -471,6 +471,22 @@ func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
 	}
 
 	stdout.Reset()
+	unsafe := []install.DiscoveredSkill{{Name: "my skill"}, {Name: "x;touch pwned"}, {Name: "it's"}}
+	reportNewSkills(&stdout, &stderr, repository, unsafe, "")
+	want = "new skills in owner/all (not installed): my skill, x;touch pwned, it's\n" +
+		"  install: skill-manager install https://github.com/owner/all --skill 'my skill' --skill 'x;touch pwned' --skill 'it'\\''s'\n"
+	if stdout.String() != want {
+		t.Fatalf("stdout = %q, want quoted command %q", stdout.String(), want)
+	}
+
+	stdout.Reset()
+	reportNewSkills(&stdout, &stderr, repository, []install.DiscoveredSkill{{Name: "alpha"}, {Name: "evil\x1b[2J"}}, "")
+	want = "new skills in owner/all (not installed): alpha, \"evil\\x1b[2J\"\n  install command omitted: a skill name contains control characters\n"
+	if stdout.String() != want {
+		t.Fatalf("stdout = %q, want omitted command %q", stdout.String(), want)
+	}
+
+	stdout.Reset()
 	reportNewSkills(&stdout, &stderr, repository, nil, "duplicate skill names discovered: x")
 	if stdout.Len() != 0 || stderr.String() != "warning: could not check for new skills in owner/all: duplicate skill names discovered: x\n" {
 		t.Fatalf("stdout = %q stderr = %q, want warning", stdout.String(), stderr.String())

@@ -552,6 +552,7 @@ function newSkillsOf(health?: SourceHealth): string[] {
 }
 
 function newSkillsNote(health?: SourceHealth) {
+  if (health?.status === 'ok' && health.newSkillsError) return <span className="source-health">Could not check for new skills — {health.newSkillsError}</span>
   const names = newSkillsOf(health)
   if (names.length === 0) return null
   const shown = names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3} more` : names.join(', ')

@@ -21,10 +21,13 @@
   only when it is installed.
 - `update` still never installs, links, or records new skills. After a
   successful update it lists the new skills per repository and prints the exact
-  `skill-manager install <url> --skill <name>...` command. The command adds
-  `--tool <tool>` only when the repository records exactly one tool.
+  `skill-manager install <url> --skill <name>...` command with every argument
+  shell-quoted, one per recorded tool with `--tool <tool>` unless the
+  repository uses every tool. Skill names are upstream directory names: a name
+  with control characters is printed quoted and the command is omitted.
 - A discovery failure after a successful update (for example a duplicate skill
-  name) is reported as a warning and does not turn the update into a failure.
+  name) is reported as a warning in the CLI and the GUI and does not turn the
+  update into a failure. GUI warnings never contain the checkout path.
 - `update --dry-run` lists new skills already present in the local checkout. It
   still does not fetch, so skills that exist only upstream are not shown.
 - GUI source health (`InspectSources`) carries `newSkills` for sources whose
@@ -34,7 +37,9 @@
   checkout without pulling. The matrix preselects new skills for tools the
   source already uses and never preselects conflict or already-installed cells.
   The user can change the selection before review.
-- Update result messages mention how many new skills are available.
+- Update result messages mention how many new skills are available and how
+  many sources could not be checked. A healthy row whose check failed shows the
+  cause instead of new skills.
 - Toggle, uninstall, extend, and repair semantics do not change.
 
 ## Summary Table

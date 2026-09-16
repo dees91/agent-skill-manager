@@ -94,7 +94,9 @@ same ownership audit and transactional removal service.
   names against `installedSkills` (by name, so moved recorded skills are not
   new), `UpdateResult.NewSkills` carries them after the state save, and the CLI
   prints the exact `install --skill` command, adding `--tool` per recorded tool
-  unless the repository uses every tool. A discovery failure (such as a
+  unless the repository uses every tool. Skill names are untrusted upstream
+  directory names, so every argument is shell-quoted and a name with control
+  characters suppresses the command. A discovery failure (such as a
   duplicate name) is a warning, not an update failure. Dry-run reports the
   local checkout only, since it never fetches (`implemented`,
   `internal/install/new_skills.go`).

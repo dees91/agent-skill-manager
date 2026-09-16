@@ -281,6 +281,9 @@ type SourceMutationItem struct {
 	// NewSkills names skills an update found in the checkout that are not
 	// installed. Update never installs them.
 	NewSkills []string `json:"newSkills,omitempty"`
+	// NewSkillsError explains why new skills could not be checked. The update
+	// itself still succeeded. It never contains the checkout path.
+	NewSkillsError string `json:"newSkillsError,omitempty"`
 }
 
 // SourceMutationFailure preserves structured failure and cleanup information.
@@ -310,6 +313,9 @@ type SourceHealth struct {
 	// NewSkills names skills present in a healthy checkout that are not
 	// recorded as installed.
 	NewSkills []string `json:"newSkills"`
+	// NewSkillsError explains why a healthy checkout could not be checked for
+	// new skills. It never contains the checkout path.
+	NewSkillsError string `json:"newSkillsError,omitempty"`
 }
 
 // RepairEntry is one checkout-relative path that blocks a managed checkout.

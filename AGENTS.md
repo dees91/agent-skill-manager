@@ -1042,16 +1042,21 @@ installation visible. It does not change the rule that update never installs.
 - There is no dismiss or ignore list and no new state. A skill stops being new
   only when it is installed.
 - `update` lists new skills per repository after a successful update and prints
-  `skill-manager install <url> --skill <name>...`, adding `--tool <tool>` only
-  when the repository records exactly one tool. A discovery failure is a
-  warning and does not fail the update.
+  `skill-manager install <url> --skill <name>...` with every argument
+  shell-quoted. It prints one command per recorded tool with `--tool <tool>`
+  unless the repository uses every tool. Skill names come from upstream
+  directory names, so a name with control characters is shown quoted and the
+  command is omitted. A discovery failure is a warning in the CLI and the GUI
+  and does not fail the update.
 - `update --dry-run` lists new skills already in the local checkout and still
   does not fetch.
 - GUI source health carries `newSkills` for `ok` sources. The Sources row shows
   them with an `Install new` action that reuses the Git install flow on the
   recorded URL (reusing the checkout without pulling) and preselects new skills
   for the tools the source already uses, never conflict or already-installed
-  cells. Update result messages mention how many new skills are available.
+  cells. Update result messages mention how many new skills are available and
+  how many sources could not be checked. A healthy source whose check failed
+  shows the path-free cause instead of new skills.
 - Toggle, uninstall, extend, and repair semantics do not change.
 
 ## Skill Context Budget Dashboard (Iteration 7)

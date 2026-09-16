@@ -740,3 +740,13 @@ or merge were made. Updated the repository workflow review status locally.
   The no-auto-install rule is unchanged and no dismiss state was added.
 - Updated `AGENTS.md`, `CLAUDE.md`, the new phase 22 plan, `docs/usage.md`, and
   the repository install, desktop GUI, interfaces, and product decisions pages.
+
+## [2026-09-16] fix | Review fixes for new skill discovery
+
+- The CLI install hint interpolated upstream directory names into a pasteable
+  shell command. Every argument is now POSIX shell-quoted, and names with
+  control characters are printed quoted with the command omitted.
+- The desktop dropped discovery failures that the product decision defines as
+  warnings. Update items and source health now carry a path-free
+  `newSkillsError`, the update message counts unchecked sources, and the row
+  shows the cause.

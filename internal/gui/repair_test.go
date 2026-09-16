@@ -94,6 +94,52 @@ func TestInspectSourcesAndUpdateReportNewSkills(t *testing.T) {
 	}
 }
 
+func TestNewSkillDiscoveryFailureIsAPathFreeWarning(t *testing.T) {
+	fixture := newRepairFixture(t)
+	writeRepairFile(t, filepath.Join(fixture.sourcePath, "other", "alpha", "SKILL.md"), "---\nname: alpha\ndescription: Copy\n---\n")
+	runGitRepair(t, "-C", fixture.sourcePath, "add", ".")
+	runGitRepair(t, "-C", fixture.sourcePath, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add duplicate")
+	runGitRepair(t, "-C", fixture.sourcePath, "push", "origin", "main")
+	service := New(fixture.paths)
+	before, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+
+	result := service.UpdateSource(before[0].SourceID, false)
+	if result.Failure != nil {
+		t.Fatalf("UpdateSource() failure = %#v, want a successful update", result.Failure)
+	}
+	if len(result.Completed) != 1 || !strings.Contains(result.Completed[0].NewSkillsError, "duplicate skill names") {
+		t.Fatalf("completed = %#v, want a duplicate-name warning", result.Completed)
+	}
+	if !strings.Contains(result.Message, "Could not check 1 source(s) for new skills.") {
+		t.Fatalf("message = %q, want the unchecked source count", result.Message)
+	}
+
+	health, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(health) != 1 || health[0].Status != SourceHealthOK || len(health[0].NewSkills) != 0 || !strings.Contains(health[0].NewSkillsError, "duplicate skill names") {
+		t.Fatalf("health = %#v, want a healthy source with a warning", health)
+	}
+	for _, text := range []string{result.Completed[0].NewSkillsError, health[0].NewSkillsError} {
+		if strings.Contains(text, fixture.paths.Home) {
+			t.Fatalf("warning leaks filesystem paths: %q", text)
+		}
+	}
+}
+
+func TestNewSkillsWarningRemovesTheCheckoutPath(t *testing.T) {
+	repository := state.RepositoryEntry{CheckoutPath: "/home/example/.skill-manager/repos/github.com/owner/repo"}
+	got := newSkillsWarning(repository, "discover skills in /home/example/.skill-manager/repos/github.com/owner/repo: open /home/example/.skill-manager/repos/github.com/owner/repo/skills: permission denied")
+	want := "discover skills in the managed checkout: open the managed checkout/skills: permission denied"
+	if got != want {
+		t.Fatalf("newSkillsWarning() = %q, want %q", got, want)
+	}
+}
+
 func TestInspectSourcesReportsNonRepairableBlockers(t *testing.T) {
 	fixture := newRepairFixture(t)
 	runGitRepair(t, "-C", fixture.checkoutPath, "checkout", "--detach")
