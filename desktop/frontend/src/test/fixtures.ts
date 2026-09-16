@@ -117,7 +117,7 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     }),
     prepareGitInstall: vi.fn(async () => new gui.InstallDraft({ draftId: 'draft:1', kind: 'git', group: 'demo/skills', location: 'https://github.com/demo/skills', candidates: [candidate('alpha')], cloned: true, reused: false, retainedClone: true, cancelled: false })),
     chooseLocalInstall: vi.fn(async () => new gui.InstallDraft({ draftId: 'draft:2', kind: 'local', group: 'local-skills', location: '/Users/example/Projects/local-skills', candidates: [candidate('local-alpha')], cloned: false, reused: false, retainedClone: false, cancelled: false })),
-    reviewInstall: vi.fn(async (draftId, selections) => new gui.InstallReview({ reviewId: 'review:1', draftId, group: 'demo/skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true })),
+    reviewInstall: vi.fn(async (draftId, selections, off) => new gui.InstallReview({ reviewId: 'review:1', draftId, group: 'demo/skills', selections, createCount: selections.length, alreadyOnCount: 0, alreadyOffCount: 0, conflicts: [], ready: true, off })),
     applyInstall: vi.fn(async () => new gui.SourceMutationResult({ message: 'Installed 2 links.', completed: [], createdLinks: 2, alreadyInstalled: 0, snapshot })),
     updateSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),
     updateAllSources: vi.fn(async () => new gui.SourceMutationResult({ message: 'Updated 1 source(s); 0 already up to date.', completed: [], snapshot })),

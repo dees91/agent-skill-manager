@@ -62,7 +62,9 @@ Pending or filesystem visibility.
 Source operations have a separate exclusive lane. They refuse to start while
 toggle changes are pending, block other mutations and app close while active,
 and emit phase progress. Install revalidates exact matrix selections before
-apply. Update, repair, and uninstall resolve opaque IDs against the current
+apply. `ReviewInstall(draftID, selections, off)` stores the Install as OFF mode
+in the review, and `ApplyInstall` uses only that stored mode, so toggling the
+switch clears the review in `InstallDialog`. Update, repair, and uninstall resolve opaque IDs against the current
 manifest; uninstall additionally requires an exact group-name confirmation.
 
 Source health is an explicit read-only inspection (`InspectSources`), never part

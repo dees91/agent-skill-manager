@@ -244,6 +244,73 @@ func TestRunInstallLocalDryRunDoesNotMutate(t *testing.T) {
 	assertExists(t, filepath.Join(source, "skills", "alpha", "SKILL.md"))
 }
 
+func TestRunInstallLocalOffCreatesDisabledSkills(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	source := filepath.Join(p.Home, "workspace", "local-pack")
+	mkdirSkill(t, filepath.Join(source, "skills", "alpha"))
+	mkdirSkill(t, filepath.Join(source, "skills", "beta"))
+
+	var dryOut, dryErr strings.Builder
+	if code := RunWithPaths([]string{"install", source, "--tool", "codex", "--off", "--dry-run"}, &dryOut, &dryErr, p); code != 0 || dryErr.Len() != 0 {
+		t.Fatalf("dry-run code=%d stdout=%q stderr=%q", code, dryOut.String(), dryErr.String())
+	}
+	wantDry := "would link codex/alpha OFF: " + filepath.Join(p.CodexDisabledDir, "alpha") + " -> "
+	for _, want := range []string{"mode: install as OFF", wantDry, "(restores to " + filepath.Join(p.CodexUserSkills, "alpha") + ")"} {
+		if !strings.Contains(dryOut.String(), want) {
+			t.Fatalf("dry-run stdout = %q, want %q", dryOut.String(), want)
+		}
+	}
+	assertMissing(t, filepath.Join(p.CodexDisabledDir, "alpha"))
+	assertMissing(t, p.StateFile)
+
+	var onOut, onErr strings.Builder
+	if code := RunWithPaths([]string{"install", source, "--tool", "codex", "--skill", "alpha"}, &onOut, &onErr, p); code != 0 {
+		t.Fatalf("ON install code=%d stderr=%q", code, onErr.String())
+	}
+
+	var stdout, stderr strings.Builder
+	if code := RunWithPaths([]string{"install", source, "--tool", "codex", "--off"}, &stdout, &stderr, p); code != 0 || stderr.Len() != 0 {
+		t.Fatalf("install code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	for _, want := range []string{
+		"created 1 symlink(s) as OFF",
+		"turn a skill ON with: skill-manager enable --tool codex beta",
+		"already installed codex/alpha: ON at",
+		"note: --off does not disable already installed skills",
+	} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+		}
+	}
+	assertMissing(t, filepath.Join(p.CodexUserSkills, "beta"))
+	assertExists(t, filepath.Join(p.CodexDisabledDir, "beta", "SKILL.md"))
+	assertExists(t, filepath.Join(p.CodexUserSkills, "alpha", "SKILL.md"))
+
+	var enableOut, enableErr strings.Builder
+	if code := RunWithPaths([]string{"enable", "--tool", "codex", "beta"}, &enableOut, &enableErr, p); code != 0 {
+		t.Fatalf("enable code=%d stdout=%q stderr=%q", code, enableOut.String(), enableErr.String())
+	}
+	assertExists(t, filepath.Join(p.CodexUserSkills, "beta", "SKILL.md"))
+}
+
+func TestRunInstallGitOffDryRunPlansDisabledLinks(t *testing.T) {
+	p, _ := setupInstallDryRunCheckout(t, "https://github.com/example/agent-skills.git", "alpha")
+	var stdout, stderr strings.Builder
+
+	code := RunWithPaths([]string{"install", "https://github.com/example/agent-skills", "--tool", "claude", "--off", "--dry-run"}, &stdout, &stderr, p)
+
+	if code != 0 || stderr.Len() != 0 {
+		t.Fatalf("dry-run code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	for _, want := range []string{"mode: install as OFF", "would link claude/alpha OFF: " + filepath.Join(p.ClaudeDisabledDir, "alpha")} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+		}
+	}
+	assertMissing(t, filepath.Join(p.ClaudeDisabledDir, "alpha"))
+	assertMissing(t, p.StateFile)
+}
+
 func TestRunUninstallLocalPathPreservesSource(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	source := filepath.Join(p.Home, "workspace", "local-pack")

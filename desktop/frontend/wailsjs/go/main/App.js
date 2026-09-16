@@ -66,8 +66,8 @@ export function RepairSource(arg1, arg2) {
   return window['go']['main']['App']['RepairSource'](arg1, arg2);
 }
 
-export function ReviewInstall(arg1, arg2) {
-  return window['go']['main']['App']['ReviewInstall'](arg1, arg2);
+export function ReviewInstall(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ReviewInstall'](arg1, arg2, arg3);
 }
 
 export function SetSkillFavorite(arg1, arg2) {

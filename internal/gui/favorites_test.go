@@ -142,7 +142,7 @@ func TestSourceUninstallReportsAndRetainsFavorite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "media-compose", Tool: "codex"}})
+	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "media-compose", Tool: "codex"}}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

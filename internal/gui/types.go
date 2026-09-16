@@ -259,6 +259,8 @@ type InstallReview struct {
 	AlreadyOffCount int                  `json:"alreadyOffCount"`
 	Conflicts       []InstallConflict    `json:"conflicts"`
 	Ready           bool                 `json:"ready"`
+	// Off reports that new links in this review are created disabled.
+	Off bool `json:"off"`
 }
 
 // SourceProgress is emitted during one non-cancellable lifecycle operation.

@@ -31,6 +31,7 @@ type installDraftState struct {
 type installReviewState struct {
 	DraftID    string
 	Selections []InstallCellRequest
+	Off        bool
 }
 
 // PrepareGitInstall clones or reuses a managed checkout and returns a path-free
@@ -121,8 +122,9 @@ func (s *Service) PrepareLocalInstall(selectedPath string) (InstallDraft, error)
 	return result, err
 }
 
-// ReviewInstall re-discovers and preflights every selected exact cell.
-func (s *Service) ReviewInstall(draftID string, selections []InstallCellRequest) (InstallReview, error) {
+// ReviewInstall re-discovers and preflights every selected exact cell. With off,
+// new links are planned directly as disabled, and apply uses the reviewed mode.
+func (s *Service) ReviewInstall(draftID string, selections []InstallCellRequest, off bool) (InstallReview, error) {
 	var result InstallReview
 	err := s.runSourceOperation("install", "", func() error {
 		draft, err := s.getDraft(draftID)
@@ -133,12 +135,13 @@ func (s *Service) ReviewInstall(draftID string, selections []InstallCellRequest)
 		if err != nil {
 			return err
 		}
+		options.Off = off
 		s.emitProgress(SourceProgress{Operation: "install", Phase: "preflight", Group: draftGroup(draft), Message: "Checking selected install targets…"})
 		plan, localPlan, conflicts, err := s.planDraft(draft, options)
 		if err != nil {
 			return err
 		}
-		result = InstallReview{DraftID: draftID, Group: draftGroup(draft), Selections: normalized, Conflicts: conflicts}
+		result = InstallReview{DraftID: draftID, Group: draftGroup(draft), Selections: normalized, Conflicts: conflicts, Off: off}
 		if len(conflicts) > 0 {
 			return nil
 		}
@@ -156,7 +159,7 @@ func (s *Service) ReviewInstall(draftID string, selections []InstallCellRequest)
 		result.ReviewID = reviewID
 		result.Ready = true
 		s.mu.Lock()
-		s.reviews[reviewID] = installReviewState{DraftID: draftID, Selections: normalized}
+		s.reviews[reviewID] = installReviewState{DraftID: draftID, Selections: normalized, Off: off}
 		s.mu.Unlock()
 		return nil
 	})
@@ -180,6 +183,7 @@ func (s *Service) ApplyInstall(reviewID string, includeReadOnly bool) SourceMuta
 		if err != nil {
 			return err
 		}
+		options.Off = review.Off
 		group := draftGroup(draft)
 		s.emitProgress(SourceProgress{Operation: "install", Phase: "revalidate", Group: group, Message: "Revalidating source and selected targets…"})
 		plan, localPlan, conflicts, err := s.planDraft(draft, options)
@@ -189,7 +193,11 @@ func (s *Service) ApplyInstall(reviewID string, includeReadOnly bool) SourceMuta
 		if len(conflicts) > 0 {
 			return fmt.Errorf("install preflight changed: %s", conflicts[0].Reason)
 		}
-		s.emitProgress(SourceProgress{Operation: "install", Phase: "apply", Group: group, Message: "Creating skill links and saving ownership…"})
+		applyMessage := "Creating skill links and saving ownership…"
+		if review.Off {
+			applyMessage = "Creating disabled skill links and saving ownership…"
+		}
+		s.emitProgress(SourceProgress{Operation: "install", Phase: "apply", Group: group, Message: applyMessage})
 		item := SourceMutationItem{Group: group, Status: "installed"}
 		if draft.Kind == sourceKindGit {
 			applied, applyErr := install.NewApplyService(s.paths).Apply(plan, draft.Checkout.LastSeenCommit)
@@ -212,6 +220,9 @@ func (s *Service) ApplyInstall(reviewID string, includeReadOnly bool) SourceMuta
 		}
 		result.Completed = append(result.Completed, item)
 		result.Message = fmt.Sprintf("Installed %d link(s); %d already installed.", result.CreatedLinks, result.AlreadyInstalled)
+		if review.Off {
+			result.Message = fmt.Sprintf("Installed %d link(s) as OFF; %d already installed.", result.CreatedLinks, result.AlreadyInstalled)
+		}
 		s.mu.Lock()
 		delete(s.reviews, reviewID)
 		delete(s.drafts, review.DraftID)

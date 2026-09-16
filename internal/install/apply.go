@@ -14,20 +14,25 @@ import (
 
 // ApplyService applies install plans to the filesystem and state manifest.
 type ApplyService struct {
-	paths    paths.Paths
-	store    state.Store
-	now      func() time.Time
-	symlink  func(string, string) error
-	backedUp bool
+	paths        paths.Paths
+	store        state.Store
+	now          func() time.Time
+	symlink      func(string, string) error
+	saveManifest func(state.Manifest) error
+	classify     managedClassifier
+	backedUp     bool
 }
 
 // NewApplyService creates an install apply service for the provided paths.
 func NewApplyService(p paths.Paths) *ApplyService {
+	store := state.New(p)
 	return &ApplyService{
-		paths:   p,
-		store:   state.New(p),
-		now:     time.Now,
-		symlink: os.Symlink,
+		paths:        p,
+		store:        store,
+		now:          time.Now,
+		symlink:      os.Symlink,
+		saveManifest: store.Save,
+		classify:     defaultManagedClassifier(p),
 	}
 }
 
@@ -71,25 +76,24 @@ func (s *ApplyService) Apply(plan InstallPlan, lastSeenCommit string) (ApplyResu
 		return result, err
 	}
 
-	for _, link := range plan.Links {
-		if err := os.MkdirAll(filepath.Dir(link.TargetPath), 0o755); err != nil {
-			result.RolledBack = rollbackCreated(result.Created)
-			return result, combineRollbackError(fmt.Errorf("create symlink parent %s: %w", filepath.Dir(link.TargetPath), err), result.Created, result.RolledBack)
-		}
-		if err := s.symlink(link.Skill.Path, link.TargetPath); err != nil {
-			result.RolledBack = rollbackCreated(result.Created)
-			return result, combineRollbackError(fmt.Errorf("create symlink %s -> %s: %w", link.TargetPath, link.Skill.Path, err), result.Created, result.RolledBack)
-		}
-		result.Created = append(result.Created, link)
+	rollback := func(original error) (ApplyResult, error) {
+		result.RolledBack = rollbackCreated(result.Created)
+		return result, combineRollbackError(original, result.Created, result.RolledBack)
+	}
+	created, err := createPlannedLinks(s.paths, plan.Links, s.symlink)
+	result.Created = created
+	if err != nil {
+		return rollback(err)
 	}
 
 	repository, err := s.repositoryEntryForPlan(plan, manifest, lastSeenCommit)
 	if err != nil {
-		return result, err
+		return rollback(err)
 	}
 	manifest.UpsertRepository(repository)
-	if err := s.store.Save(manifest); err != nil {
-		return result, err
+	addDisabledRecords(&manifest, result.Created, s.classify, s.now().UTC())
+	if err := s.saveManifest(manifest); err != nil {
+		return rollback(fmt.Errorf("save install state: %w", err))
 	}
 	result.Repository, _ = manifest.GetRepository(plan.Identity.Host, plan.Identity.RepoPath)
 	return result, nil
@@ -149,6 +153,15 @@ func (s *ApplyService) validateLinkPlan(checkoutPath string, link LinkPlan) erro
 	expectedTarget := filepath.Join(userDir, link.Skill.Name)
 	if filepath.Clean(link.TargetPath) != expectedTarget {
 		return fmt.Errorf("install target %s does not match expected %s", link.TargetPath, expectedTarget)
+	}
+	if link.DisabledPath != "" {
+		expectedDisabled, err := s.store.DisabledPath(link.Tool, link.Skill.Name)
+		if err != nil {
+			return err
+		}
+		if filepath.Clean(link.DisabledPath) != expectedDisabled {
+			return fmt.Errorf("install disabled path %s does not match expected %s", link.DisabledPath, expectedDisabled)
+		}
 	}
 	return nil
 }
@@ -293,24 +306,6 @@ func (s *ApplyService) repositoryEntryForPlan(plan InstallPlan, manifest state.M
 		entry.InstalledSkills = append(entry.InstalledSkills, skill)
 	}
 	return entry, nil
-}
-
-func rollbackCreated(created []LinkPlan) []LinkPlan {
-	rolledBack := []LinkPlan{}
-	for i := len(created) - 1; i >= 0; i-- {
-		link := created[i]
-		target, err := os.Readlink(link.TargetPath)
-		if err != nil {
-			continue
-		}
-		if !samePath(resolveLinkTarget(link.TargetPath, target), link.Skill.Path) {
-			continue
-		}
-		if err := os.Remove(link.TargetPath); err == nil {
-			rolledBack = append(rolledBack, link)
-		}
-	}
-	return rolledBack
 }
 
 func combineRollbackError(original error, created, rolledBack []LinkPlan) error {

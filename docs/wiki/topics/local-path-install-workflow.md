@@ -27,6 +27,8 @@
   cannot take over a recorded cell even when its active path has drifted.
 - Apply backs up existing state, revalidates source identity and ownership,
   rolls back links created by a failed apply, then persists ownership.
+- Install as OFF works identically for local sources: links go to the disabled
+  path and the records carry the `local path` source and the local group.
 
 The desktop Sources screen obtains the source through the native macOS folder
 picker, then exposes the same discovery as an exact per-skill Claude/Codex/Muse/Grok

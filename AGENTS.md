@@ -215,8 +215,9 @@ Conflict and idempotency rules:
 
 Install apply behavior:
 
-- After a clean preflight, create symlinks for selected skills and tools.
+- After a clean preflight, create symlinks for selected skills and tools. With Install as OFF (Iteration 23), new links are created directly at the disabled path instead.
 - If symlink creation fails after some links were created, remove only the links created by that failed install operation.
+- If saving the install state fails, remove the links created by that operation as well, for Git and local sources alike.
 - Do not remove a checkout created earlier in the operation. Keeping the clone makes retry cheaper and safer.
 - Do not write a partial install manifest when symlink creation fails.
 
@@ -386,10 +387,10 @@ Install operation:
 3. For non-dry-run install, clone missing checkouts or reuse matching existing checkouts without pulling.
 4. Discover valid skills from the checkout.
 5. Apply optional `--skill` selection and fail if any requested skill is missing.
-6. Preflight all selected skill/tool targets for conflicts and idempotent already-installed cases.
-7. Create missing symlinks.
-8. If symlink creation fails, remove only symlinks created by this install operation.
-9. Update the install manifest in `state.json` only after successful symlink creation.
+6. Preflight all selected skill/tool targets for conflicts and idempotent already-installed cases. Install as OFF also requires each disabled path to be free.
+7. Create missing symlinks at the active path, or at the disabled path for Install as OFF.
+8. If symlink creation or the state save fails, remove only symlinks created by this install operation.
+9. Update the install manifest, and the disabled records of links created OFF, in one `state.json` save after successful symlink creation.
 10. Rescan.
 
 Local install follows the same discovery/preflight/link/state sequence without a clone step. Local uninstall stages only exact owned symlinks; it never stages or deletes its source directory.
@@ -547,7 +548,7 @@ skill-manager install <git-url> [--tool claude|codex|muse|grok|both|all] [--skil
 skill-manager repos
 ```
 
-`skill-manager install` installs skills from a Git repository using managed checkouts and symlinks. `--tool` defaults to all supported tools. `--skill` may be repeated. `--dry-run` is strict and does not clone missing repositories.
+`skill-manager install` installs skills from a Git repository using managed checkouts and symlinks. `--tool` defaults to all supported tools. `--skill` may be repeated. `--off` creates new links disabled (Iteration 23). `--dry-run` is strict and does not clone missing repositories.
 
 `skill-manager repos` is read-only and summarizes repositories recorded in Skill Manager state, including group, URL, checkout path, last seen commit, installed skill count, and tools.
 
@@ -651,6 +652,9 @@ preserving the CLI contracts and the ownership/safety rules above.
   clone a missing managed checkout; cancelling after that point retains the
   clean unrecorded checkout for a cheaper retry. Local sources are selected
   through the native macOS directory picker.
+- The install dialog has one **Install as OFF** switch for the whole selection
+  (Iteration 23). Review records the mode and apply always uses the reviewed
+  mode.
 - Installation selection is a per-skill Claude/Codex/Muse/Grok matrix. Extend the shared
   domain planner to accept exact cells while preserving the existing CLI
   `--tool` and `--skill` expansion semantics.
@@ -1059,6 +1063,35 @@ installation visible. It does not change the rule that update never installs.
   shows the path-free cause instead of new skills.
 - Toggle, uninstall, extend, and repair semantics do not change.
 
+### Install as OFF (Iteration 23)
+
+Iteration 23 lets an install add skills without making them visible to any
+tool until the user turns them ON.
+
+- `skill-manager install <git-url|local-path> [--tool …] [--skill …] --off`
+  and one desktop **Install as OFF** switch in both the Install source and
+  Install new flows. The switch applies to every selected cell; there is no
+  per-cell mode.
+- New links are created directly at `~/.skill-manager/disabled/<tool>/<skill>`
+  in a private (0700) directory. A skill installed OFF never appears in a
+  tool's active skills directory, even briefly. Do not create it ON and then
+  disable it.
+- Each link created OFF gets the disabled record a manual disable of the same
+  active link would write: `originalPath` is the active path, `entryType` is
+  `symlink`, `symlinkTarget` is the skill path, and `source` and `group` come
+  from the scanner's managed classifier (local source, Git origin, or Skills
+  CLI lock). The source manifest and every disabled record are written in one
+  state save.
+- Cells already ON stay ON; `--off` never disables anything and says so.
+  Cells already OFF stay OFF.
+- Install as OFF adds one conflict: the disabled path already exists. Every
+  existing install conflict still applies, including a free active path.
+- A failed install state save removes every link that install created, ON or
+  OFF, for Git and local sources.
+- The Iteration 22 update hint keeps the default ON install. Discover install,
+  extend, the TUI, toggle, update, uninstall, and repair semantics do not
+  change.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1222,6 +1255,8 @@ Keep [planning/phase-20-grok-support-tasks.md](./planning/phase-20-grok-support-
 Keep [planning/phase-21-checkout-repair-tasks.md](./planning/phase-21-checkout-repair-tasks.md) as the source of truth for Iteration 21 managed checkout diagnosis and repair task status.
 
 Keep [planning/phase-22-new-skill-discovery-tasks.md](./planning/phase-22-new-skill-discovery-tasks.md) as the source of truth for Iteration 22 new skill discovery task status.
+
+Keep [planning/phase-23-install-as-off-tasks.md](./planning/phase-23-install-as-off-tasks.md) as the source of truth for Iteration 23 install as OFF task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

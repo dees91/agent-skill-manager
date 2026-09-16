@@ -352,7 +352,7 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
-	plan, err := install.PlanLocalInstall(a.paths, manifest, source, discovered, install.PlanOptions{Tools: options.Tools, SkillNames: options.SkillNames})
+	plan, err := install.PlanLocalInstall(a.paths, manifest, source, discovered, install.PlanOptions{Tools: options.Tools, SkillNames: options.SkillNames, Off: options.Off})
 	if err != nil {
 		var planErr install.PlanError
 		if errors.As(err, &planErr) {
@@ -369,14 +369,16 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 	}
 	fmt.Fprintf(stdout, "group: %s\n", source.Group)
 	fmt.Fprintf(stdout, "tools: %s\n", formatTools(options.Tools))
+	printInstallMode(stdout, options.Off)
 	fmt.Fprintf(stdout, "discovered: %d skill(s)\n", len(discovered))
 	if options.DryRun {
 		for _, link := range plan.Links {
-			fmt.Fprintf(stdout, "would link %s/%s: %s -> %s\n", link.Tool, link.Skill.Name, link.TargetPath, link.Skill.Path)
+			printPlannedLink(stdout, link)
 		}
 		for _, already := range plan.AlreadyInstalled {
 			printAlreadyInstalled(stdout, already)
 		}
+		printOffAlreadyOnNote(stdout, options.Off, plan.AlreadyInstalled)
 		fmt.Fprintf(stdout, "would preserve source: %s\n", source.CanonicalPath)
 		return 0
 	}
@@ -388,11 +390,12 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 		}
 		return 1
 	}
-	fmt.Fprintf(stdout, "created %d symlink(s)\n", len(result.Created))
+	printCreatedLinks(stdout, options.Off, result.Created)
 	fmt.Fprintf(stdout, "already installed %d item(s)\n", len(result.AlreadyInstalled))
 	for _, already := range result.AlreadyInstalled {
 		printAlreadyInstalled(stdout, already)
 	}
+	printOffAlreadyOnNote(stdout, options.Off, result.AlreadyInstalled)
 	fmt.Fprintf(stdout, "installed %d skill(s)\n", len(result.Source.InstalledSkills))
 	fmt.Fprintf(stdout, "source remains in place: %s\n", result.Source.CanonicalPath)
 	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
@@ -405,11 +408,12 @@ func (a App) runInstallDryRun(stdout, stderr io.Writer, options installCLIOption
 		return code
 	}
 	for _, link := range prepared.Plan.Links {
-		fmt.Fprintf(stdout, "would link %s/%s: %s -> %s\n", link.Tool, link.Skill.Name, link.TargetPath, link.Skill.Path)
+		printPlannedLink(stdout, link)
 	}
 	for _, already := range prepared.Plan.AlreadyInstalled {
 		printAlreadyInstalled(stdout, already)
 	}
+	printOffAlreadyOnNote(stdout, options.Off, prepared.Plan.AlreadyInstalled)
 	return 0
 }
 
@@ -431,11 +435,12 @@ func (a App) runInstallApply(stdout, stderr io.Writer, options installCLIOptions
 	} else if prepared.Checkout.Reused {
 		fmt.Fprintf(stdout, "reused checkout %s\n", prepared.CheckoutPath)
 	}
-	fmt.Fprintf(stdout, "created %d symlink(s)\n", len(applyResult.Created))
+	printCreatedLinks(stdout, options.Off, applyResult.Created)
 	fmt.Fprintf(stdout, "already installed %d item(s)\n", len(applyResult.AlreadyInstalled))
 	for _, already := range applyResult.AlreadyInstalled {
 		printAlreadyInstalled(stdout, already)
 	}
+	printOffAlreadyOnNote(stdout, options.Off, applyResult.AlreadyInstalled)
 	fmt.Fprintf(stdout, "installed %d skill(s)\n", len(applyResult.Repository.InstalledSkills))
 	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	return 0
@@ -474,6 +479,7 @@ func (a App) prepareInstall(stdout, stderr io.Writer, options installCLIOptions,
 	}
 	fmt.Fprintf(stdout, "checkout: %s\n", checkoutPath)
 	fmt.Fprintf(stdout, "tools: %s\n", formatTools(options.Tools))
+	printInstallMode(stdout, options.Off)
 	if result.WouldClone {
 		fmt.Fprintf(stdout, "would clone %s -> %s\n", identity.OriginalURL, checkoutPath)
 		fmt.Fprintln(stdout, "skill discovery unavailable until real install")
@@ -494,6 +500,7 @@ func (a App) prepareInstall(stdout, stderr io.Writer, options installCLIOptions,
 	plan, err := install.PlanInstall(a.paths, manifest, identity, checkoutPath, discovered, install.PlanOptions{
 		Tools:      options.Tools,
 		SkillNames: options.SkillNames,
+		Off:        options.Off,
 	})
 	if err != nil {
 		var planErr install.PlanError
@@ -712,6 +719,7 @@ type installCLIOptions struct {
 	Tools      []model.Tool
 	SkillNames []string
 	DryRun     bool
+	Off        bool
 }
 
 type updateCLIOptions struct {
@@ -799,10 +807,10 @@ func findLocalSource(manifest state.Manifest, lookup install.LocalSourceLookup) 
 
 func parseInstallArgs(args []string) (installCLIOptions, error) {
 	if len(args) == 0 {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--off] [--dry-run]")
 	}
 	if strings.HasPrefix(args[0], "-") {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--off] [--dry-run]")
 	}
 	options := installCLIOptions{GitURL: strings.TrimSpace(args[0])}
 	if options.GitURL == "" {
@@ -819,6 +827,8 @@ func parseInstallArgs(args []string) (installCLIOptions, error) {
 		switch args[i] {
 		case "--dry-run":
 			options.DryRun = true
+		case "--off":
+			options.Off = true
 		case "--tool":
 			if toolSeen {
 				return installCLIOptions{}, fmt.Errorf("--tool may be provided only once")
@@ -1066,6 +1076,43 @@ func printInstallPlanError(stderr io.Writer, err install.PlanError) {
 	}
 }
 
+func printInstallMode(stdout io.Writer, off bool) {
+	if off {
+		fmt.Fprintln(stdout, "mode: install as OFF")
+	}
+}
+
+func printPlannedLink(stdout io.Writer, link install.LinkPlan) {
+	if link.DisabledPath != "" {
+		fmt.Fprintf(stdout, "would link %s/%s OFF: %s -> %s (restores to %s)\n", link.Tool, link.Skill.Name, link.DisabledPath, link.Skill.Path, link.TargetPath)
+		return
+	}
+	fmt.Fprintf(stdout, "would link %s/%s: %s -> %s\n", link.Tool, link.Skill.Name, link.TargetPath, link.Skill.Path)
+}
+
+func printCreatedLinks(stdout io.Writer, off bool, created []install.LinkPlan) {
+	if !off {
+		fmt.Fprintf(stdout, "created %d symlink(s)\n", len(created))
+		return
+	}
+	fmt.Fprintf(stdout, "created %d symlink(s) as OFF\n", len(created))
+	if len(created) > 0 {
+		fmt.Fprintf(stdout, "turn a skill ON with: skill-manager enable --tool %s %s\n", created[0].Tool, shellQuote(created[0].Skill.Name))
+	}
+}
+
+func printOffAlreadyOnNote(stdout io.Writer, off bool, already []install.AlreadyInstalled) {
+	if !off {
+		return
+	}
+	for _, item := range already {
+		if item.State == model.SkillStateOn {
+			fmt.Fprintln(stdout, "note: --off does not disable already installed skills")
+			return
+		}
+	}
+}
+
 func printAlreadyInstalled(stdout io.Writer, already install.AlreadyInstalled) {
 	switch already.State {
 	case model.SkillStateOn:
@@ -1108,8 +1155,9 @@ Commands:
   status                       Summarize skill states
   groups                       Summarize detected groups
   repos                        Summarize managed repository installs
-  install <git-url|local-path> [--tool <tool>] [--skill <name>...] [--dry-run]
-                               Install or preview skills from Git or a local path
+  install <git-url|local-path> [--tool <tool>] [--skill <name>...] [--off] [--dry-run]
+                               Install or preview skills from Git or a local path;
+                               --off creates them disabled
   update [<git-url|local-path>] [--dry-run]
                                Update one or all managed repositories
   uninstall <git-url|local-path> [--dry-run]

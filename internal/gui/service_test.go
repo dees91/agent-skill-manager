@@ -150,7 +150,7 @@ func TestLocalInstallReviewApplyAndTypedUninstall(t *testing.T) {
 	if draft.Kind != "local" || len(draft.Candidates) != 1 {
 		t.Fatalf("draft = %#v", draft)
 	}
-	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "alpha", Tool: "claude"}})
+	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "alpha", Tool: "claude"}}, false)
 	if err != nil || !review.Ready || review.CreateCount != 1 {
 		t.Fatalf("review = %#v err=%v", review, err)
 	}
@@ -179,6 +179,64 @@ func TestLocalInstallReviewApplyAndTypedUninstall(t *testing.T) {
 	}
 }
 
+func TestLocalInstallAsOffAppliesTheReviewedMode(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	sourcePath := filepath.Join(p.Home, "workspace", "local-pack")
+	writeSkill(t, filepath.Join(sourcePath, "skills", "alpha"), "Alpha")
+	service := New(p)
+	draft, err := service.PrepareLocalInstall(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cells := []InstallCellRequest{{SkillName: "alpha", Tool: "claude"}, {SkillName: "alpha", Tool: "muse"}}
+	review, err := service.ReviewInstall(draft.DraftID, cells, true)
+	if err != nil || !review.Ready || !review.Off || review.CreateCount != 2 {
+		t.Fatalf("review = %#v err=%v", review, err)
+	}
+	result := service.ApplyInstall(review.ReviewID, false)
+	if result.Failure != nil || result.CreatedLinks != 2 || result.Message != "Installed 2 link(s) as OFF; 0 already installed." {
+		t.Fatalf("apply = %#v", result)
+	}
+	for _, dir := range []string{p.ClaudeUserSkills, p.MuseUserSkills} {
+		if _, err := os.Lstat(filepath.Join(dir, "alpha")); !os.IsNotExist(err) {
+			t.Fatalf("alpha is visible in %s: %v", dir, err)
+		}
+	}
+	var row *SkillRow
+	for i := range result.Snapshot.Rows {
+		if result.Snapshot.Rows[i].Name == "alpha" {
+			row = &result.Snapshot.Rows[i]
+		}
+	}
+	if row == nil || row.Claude == nil || row.Muse == nil || row.Claude.State != "OFF" || row.Muse.State != "OFF" || row.Claude.Group != "local-pack" || row.Codex != nil {
+		t.Fatalf("row = %#v, want alpha OFF for Claude and Muse in local-pack", row)
+	}
+}
+
+func TestInstallReviewWithoutOffCannotApplyAsOff(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	sourcePath := filepath.Join(p.Home, "workspace", "local-pack")
+	writeSkill(t, filepath.Join(sourcePath, "skills", "alpha"), "Alpha")
+	service := New(p)
+	draft, err := service.PrepareLocalInstall(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "alpha", Tool: "grok"}}, false)
+	if err != nil || review.Off {
+		t.Fatalf("review = %#v err=%v", review, err)
+	}
+	if result := service.ApplyInstall(review.ReviewID, false); result.Failure != nil {
+		t.Fatalf("apply = %#v", result)
+	}
+	if _, err := os.Lstat(filepath.Join(p.GrokUserSkills, "alpha", "SKILL.md")); err != nil {
+		t.Fatalf("reviewed ON install is not active: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(p.GrokDisabledDir, "alpha")); !os.IsNotExist(err) {
+		t.Fatalf("reviewed ON install created a disabled link: %v", err)
+	}
+}
+
 func TestGitInstallInspectionUsesOpaqueDraftAndExactCellApply(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	service := New(p)
@@ -191,7 +249,7 @@ func TestGitInstallInspectionUsesOpaqueDraftAndExactCellApply(t *testing.T) {
 	if !draft.Cloned || draft.DraftID == "" || strings.Contains(draft.DraftID, p.Home) || len(draft.Candidates) != 1 {
 		t.Fatalf("draft = %#v", draft)
 	}
-	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "alpha", Tool: "codex"}})
+	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "alpha", Tool: "codex"}}, false)
 	if err != nil || !review.Ready || review.CreateCount != 1 {
 		t.Fatalf("review = %#v err=%v", review, err)
 	}

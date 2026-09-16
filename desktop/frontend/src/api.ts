@@ -99,7 +99,7 @@ export interface Backend {
   setSkillFavorite(skillName: string, favorite: boolean): Promise<FavoriteMutationResult>
   prepareGitInstall(gitURL: string): Promise<InstallDraft>
   chooseLocalInstall(): Promise<InstallDraft>
-  reviewInstall(draftID: string, selections: InstallCellRequest[]): Promise<InstallReview>
+  reviewInstall(draftID: string, selections: InstallCellRequest[], off: boolean): Promise<InstallReview>
   applyInstall(reviewID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   updateSource(sourceID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   updateAllSources(includeReadOnly: boolean): Promise<SourceMutationResult>

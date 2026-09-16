@@ -799,3 +799,17 @@ func mergeGroup(current, next model.GroupLabel) model.GroupLabel {
 	}
 	return model.GroupUnknown
 }
+
+// ManagedSymlinkClassifier returns a classifier that labels a managed skill
+// symlink exactly as a scan of the active skills directory would, using the
+// provided manifest for local source ownership. Install uses it so a skill
+// created directly as OFF records the same source and group as a manual
+// disable. The classifier caches Git metadata per repository.
+func (s Scanner) ManagedSymlinkClassifier(manifest state.Manifest) func(tool model.Tool, name, linkPath string) (model.SourceLabel, model.GroupLabel) {
+	context := newScanContextWithManifest(manifest)
+	skillsCLINames := metadata.ReadSkillsLockNames(s.paths.AgentsSkillLock)
+	return func(tool model.Tool, name, linkPath string) (model.SourceLabel, model.GroupLabel) {
+		source, group, _, _ := classifyManagedSource(context, tool, name, linkPath, model.EntryTypeSymlink, skillsCLINames)
+		return source, group
+	}
+}

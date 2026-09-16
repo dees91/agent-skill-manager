@@ -14,9 +14,9 @@
 - `groups` summarizes group rows, per-tool state counts, and sources.
 - `repos` summarizes repositories recorded in the Skill Manager manifest.
 - `enable` and `disable` mutate one named tool/skill cell and support dry-run.
-- `install <git-url|local-path>` supports strict dry-run, tool targeting, and
-  repeated skill selection; Git uses a managed checkout and local paths link in
-  place.
+- `install <git-url|local-path>` supports strict dry-run, tool targeting,
+  repeated skill selection, and `--off` to create new links disabled; Git uses
+  a managed checkout and local paths link in place.
 - `update [<git-url|local-path>] [--dry-run]` fast-forwards one managed Git
   repository or all recorded repositories when omitted; targeted local sources
   report that no update is required. It lists skills a repository gained that
@@ -100,6 +100,8 @@ Git repositories only.
 - A healthy Git source with skills not yet installed lists them in that cell
   and offers `Install new`, which preselects only those skills in the install
   matrix.
+- The install dialog, in both Install source and Install new, has one
+  **Install as OFF** switch that creates every new link disabled.
 - Source actions are unavailable with pending toggles and become an exclusive
   non-cancellable operation while phase progress is shown. App close is
   blocked until that operation completes.
