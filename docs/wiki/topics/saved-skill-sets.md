@@ -7,8 +7,11 @@
   description, and sorted unique skill basenames.
 - Skill Sets are separate from source-derived Groups. A skill may belong to
   several sets, and sets do not own, activate, or reference-count skills.
-- Membership is tool-agnostic. Every use explicitly selects Claude, Codex, or
-  both and reuses the ordinary smart-toggle plus Pending/Apply boundary.
+- Membership is tool-agnostic. Every use explicitly selects any combination of
+  Claude, Codex, Muse, and Grok and reuses the ordinary smart-toggle plus
+  Pending/Apply boundary. The toggle dialog uses independent tool buttons with
+  an All button that selects or clears every tool (`aria-pressed` is `mixed` for
+  a partial selection); the backend already accepted any tool list.
 - Placement and state come from the live scan. A missing member remains saved
   as unavailable and reconnects when the same basename is discovered again,
   regardless of source.

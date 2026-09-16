@@ -268,6 +268,59 @@ describe('Skill Manager desktop app', () => {
     await waitFor(() => expect(backend.toggleSkillSet).toHaveBeenCalledWith('set:review-support', ['codex']))
   })
 
+  it('combines any tools for a Skill Set toggle', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: 'Skill Sets' }))
+    await user.click(screen.getByRole('button', { name: 'Toggle…' }))
+    const dialog = screen.getByRole('dialog', { name: 'Toggle Review support' })
+    expect(within(dialog).getByText('Select at least one tool.')).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Grok' }))
+    await waitFor(() => expect(backend.previewSkillSetToggle).toHaveBeenLastCalledWith('set:review-support', ['grok']))
+    await user.click(within(dialog).getByRole('button', { name: 'Claude' }))
+    await waitFor(() => expect(backend.previewSkillSetToggle).toHaveBeenLastCalledWith('set:review-support', ['claude', 'grok']))
+    expect(within(dialog).getByRole('button', { name: 'Claude' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(dialog).getByRole('button', { name: 'Grok' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(dialog).getByRole('button', { name: 'Codex' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(dialog).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'mixed')
+
+    await user.click(await within(dialog).findByRole('button', { name: /^Stage (enable|disable)$/ }))
+    await waitFor(() => expect(backend.toggleSkillSet).toHaveBeenCalledWith('set:review-support', ['claude', 'grok']))
+  })
+
+  it('selects and clears every tool with All for a Skill Set toggle', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: 'Skill Sets' }))
+    await user.click(screen.getByRole('button', { name: 'Toggle…' }))
+    const dialog = screen.getByRole('dialog', { name: 'Toggle Review support' })
+
+    await user.click(within(dialog).getByRole('button', { name: 'All' }))
+    await waitFor(() => expect(backend.previewSkillSetToggle).toHaveBeenLastCalledWith('set:review-support', ['claude', 'codex', 'muse', 'grok']))
+    for (const name of ['Claude', 'Codex', 'Muse', 'Grok', 'All']) {
+      expect(within(dialog).getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true')
+    }
+    expect(await within(dialog).findByText(/eligible cells? in Claude \+ Codex \+ Muse \+ Grok/)).toBeInTheDocument()
+
+    const previewCalls = vi.mocked(backend.previewSkillSetToggle).mock.calls.length
+    await user.click(within(dialog).getByRole('button', { name: 'All' }))
+    expect(within(dialog).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(dialog).queryByText(/eligible cells? in/)).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /Stage changes/ })).toBeDisabled()
+    expect(backend.previewSkillSetToggle).toHaveBeenCalledTimes(previewCalls)
+
+    await user.click(within(dialog).getByRole('button', { name: 'Muse' }))
+    await waitFor(() => expect(backend.previewSkillSetToggle).toHaveBeenLastCalledWith('set:review-support', ['muse']))
+    await user.click(within(dialog).getByRole('button', { name: 'Muse' }))
+    expect(within(dialog).queryByText(/eligible cells? in/)).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /Stage changes/ })).toBeDisabled()
+  })
+
   it('creates a Skill Set from unique names in Pending', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

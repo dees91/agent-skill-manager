@@ -91,8 +91,9 @@ have their own confirmations and cannot run while a toggle batch is pending.
 
 ![Two saved Skill Sets showing enabled, mixed, disabled, and unavailable tool states](images/skill-sets.png)
 
-Skill Sets are overlapping recipes, not active profiles. Each use asks for a
-tool scope and enters the ordinary Pending/Apply flow. Missing members stay in
+Skill Sets are overlapping recipes, not active profiles. Each use asks which
+tools to change, in any combination such as Claude and Grok, and enters the
+ordinary Pending/Apply flow. Missing members stay in
 the recipe and reconnect when a skill with the same basename is installed
 again. The CLI and TUI do not manage Skill Sets yet.
 

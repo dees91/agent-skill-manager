@@ -791,3 +791,15 @@ or merge were made. Updated the repository workflow review status locally.
 - Updated `AGENTS.md`, `CLAUDE.md`, the phase 23 plan, `docs/usage.md`, and the
   repository install, local install, toggle lifecycle, desktop GUI, interfaces,
   and product decisions pages.
+
+## [2026-09-16] implementation | Combine tools when toggling a Skill Set
+
+- The Skill Set toggle dialog allowed one tool or All, although
+  `PreviewSkillSetToggle` and `ToggleSkillSet` already accept any tool list and
+  compute the smart direction across it.
+- Replaced the single-select control with independent tool buttons plus an All
+  button that selects or clears every tool. An empty selection shows a hint and
+  no preview. The Skills screen tool scope filter stays single-select because it
+  also drives row filtering and placement.
+- Updated `AGENTS.md`, `DESIGN.md`, the phase 14 plan, `docs/usage.md`, and the
+  saved Skill Sets page.
