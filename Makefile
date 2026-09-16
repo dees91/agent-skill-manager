@@ -4,7 +4,11 @@ WAILS = go run github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)
 VULNCHECK_VERSION ?= v1.7.0
 VULNCHECK = go run golang.org/x/vuln/cmd/govulncheck@$(VULNCHECK_VERSION)
 
-.PHONY: dev install build test test-all vulncheck gui-dev gui-bindings gui-test gui-build notices notices-check release-package clean
+.PHONY: setup dev install build test test-all vulncheck gui-dev gui-bindings gui-test gui-build notices notices-check release-package clean
+
+setup:
+	git config core.hooksPath .githooks
+	@echo "Enabled tracked Git hooks from .githooks"
 
 dev: install
 

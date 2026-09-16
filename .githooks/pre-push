@@ -1,0 +1,47 @@
+#!/bin/sh
+# Prints the public text in the pushed range next to the review criteria.
+# It never blocks a push; see docs/contributing/public-text.md.
+
+zero=0000000000000000000000000000000000000000
+printed=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ "$local_sha" = "$zero" ] && continue
+	if [ "$remote_sha" = "$zero" ]; then
+		range="$local_sha --not --remotes"
+	else
+		range="$remote_sha..$local_sha"
+	fi
+	# shellcheck disable=SC2086
+	commits=$(git log --format='  %h %s%n%w(0,4,4)%b' $range 2>/dev/null)
+	# shellcheck disable=SC2086
+	files=$(git log --format= --name-only $range 2>/dev/null | sort -u | grep -E '\.md$|(^|/)testdata/|_test\.go$|\.test\.tsx?$|/fixtures?|demoBackend' )
+	[ -z "$commits" ] && continue
+	if [ "$printed" -eq 0 ]; then
+		echo "public text review (docs/contributing/public-text.md)" >&2
+		printed=1
+	fi
+	echo "" >&2
+	echo "push ${local_ref#refs/heads/} -> ${remote_ref#refs/heads/}" >&2
+	echo "commit messages:" >&2
+	printf '%s\n' "$commits" | sed '/^[[:space:]]*$/d' >&2
+	if [ -n "$files" ]; then
+		echo "public-text files changed:" >&2
+		printf '%s\n' "$files" | sed 's/^/  /' >&2
+	fi
+done
+
+if [ "$printed" -eq 1 ]; then
+	cat >&2 <<'CRITERIA'
+
+This repository is public. Confirm the text above, and any pull request body
+you send next, describes behavior for every user (short form; full criteria in
+docs/contributing/public-text.md):
+  - the problem as a class, not the event that exposed it
+  - synthetic examples (example/agent-skills, alpha, beta)
+  - verification by tests, not by the author's installation
+  - no real paths, usernames, hostnames, source names, state manifests,
+    counts, commits, dates, or versions from an author's environment
+CRITERIA
+fi
+exit 0
