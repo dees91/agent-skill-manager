@@ -48,9 +48,9 @@ func TestInspectSourcesReportsRepairableAndCleanHealth(t *testing.T) {
 
 func TestInspectSourcesAndUpdateReportNewSkills(t *testing.T) {
 	fixture := newRepairFixture(t)
-	writeRepairFile(t, filepath.Join(fixture.sourcePath, "skills", "retro", "SKILL.md"), "---\nname: retro\ndescription: Retro\n---\n")
+	writeRepairFile(t, filepath.Join(fixture.sourcePath, "skills", "beta", "SKILL.md"), "---\nname: beta\ndescription: Beta\n---\n")
 	runGitRepair(t, "-C", fixture.sourcePath, "add", ".")
-	runGitRepair(t, "-C", fixture.sourcePath, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add retro")
+	runGitRepair(t, "-C", fixture.sourcePath, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add beta")
 	runGitRepair(t, "-C", fixture.sourcePath, "push", "origin", "main")
 	service := New(fixture.paths)
 
@@ -66,22 +66,22 @@ func TestInspectSourcesAndUpdateReportNewSkills(t *testing.T) {
 	if result.Failure != nil {
 		t.Fatalf("UpdateSource() failure = %#v", result.Failure)
 	}
-	if len(result.Completed) != 1 || strings.Join(result.Completed[0].NewSkills, ",") != "retro" {
-		t.Fatalf("completed = %#v, want retro reported", result.Completed)
+	if len(result.Completed) != 1 || strings.Join(result.Completed[0].NewSkills, ",") != "beta" {
+		t.Fatalf("completed = %#v, want beta reported", result.Completed)
 	}
 	if !strings.Contains(result.Message, "1 new skill(s) available to install.") {
 		t.Fatalf("message = %q, want new skill count", result.Message)
 	}
-	if _, err := os.Lstat(filepath.Join(fixture.paths.ClaudeUserSkills, "retro")); !os.IsNotExist(err) {
-		t.Fatalf("retro link exists or stat failed: %v", err)
+	if _, err := os.Lstat(filepath.Join(fixture.paths.ClaudeUserSkills, "beta")); !os.IsNotExist(err) {
+		t.Fatalf("beta link exists or stat failed: %v", err)
 	}
 
 	after, err := service.InspectSources()
 	if err != nil {
 		t.Fatalf("InspectSources() error = %v", err)
 	}
-	if len(after) != 1 || after[0].Status != SourceHealthOK || strings.Join(after[0].NewSkills, ",") != "retro" {
-		t.Fatalf("health = %#v, want retro as a new skill", after)
+	if len(after) != 1 || after[0].Status != SourceHealthOK || strings.Join(after[0].NewSkills, ",") != "beta" {
+		t.Fatalf("health = %#v, want beta as a new skill", after)
 	}
 
 	writeRepairFile(t, filepath.Join(fixture.checkoutPath, "generated", "trace_processor"), "binary")

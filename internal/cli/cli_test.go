@@ -464,8 +464,8 @@ func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
 		},
 	}
 	var stdout, stderr strings.Builder
-	reportNewSkills(&stdout, &stderr, repository, []install.DiscoveredSkill{{Name: "retro"}}, "")
-	want := "new skills in owner/all (not installed): retro\n  install: skill-manager install https://github.com/owner/all --skill retro\n"
+	reportNewSkills(&stdout, &stderr, repository, []install.DiscoveredSkill{{Name: "delta"}}, "")
+	want := "new skills in owner/all (not installed): delta\n  install: skill-manager install https://github.com/owner/all --skill delta\n"
 	if stdout.String() != want || stderr.Len() != 0 {
 		t.Fatalf("stdout = %q stderr = %q, want %q", stdout.String(), stderr.String(), want)
 	}
