@@ -19,8 +19,15 @@ func TestWatchSignalsStopDoesNotInterrupt(t *testing.T) {
 func TestWatchSignalsRestoresBeforeReraise(t *testing.T) {
 	signals := make(chan os.Signal, 1)
 	var calls []string
-	stop := watchSignals(signals, func() { calls = append(calls, "restore") }, func() { calls = append(calls, "reraise") })
+	handled := make(chan struct{})
+	stop := watchSignals(signals, func() { calls = append(calls, "restore") }, func() {
+		calls = append(calls, "reraise")
+		close(handled)
+	})
 	signals <- os.Interrupt
+	// Wait for the watcher to handle the signal; otherwise stop() can win the
+	// select against the pending signal and the handlers never run.
+	<-handled
 	stop()
 	if len(calls) != 2 || calls[0] != "restore" || calls[1] != "reraise" {
 		t.Fatalf("calls = %v", calls)
