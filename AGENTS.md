@@ -1093,6 +1093,28 @@ tool until the user turns them ON.
   extend, the TUI, toggle, update, uninstall, and repair semantics do not
   change.
 
+### Optional TypeSafe Advisor (Iteration 24, planned)
+
+The implementation plan is
+[planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md).
+This is future work; existing runtime and privacy behavior remain authoritative
+until the relevant tasks are implemented and verified.
+
+- Keep local BM25F search as the default and preserve `advisor search` as offline.
+- Plan a separate recommendation operation with optional user-owned TypeSafe
+  credentials, explicit cloud opt-in, direct Go-to-provider HTTPS, and visible
+  local fallback. A stored/environment key alone never enables cloud use.
+- Limit cloud inputs to the supplied task brief and shortlisted skill metadata.
+  No transcript/project-code/full-instruction upload is in this iteration.
+- Store keys in the OS credential store, with an environment-only CLI option;
+  never bundle a maintainer key or add a Skill Manager-operated backend.
+- Recommendation is read-only. The agent owns final selection and the existing
+  activation, same-turn instruction reads, receipts, and cleanup.
+- Deliver the complete feature in one agent run under one implementation task.
+  Include synthetic quality fixtures and optional live measurement; missing API
+  credentials do not block implementation or offline validation. Read the plan
+  for acceptance criteria and genuine re-plan conditions.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1258,6 +1280,8 @@ Keep [planning/phase-21-checkout-repair-tasks.md](./planning/phase-21-checkout-r
 Keep [planning/phase-22-new-skill-discovery-tasks.md](./planning/phase-22-new-skill-discovery-tasks.md) as the source of truth for Iteration 22 new skill discovery task status.
 
 Keep [planning/phase-23-install-as-off-tasks.md](./planning/phase-23-install-as-off-tasks.md) as the source of truth for Iteration 23 install as OFF task status.
+
+Keep [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md) as the source of truth for the single-run optional TypeSafe advisor assignment and its acceptance criteria.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

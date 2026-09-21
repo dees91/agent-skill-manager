@@ -714,6 +714,27 @@ or merge were made. Updated the repository workflow review status locally.
   installation checks, checksum checks, and rendering evidence recorded above
   remain applicable; no new application version or binary release is needed.
 
+## [2026-09-08] analysis | Separate usage and session search product
+
+- Compared a proposed feature set (subscription usage, reset times, and
+  cross-agent local session search) with current product intent, the Phase 7
+  plan, README privacy boundaries, and context-budget report types.
+- Recorded an advisory preference for a separate product in project overview,
+  with possible later interface integration. This is not a roadmap addition;
+  authoritative product scope remains unchanged.
+- Distinguished skill-catalog context estimates from subscription usage and
+  recorded provider coverage as an unresolved feasibility question. Third-party
+  product and licensing claims from the proposal were not adopted.
+
+## [2026-09-08] decision | Keep usage and session search out of scope
+
+- Accepted the separation: usage, reset, and session search belong to a
+  separate project with its own executable and data store, not to Skill
+  Manager. Only a documentation seed for that project exists; implementation
+  was explicitly deferred.
+- Updated the earlier advisory synthesis to reflect the accepted separation.
+  Skill Manager product behavior and roadmap remain unchanged.
+
 ## [2026-09-16] decision | Public text review for every agent
 
 - Public text can describe its author's own case (source names, counts, checks
@@ -825,3 +846,34 @@ or merge were made. Updated the repository workflow review status locally.
   synthetic source in an isolated home, and an isolated-home desktop launch.
 - Published the draft as a non-latest GitHub prerelease and re-verified both
   archives from the unauthenticated public download URLs.
+
+## [2026-09-19] decision | Plan optional TypeSafe advisor with BYOK
+
+Recorded Phase 24 as future work with eight pending implementation tasks and a
+held-out selection-quality gate before integration. The plan preserves local
+search and agent-owned activation, specifies user-owned credentials and
+explicit cloud consent, and includes bounded metadata input, typed local
+fallback, CLI/desktop setup, and credential/privacy verification.
+
+Updated `AGENTS.md`, `CLAUDE.md`, and wiki routes. The existing advisor and
+CLI test suites passed during planning; no inference, credential-store
+mutation, feature implementation, or release action was performed.
+
+## [2026-09-19] lint | Validate TypeSafe planning documentation
+
+Strict wiki validation passed for 18 Markdown files with no errors or warnings.
+Changed-document relative links and `git diff --check` passed. The plan has
+eight pending tasks and public synthetic examples; no feature completion is
+claimed. The existing advisor and CLI test suites passed during planning.
+
+## [2026-09-19] decision | One complete agent run for TypeSafe integration
+
+The user clarified that Phase 24 must be one end-to-end agent assignment.
+Replaced the eight-task sequence with one pending P24-T01 covering provider,
+credentials, CLI, desktop, advisor integration, tests, and documentation.
+Internal work items require no intermediate approval or separate handoff.
+
+Removed the mandatory pre-integration research gate. Synthetic evaluation stays
+inside the assignment; live evaluation is opt-in and absence of a key does not
+block implementation or offline checks. Quality claims still require measured
+evidence. Earlier log entries describe the superseded plan structure.

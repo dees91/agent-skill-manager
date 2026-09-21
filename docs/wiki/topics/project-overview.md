@@ -54,6 +54,30 @@
   backups, separate favorite, saved-recipe, and advisor receipt metadata, managed
   repository checkouts, and transient uninstall staging.
 
+## Adjacent Product Boundary: Usage And Session Search
+
+- `user-confirmed` (2026-09-08): subscription usage, reset times, and
+  cross-agent local session search for Claude Code, Codex, Muse, and Grok
+  belong to a separate project, not to Skill Manager. Only a documentation
+  seed for that project exists; implementation was explicitly deferred.
+  Skill Manager scope is unchanged.
+- `inferred`: keep independent executables and private data stores.
+  Skill Manager owns skill visibility and source lifecycle; the proposed tool
+  would own provider usage collection and transcript indexing. Shared tool
+  names and desktop technology do not make their domain state interchangeable.
+- `documented`: existing token metrics measure startup skill-catalog context
+  cost, not subscription consumption; see [AGENTS.md](../../../AGENTS.md#skill-context-budget-dashboard-iteration-7),
+  [Phase 7](../../../planning/phase-7-skill-context-budget-tasks.md), and
+  [report types](../../../internal/contextbudget/types.go).
+- `inferred`: reuse desktop/CLI development patterns initially; defer shared
+  libraries until concrete duplication exists. A later combined interface can
+  consume separate services without sharing the skill installation manifest.
+- `open`: verify usage/reset data availability and transcript coverage for
+  each provider before promising complete support. Local token totals must not
+  be presented as authoritative remaining subscription quota. Third-party
+  tool, support, and license claims in the proposal were not validated during
+  this scope assessment.
+
 ## Primary Invariants
 
 - Scan the filesystem each run; do not rely only on cached manifest data.

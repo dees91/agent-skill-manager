@@ -80,3 +80,26 @@ selected tool + 1-5 ON/OFF skill names
 See [interfaces.md](interfaces.md) for commands and
 [state-safety-and-recovery.md](state-safety-and-recovery.md) for recovery
 boundaries.
+
+## Planned optional TypeSafe recommendations
+
+`planned` (2026-09-19): [Phase 24](../../../planning/phase-24-typesafe-advisor-tasks.md)
+adds one end-to-end implementation assignment for optional BYOK recommendations.
+Existing local search, activation, receipts, and cleanup remain implemented
+behavior. No cloud recommendation command or credential setting exists yet.
+
+The plan keeps local mode as default and puts cloud recommendations behind a
+separate operation and explicit opt-in. Go would call TypeSafe directly using
+the user's key, with a bounded task brief and shortlisted metadata. Stored or
+environment credentials alone do not authorize a request. Failure returns
+explicitly labeled local candidates; a successful no-match remains no-match.
+The agent keeps final selection and mutation ownership.
+
+`user-confirmed` (2026-09-19): execute the full feature in one agent run with
+one task and one completion report. Internal work items are not separate stages
+or approval gates. Include synthetic evaluation fixtures and an optional live
+check, but missing live credentials must not block implementation or independent
+verification. Claims about model quality require actual measurements. This
+supersedes the earlier eight-task plan and pre-integration benchmark gate.
+Full instruction uploads, automatic phase tracking, a hosted backend, and
+additional providers remain outside this plan.

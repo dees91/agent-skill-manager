@@ -56,7 +56,8 @@ page is added, removed, renamed, or materially repurposed.
 - [topics/runtime-skill-advisor.md](topics/runtime-skill-advisor.md)
   - first-party skill distribution, local ranked retrieval, capability-gated
     path-free API, receipt/lease activation, same-turn instruction loading,
-    agent-owned normal-exit cleanup, and concurrency.
+    agent-owned normal-exit cleanup, concurrency, and the planned optional
+    TypeSafe BYOK recommendation path.
 - [topics/state-safety-and-recovery.md](topics/state-safety-and-recovery.md)
   - manifest shape, backups, atomic writes, mutation boundaries, and recovery
     limits.
@@ -73,3 +74,9 @@ page is added, removed, renamed, or materially repurposed.
 - [sources/implementation-snapshot-2026-08-11.md](sources/implementation-snapshot-2026-08-11.md)
   - dated package-level source inspection and verification status used to seed
     the initial topic pages.
+
+## Planned implementation
+
+- [Phase 24: optional TypeSafe advisor](../../planning/phase-24-typesafe-advisor-tasks.md)
+  - one end-to-end agent assignment for BYOK, offline compatibility, credentials, CLI/desktop work,
+    acceptance coverage, and implementation status. No integration exists yet.
