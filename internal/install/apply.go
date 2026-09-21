@@ -100,19 +100,19 @@ func (s *ApplyService) Apply(plan InstallPlan, lastSeenCommit string) (ApplyResu
 }
 
 func revalidateGitCellOwnership(plan InstallPlan, manifest state.Manifest) error {
-	check := func(tool model.Tool, skillName string) error {
-		if owner := gitInstallCellOwner(manifest, tool, skillName, plan.Identity); owner != "" {
-			return fmt.Errorf("install cell %s/%s became owned by %s", tool, skillName, owner)
+	check := func(tool model.Tool, installedName string) error {
+		if owner := gitInstallCellOwner(manifest, tool, installedName, plan.Identity); owner.found() {
+			return fmt.Errorf("install cell %s/%s became owned by %s", tool, installedName, owner)
 		}
 		return nil
 	}
 	for _, link := range plan.Links {
-		if err := check(link.Tool, link.Skill.Name); err != nil {
+		if err := check(link.Tool, link.InstalledName()); err != nil {
 			return err
 		}
 	}
 	for _, already := range plan.AlreadyInstalled {
-		if err := check(already.Tool, already.Skill.Name); err != nil {
+		if err := check(already.Tool, already.InstalledName()); err != nil {
 			return err
 		}
 	}
@@ -146,16 +146,19 @@ func (s *ApplyService) validateLinkPlan(checkoutPath string, link LinkPlan) erro
 	if err := validateSkillForApply(checkoutPath, link.Skill); err != nil {
 		return err
 	}
+	if err := validateInstalledAsForApply(link.Skill, link.InstalledAs); err != nil {
+		return err
+	}
 	userDir, ok := s.paths.UserSkillsDirFor(link.Tool)
 	if !ok {
 		return fmt.Errorf("invalid install tool %q", link.Tool)
 	}
-	expectedTarget := filepath.Join(userDir, link.Skill.Name)
+	expectedTarget := filepath.Join(userDir, link.InstalledName())
 	if filepath.Clean(link.TargetPath) != expectedTarget {
 		return fmt.Errorf("install target %s does not match expected %s", link.TargetPath, expectedTarget)
 	}
 	if link.DisabledPath != "" {
-		expectedDisabled, err := s.store.DisabledPath(link.Tool, link.Skill.Name)
+		expectedDisabled, err := s.store.DisabledPath(link.Tool, link.InstalledName())
 		if err != nil {
 			return err
 		}
@@ -170,16 +173,29 @@ func (s *ApplyService) validateAlreadyInstalledPlan(checkoutPath string, already
 	if err := validateSkillForApply(checkoutPath, already.Skill); err != nil {
 		return err
 	}
+	if err := validateInstalledAsForApply(already.Skill, already.InstalledAs); err != nil {
+		return err
+	}
 	userDir, ok := s.paths.UserSkillsDirFor(already.Tool)
 	if !ok {
 		return fmt.Errorf("invalid install tool %q", already.Tool)
 	}
-	expectedTarget := filepath.Join(userDir, already.Skill.Name)
+	expectedTarget := filepath.Join(userDir, already.InstalledName())
 	if filepath.Clean(already.TargetPath) != expectedTarget {
 		return fmt.Errorf("already-installed target %s does not match expected %s", already.TargetPath, expectedTarget)
 	}
 	if already.State != model.SkillStateOn && already.State != model.SkillStateOff {
 		return fmt.Errorf("already-installed %s/%s has unsupported state %s", already.Tool, already.Skill.Name, already.State)
+	}
+	return nil
+}
+
+func validateInstalledAsForApply(skill DiscoveredSkill, installedAs string) error {
+	if installedAs == "" {
+		return nil
+	}
+	if installedAs == skill.Name || !state.ValidInstalledName(installedAs) {
+		return fmt.Errorf("invalid install name %q for skill %s", installedAs, skill.Name)
 	}
 	return nil
 }
@@ -210,8 +226,8 @@ func validateSkillForApply(checkoutPath string, skill DiscoveredSkill) error {
 
 func revalidateLinksAgainstManifest(plan InstallPlan, manifest state.Manifest) error {
 	for _, link := range plan.Links {
-		if entry, ok := manifest.Get(link.Tool, link.Skill.Name); ok {
-			return fmt.Errorf("install target %s/%s became disabled at %s", link.Tool, link.Skill.Name, entry.DisabledPath)
+		if entry, ok := manifest.Get(link.Tool, link.InstalledName()); ok {
+			return fmt.Errorf("install target %s/%s became disabled at %s", link.Tool, link.InstalledName(), entry.DisabledPath)
 		}
 	}
 	return nil
@@ -223,33 +239,33 @@ func (s *ApplyService) revalidateAlreadyInstalled(plan InstallPlan, manifest sta
 		case model.SkillStateOn:
 			target, err := os.Readlink(already.TargetPath)
 			if err != nil {
-				return fmt.Errorf("already-installed %s/%s is not active: %w", already.Tool, already.Skill.Name, err)
+				return fmt.Errorf("already-installed %s/%s is not active: %w", already.Tool, already.InstalledName(), err)
 			}
 			if !samePath(resolveLinkTarget(already.TargetPath, target), already.Skill.Path) {
-				return fmt.Errorf("already-installed %s/%s active symlink target changed", already.Tool, already.Skill.Name)
+				return fmt.Errorf("already-installed %s/%s active symlink target changed", already.Tool, already.InstalledName())
 			}
 		case model.SkillStateOff:
-			entry, ok := manifest.Get(already.Tool, already.Skill.Name)
+			entry, ok := manifest.Get(already.Tool, already.InstalledName())
 			if !ok {
-				return fmt.Errorf("already-installed %s/%s disabled state is missing", already.Tool, already.Skill.Name)
+				return fmt.Errorf("already-installed %s/%s disabled state is missing", already.Tool, already.InstalledName())
 			}
 			if entry.EntryType != model.EntryTypeSymlink || !samePath(resolveLinkTarget(entry.OriginalPath, entry.SymlinkTarget), already.Skill.Path) {
-				return fmt.Errorf("already-installed %s/%s disabled state target changed", already.Tool, already.Skill.Name)
+				return fmt.Errorf("already-installed %s/%s disabled state target changed", already.Tool, already.InstalledName())
 			}
 			if already.DisabledPath != "" && entry.DisabledPath != already.DisabledPath {
-				return fmt.Errorf("already-installed %s/%s disabled path changed", already.Tool, already.Skill.Name)
+				return fmt.Errorf("already-installed %s/%s disabled path changed", already.Tool, already.InstalledName())
 			}
 			if _, err := os.Lstat(already.TargetPath); err == nil {
-				return fmt.Errorf("already-installed %s/%s is disabled but active target exists", already.Tool, already.Skill.Name)
+				return fmt.Errorf("already-installed %s/%s is disabled but active target exists", already.Tool, already.InstalledName())
 			} else if !errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("inspect disabled active target %s: %w", already.TargetPath, err)
 			}
 			target, err := os.Readlink(entry.DisabledPath)
 			if err != nil {
-				return fmt.Errorf("already-installed %s/%s disabled symlink is missing: %w", already.Tool, already.Skill.Name, err)
+				return fmt.Errorf("already-installed %s/%s disabled symlink is missing: %w", already.Tool, already.InstalledName(), err)
 			}
 			if !samePath(resolveLinkTarget(entry.DisabledPath, target), already.Skill.Path) {
-				return fmt.Errorf("already-installed %s/%s disabled symlink target changed", already.Tool, already.Skill.Name)
+				return fmt.Errorf("already-installed %s/%s disabled symlink target changed", already.Tool, already.InstalledName())
 			}
 		}
 	}
@@ -276,27 +292,27 @@ func (s *ApplyService) repositoryEntryForPlan(plan InstallPlan, manifest state.M
 		key := skill.Name + "\x00" + skill.RelativePath
 		skills[key] = skill
 	}
-	addSkillTool := func(skill DiscoveredSkill, tool model.Tool) error {
+	addSkillTool := func(skill DiscoveredSkill, tool model.Tool, installedAs string) error {
 		relativePath, err := filepath.Rel(plan.CheckoutPath, skill.Path)
 		if err != nil {
 			return fmt.Errorf("resolve installed skill path for %s: %w", skill.Name, err)
 		}
 		relativePath = filepath.ToSlash(relativePath)
 		key := skill.Name + "\x00" + relativePath
-		installed := skills[key]
-		installed.Name = skill.Name
-		installed.RelativePath = relativePath
-		installed.Tools = append(installed.Tools, tool)
+		installed, err := recordInstalledSkillTool(skills[key], skill.Name, relativePath, installedAs, tool)
+		if err != nil {
+			return err
+		}
 		skills[key] = installed
 		return nil
 	}
 	for _, link := range plan.Links {
-		if err := addSkillTool(link.Skill, link.Tool); err != nil {
+		if err := addSkillTool(link.Skill, link.Tool, link.InstalledAs); err != nil {
 			return state.RepositoryEntry{}, err
 		}
 	}
 	for _, already := range plan.AlreadyInstalled {
-		if err := addSkillTool(already.Skill, already.Tool); err != nil {
+		if err := addSkillTool(already.Skill, already.Tool, already.InstalledAs); err != nil {
 			return state.RepositoryEntry{}, err
 		}
 	}

@@ -1011,3 +1011,37 @@ func findSkill(t *testing.T, skills []model.ToolSkill, tool model.Tool, name str
 	t.Fatalf("skill %s/%s not found in %#v", tool, name, skills)
 	return model.ToolSkill{}
 }
+
+func TestManagedClassifiesAliasedLocalPathLinkBesidePlainName(t *testing.T) {
+	home := t.TempDir()
+	p := paths.ForHome(home)
+	sourceRoot := filepath.Join(home, "workspace", "sample-pack")
+	skillDir := filepath.Join(sourceRoot, "skills", "alpha")
+	otherDir := filepath.Join(home, "elsewhere", "alpha")
+	mkdirSkill(t, skillDir)
+	mkdirSkill(t, otherDir)
+	mkdirAll(t, p.ClaudeUserSkills)
+	if err := os.Symlink(skillDir, filepath.Join(p.ClaudeUserSkills, "alpha-sample-pack")); err != nil {
+		t.Fatalf("create aliased link: %v", err)
+	}
+	if err := os.Symlink(otherDir, filepath.Join(p.ClaudeUserSkills, "alpha")); err != nil {
+		t.Fatalf("create plain link: %v", err)
+	}
+	saveState(t, p, state.Manifest{LocalSources: []state.LocalSourceEntry{{
+		OriginalPath: sourceRoot, CanonicalPath: sourceRoot, Group: model.GroupLabel("sample-pack"),
+		InstalledSkills: []state.InstalledSkillEntry{{Name: "alpha", InstalledAs: "alpha-sample-pack", RelativePath: "skills/alpha", Tools: []model.Tool{model.ToolClaude}}},
+	}}})
+
+	got, err := New(p).Managed()
+	if err != nil {
+		t.Fatalf("Managed() error = %v", err)
+	}
+	aliased := findSkill(t, got, model.ToolClaude, "alpha-sample-pack")
+	if aliased.Source != model.SourceLocalPath || aliased.Group != model.GroupLabel("sample-pack") {
+		t.Fatalf("aliased source/group = %q/%q, want local path/sample-pack", aliased.Source, aliased.Group)
+	}
+	plain := findSkill(t, got, model.ToolClaude, "alpha")
+	if plain.Source == model.SourceLocalPath || plain.Group == model.GroupLabel("sample-pack") {
+		t.Fatalf("plain source/group = %q/%q, want it not classified as sample-pack", plain.Source, plain.Group)
+	}
+}

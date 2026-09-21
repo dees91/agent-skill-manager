@@ -15,9 +15,11 @@ import (
 )
 
 // RepositoryReference is one active or disabled managed symlink owned by an install source.
+// SkillName is the source skill name; InstalledName is the link basename.
 type RepositoryReference struct {
 	Tool           model.Tool
 	SkillName      string
+	InstalledName  string
 	RelativePath   string
 	SkillPath      string
 	LinkPath       string
@@ -75,6 +77,7 @@ func AuditRepositoryReferences(p paths.Paths, manifest state.Manifest, repositor
 	expectedDisabledCells := map[string]bool{}
 	seenCells := map[string]bool{}
 	pathsByName := map[string]string{}
+	namesByInstalled := map[string]string{}
 	validatedSkills := map[string]bool{}
 
 	for _, installed := range repository.InstalledSkills {
@@ -95,22 +98,33 @@ func AuditRepositoryReferences(p paths.Paths, manifest state.Manifest, repositor
 			}
 		}
 
+		installedName := installed.InstalledName()
+		if installed.InstalledAs != "" && !state.ValidInstalledName(installed.InstalledAs) {
+			conflicts = append(conflicts, ReferenceConflict{SkillName: installed.Name, Path: skillPath, Reason: fmt.Sprintf("invalid recorded install name %q", installed.InstalledAs)})
+			continue
+		}
+		if previous, ok := namesByInstalled[installedName]; ok && previous != installed.Name {
+			conflicts = append(conflicts, ReferenceConflict{SkillName: installed.Name, Path: skillPath, Reason: fmt.Sprintf("skills %s and %s share install name %s", previous, installed.Name, installedName)})
+			continue
+		}
+		namesByInstalled[installedName] = installed.Name
+
 		for _, tool := range installed.Tools {
 			activeDir, ok := p.UserSkillsDirFor(tool)
 			if !ok {
-				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installed.Name, Path: skillPath, Reason: "unsupported tool in repository manifest"})
+				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installedName, Path: skillPath, Reason: "unsupported tool in repository manifest"})
 				continue
 			}
-			cellKey := repositoryCellKey(tool, installed.Name)
+			cellKey := repositoryCellKey(tool, installedName)
 			if seenCells[cellKey] {
-				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installed.Name, Path: skillPath, Reason: "duplicate repository skill/tool cell"})
+				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installedName, Path: skillPath, Reason: "duplicate repository skill/tool cell"})
 				continue
 			}
 			seenCells[cellKey] = true
-			activePath := filepath.Join(activeDir, installed.Name)
+			activePath := filepath.Join(activeDir, installedName)
 
-			if disabled, off := manifest.Get(tool, installed.Name); off {
-				reference, referenceConflicts := auditDisabledReference(p, disabled, tool, installed.Name, relativePath, skillPath, activePath)
+			if disabled, off := manifest.Get(tool, installedName); off {
+				reference, referenceConflicts := auditDisabledReference(p, disabled, tool, installed.Name, installedName, relativePath, skillPath, activePath)
 				conflicts = append(conflicts, referenceConflicts...)
 				audit.References = append(audit.References, reference)
 				expectedLinkPaths[filepath.Clean(reference.LinkPath)] = true
@@ -118,7 +132,7 @@ func AuditRepositoryReferences(p paths.Paths, manifest state.Manifest, repositor
 				continue
 			}
 
-			reference, referenceConflicts := auditActiveReference(tool, installed.Name, relativePath, skillPath, activePath)
+			reference, referenceConflicts := auditActiveReference(tool, installed.Name, installedName, relativePath, skillPath, activePath)
 			conflicts = append(conflicts, referenceConflicts...)
 			audit.References = append(audit.References, reference)
 			expectedLinkPaths[filepath.Clean(reference.LinkPath)] = true
@@ -145,7 +159,7 @@ func AuditRepositoryReferences(p paths.Paths, manifest state.Manifest, repositor
 		if audit.References[i].Tool != audit.References[j].Tool {
 			return audit.References[i].Tool.String() < audit.References[j].Tool.String()
 		}
-		return audit.References[i].SkillName < audit.References[j].SkillName
+		return audit.References[i].InstalledName < audit.References[j].InstalledName
 	})
 	if len(conflicts) > 0 {
 		return ReferenceAudit{}, ReferenceAuditError{Conflicts: conflicts}
@@ -216,19 +230,19 @@ func normalizeRecordedSkill(checkoutPath string, installed state.InstalledSkillE
 	return skillPath, cleaned, nil
 }
 
-func auditActiveReference(tool model.Tool, skillName, relativePath, skillPath, activePath string) (RepositoryReference, []ReferenceConflict) {
-	reference := RepositoryReference{Tool: tool, SkillName: skillName, RelativePath: relativePath, SkillPath: skillPath, LinkPath: activePath, State: model.SkillStateOn}
+func auditActiveReference(tool model.Tool, skillName, installedName, relativePath, skillPath, activePath string) (RepositoryReference, []ReferenceConflict) {
+	reference := RepositoryReference{Tool: tool, SkillName: skillName, InstalledName: installedName, RelativePath: relativePath, SkillPath: skillPath, LinkPath: activePath, State: model.SkillStateOn}
 	target, err := readExpectedSymlink(activePath, skillPath)
 	if err != nil {
-		return reference, []ReferenceConflict{{Tool: tool, SkillName: skillName, Path: activePath, Reason: err.Error()}}
+		return reference, []ReferenceConflict{{Tool: tool, SkillName: installedName, Path: activePath, Reason: err.Error()}}
 	}
 	reference.SymlinkTarget = target
 	return reference, nil
 }
 
-func auditDisabledReference(p paths.Paths, disabled state.DisabledEntry, tool model.Tool, skillName, relativePath, skillPath, activePath string) (RepositoryReference, []ReferenceConflict) {
+func auditDisabledReference(p paths.Paths, disabled state.DisabledEntry, tool model.Tool, sourceName, skillName, relativePath, skillPath, activePath string) (RepositoryReference, []ReferenceConflict) {
 	disabledCopy := disabled
-	reference := RepositoryReference{Tool: tool, SkillName: skillName, RelativePath: relativePath, SkillPath: skillPath, LinkPath: disabled.DisabledPath, State: model.SkillStateOff, DisabledRecord: &disabledCopy}
+	reference := RepositoryReference{Tool: tool, SkillName: sourceName, InstalledName: skillName, RelativePath: relativePath, SkillPath: skillPath, LinkPath: disabled.DisabledPath, State: model.SkillStateOff, DisabledRecord: &disabledCopy}
 	conflicts := []ReferenceConflict{}
 	expectedDisabledDir, _ := p.DisabledDirFor(tool)
 	expectedDisabledPath := filepath.Join(expectedDisabledDir, skillName)

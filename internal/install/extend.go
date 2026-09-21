@@ -265,7 +265,7 @@ func extendCells(manifest state.Manifest, tool model.Tool, installed []state.Ins
 		}
 		recordedPath := normalizeRecordedRelativePath(entry.RelativePath)
 		if hasRecordedTool(entry.Tools, tool) {
-			cells = append(cells, InstallCell{SkillName: name, Tool: tool, Path: recordedPath})
+			cells = append(cells, InstallCell{SkillName: name, Tool: tool, Path: recordedPath, InstalledAs: entry.InstalledAs})
 			continue
 		}
 		if len(recordedTools(entry.Tools)) == 0 {
@@ -276,11 +276,11 @@ func extendCells(manifest state.Manifest, tool model.Tool, installed []state.Ins
 			skipped = append(skipped, ExtendSkip{SkillName: name, Reason: fmt.Sprintf("not found in source at recorded path %s", entry.RelativePath)})
 			continue
 		}
-		cells = append(cells, InstallCell{SkillName: name, Tool: tool, Path: recordedPath})
+		cells = append(cells, InstallCell{SkillName: name, Tool: tool, Path: recordedPath, InstalledAs: entry.InstalledAs})
 		if extendEndsOn(manifest, entry, tool) {
 			continue
 		}
-		disableAfter = append(disableAfter, name)
+		disableAfter = append(disableAfter, entry.InstalledName())
 	}
 	return cells, disableAfter, skipped
 }
@@ -315,21 +315,25 @@ func extendEndsOn(manifest state.Manifest, entry state.InstalledSkillEntry, tool
 		if other == tool {
 			continue
 		}
-		if _, ok := manifest.Get(other, entry.Name); !ok {
+		if _, ok := manifest.Get(other, entry.InstalledName()); !ok {
 			return true
 		}
 	}
 	return false
 }
 
-// claimExtendTargets reserves (tool, skill) targets across sources in manifest
-// order so a later source planning the same cell is blocked instead of
-// racing the first one.
+// claimExtendTargets reserves (tool, installed name) targets across sources
+// in manifest order so a later source planning the same cell is blocked
+// instead of racing the first one.
 func claimExtendTargets(tool model.Tool, cells []InstallCell, group string, planned map[string]string) error {
 	for _, cell := range cells {
-		key := repositoryCellKey(tool, cell.SkillName)
+		name := cell.SkillName
+		if cell.InstalledAs != "" {
+			name = cell.InstalledAs
+		}
+		key := repositoryCellKey(tool, name)
 		if owner, ok := planned[key]; ok {
-			return fmt.Errorf("target %s/%s is planned for %s", tool, cell.SkillName, owner)
+			return fmt.Errorf("target %s/%s is planned for %s", tool, name, owner)
 		}
 		planned[key] = group
 	}

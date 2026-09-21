@@ -35,6 +35,7 @@ func auditLocalSourceReferences(p paths.Paths, manifest state.Manifest, source s
 	expectedDisabledCells := cloneStringBoolMap(allowedDisabledCells)
 	seenCells := map[string]bool{}
 	pathsByName := map[string]string{}
+	namesByInstalled := map[string]string{}
 	validatedSkills := map[string]bool{}
 
 	for _, installed := range source.InstalledSkills {
@@ -55,28 +56,39 @@ func auditLocalSourceReferences(p paths.Paths, manifest state.Manifest, source s
 			}
 		}
 
+		installedName := installed.InstalledName()
+		if installed.InstalledAs != "" && !state.ValidInstalledName(installed.InstalledAs) {
+			conflicts = append(conflicts, ReferenceConflict{SkillName: installed.Name, Path: skillPath, Reason: fmt.Sprintf("invalid recorded install name %q", installed.InstalledAs)})
+			continue
+		}
+		if previous, ok := namesByInstalled[installedName]; ok && previous != installed.Name {
+			conflicts = append(conflicts, ReferenceConflict{SkillName: installed.Name, Path: skillPath, Reason: fmt.Sprintf("skills %s and %s share install name %s", previous, installed.Name, installedName)})
+			continue
+		}
+		namesByInstalled[installedName] = installed.Name
+
 		for _, tool := range installed.Tools {
 			activeDir, ok := p.UserSkillsDirFor(tool)
 			if !ok {
-				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installed.Name, Path: skillPath, Reason: "unsupported tool in local source manifest"})
+				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installedName, Path: skillPath, Reason: "unsupported tool in local source manifest"})
 				continue
 			}
-			cellKey := repositoryCellKey(tool, installed.Name)
+			cellKey := repositoryCellKey(tool, installedName)
 			if seenCells[cellKey] {
-				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installed.Name, Path: skillPath, Reason: "duplicate local source skill/tool cell"})
+				conflicts = append(conflicts, ReferenceConflict{Tool: tool, SkillName: installedName, Path: skillPath, Reason: "duplicate local source skill/tool cell"})
 				continue
 			}
 			seenCells[cellKey] = true
-			activePath := filepath.Join(activeDir, installed.Name)
-			if disabled, off := manifest.Get(tool, installed.Name); off {
-				reference, referenceConflicts := auditDisabledReference(p, disabled, tool, installed.Name, relativePath, skillPath, activePath)
+			activePath := filepath.Join(activeDir, installedName)
+			if disabled, off := manifest.Get(tool, installedName); off {
+				reference, referenceConflicts := auditDisabledReference(p, disabled, tool, installed.Name, installedName, relativePath, skillPath, activePath)
 				conflicts = append(conflicts, referenceConflicts...)
 				audit.References = append(audit.References, reference)
 				expectedLinkPaths[filepath.Clean(reference.LinkPath)] = true
 				expectedDisabledCells[cellKey] = true
 				continue
 			}
-			reference, referenceConflicts := auditActiveReference(tool, installed.Name, relativePath, skillPath, activePath)
+			reference, referenceConflicts := auditActiveReference(tool, installed.Name, installedName, relativePath, skillPath, activePath)
 			conflicts = append(conflicts, referenceConflicts...)
 			audit.References = append(audit.References, reference)
 			expectedLinkPaths[filepath.Clean(reference.LinkPath)] = true
@@ -102,7 +114,7 @@ func auditLocalSourceReferences(p paths.Paths, manifest state.Manifest, source s
 		if audit.References[i].Tool != audit.References[j].Tool {
 			return audit.References[i].Tool.String() < audit.References[j].Tool.String()
 		}
-		return audit.References[i].SkillName < audit.References[j].SkillName
+		return audit.References[i].InstalledName < audit.References[j].InstalledName
 	})
 	if len(conflicts) > 0 {
 		return LocalReferenceAudit{}, ReferenceAuditError{Conflicts: conflicts}

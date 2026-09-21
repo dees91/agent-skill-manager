@@ -147,7 +147,7 @@ func newScanContextWithManifest(manifest state.Manifest) *scanContext {
 		for _, skill := range source.InstalledSkills {
 			target := filepath.Clean(filepath.Join(source.CanonicalPath, filepath.FromSlash(skill.RelativePath)))
 			for _, tool := range skill.Tools {
-				key := tool.String() + "\x00" + skill.Name
+				key := tool.String() + "\x00" + skill.InstalledName()
 				if existing, ok := context.localCells[key]; ok && (!sameFilesystemPath(existing.target, target) || existing.group != source.Group) {
 					existing.ambiguous = true
 					context.localCells[key] = existing
