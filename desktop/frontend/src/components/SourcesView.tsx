@@ -252,6 +252,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
   const [draft, setDraft] = useState<InstallDraft | null>(null)
   const [review, setReview] = useState<InstallReview | null>(null)
   const [selections, setSelections] = useState<Set<string>>(new Set())
+  const [choices, setChoices] = useState<Record<string, string>>({})
   const [installOff, setInstallOff] = useState(false)
   const initialFocus = useRef<HTMLInputElement>(null)
 
@@ -266,7 +267,8 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       if (next.cancelled) return
       setDraft(newSkills ? newSkillsFirst(next, newSkills.skills) : next)
       setReview(null)
-      setSelections(newSkills ? newSkillSelections(next, newSkills) : new Set(next.candidates.flatMap((candidate) => MANAGED_TOOLS.map((tool) => candidate[tool]).filter((cell) => cell.status !== 'conflict').map((cell) => key(candidate.name, cell.tool)))))
+      setChoices({})
+      setSelections(newSkills ? newSkillSelections(next, newSkills) : new Set(next.candidates.flatMap((candidate) => MANAGED_TOOLS.map((tool) => candidate[tool]).filter((cell) => cell.status !== 'conflict' && cell.status !== 'needs-choice').map((cell) => key(candidate.name, cell.tool)))))
       if (next.cloned) onAnnounce('Repository cloned for inspection. The checkout will be retained if you cancel.')
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -275,7 +277,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
     if (!draft) return
     onBusy(true); onError(null)
     try {
-      const next = await backend.reviewInstall(draft.draftId, selectedRequests(selections), installOff)
+      const next = await backend.reviewInstall(draft.draftId, selectedRequests(selections, choices), installOff)
       setReview(next)
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -303,12 +305,29 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       const next = new Set(current)
       draft.candidates.forEach((candidate) => {
         if (candidate[tool].status === 'conflict') return
+        if (candidate.needsChoice && !choices[candidate.name]) return
         const cell = key(candidate.name, tool)
         selected ? next.add(cell) : next.delete(cell)
       })
       return next
     })
   }
+
+  const chooseCopy = (skill: string, path: string) => {
+    setReview(null)
+    setChoices((current) => ({ ...current, [skill]: path }))
+    if (path === '') {
+      // Reverting the picker would strand checked-but-disabled cells that the
+      // column toggle skips, so drop the row's selections with the choice.
+      setSelections((current) => {
+        const next = new Set(current)
+        MANAGED_TOOLS.forEach((tool) => next.delete(key(skill, tool)))
+        return next
+      })
+    }
+  }
+
+  const missingChoice = draft?.candidates.some((candidate) => candidate.needsChoice && !choices[candidate.name] && selectedSkillNames(selections).has(candidate.name)) ?? false
 
   return (
     <Modal title={newSkills ? 'Install new skills' : 'Install source'} onClose={onClose} busy={busy} wide>
@@ -335,41 +354,48 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
           </button>
           <p>{installOff ? 'New links are created disabled. Agents will not see these skills until you turn them ON in Skills. Installed skills keep their state.' : 'New links are created ON and become visible to agents immediately.'}</p>
         </div>
-        <InstallMatrix draft={draft} selections={selections} busy={busy} onToggle={toggle} onSetToolSelection={setToolSelection} />
+        <InstallMatrix draft={draft} selections={selections} choices={choices} busy={busy} onToggle={toggle} onChoose={chooseCopy} onSetToolSelection={setToolSelection} />
         {review && <ReviewSummary review={review} />}
+        {missingChoice && !review?.ready && <div className="dialog-note"><AlertTriangle size={14} /><p>Choose which copy to install for every selected skill with multiple versions.</p></div>}
         {error && <DialogError message={error} />}
         {busy && <ProgressState progress={progress} />}
         <DialogActions onClose={onClose} busy={busy} secondaryLabel="Cancel">
-          {!review?.ready ? <button className="primary-button" disabled={busy || selections.size === 0} onClick={() => void reviewSelection()}>Review {selections.size} target{selections.size === 1 ? '' : 's'}</button> : <button className="primary-button" disabled={busy} onClick={() => void apply()}>Install {review.createCount} link{review.createCount === 1 ? '' : 's'}{review.off ? ' as OFF' : ''}</button>}
+          {!review?.ready ? <button className="primary-button" disabled={busy || selections.size === 0 || missingChoice} onClick={() => void reviewSelection()}>Review {selections.size} target{selections.size === 1 ? '' : 's'}</button> : <button className="primary-button" disabled={busy} onClick={() => void apply()}>Install {review.createCount} link{review.createCount === 1 ? '' : 's'}{review.off ? ' as OFF' : ''}</button>}
         </DialogActions>
       </>}
     </Modal>
   )
 }
 
-function InstallMatrix({ draft, selections, busy, onToggle, onSetToolSelection }: {
+function InstallMatrix({ draft, selections, choices, busy, onToggle, onChoose, onSetToolSelection }: {
   draft: InstallDraft
   selections: Set<string>
+  choices: Record<string, string>
   busy: boolean
   onToggle: (skill: string, tool: string) => void
+  onChoose: (skill: string, path: string) => void
   onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
   const [query, setQuery] = useState('')
-  const visible = useMemo(() => draft.candidates.filter((candidate) => candidate.name.toLowerCase().includes(query.toLowerCase()) || candidate.relativePath.toLowerCase().includes(query.toLowerCase())), [draft, query])
+  const visible = useMemo(() => draft.candidates.filter((candidate) => {
+    const haystack = `${candidate.name} ${candidate.relativePath ?? ''} ${(candidate.options ?? []).join(' ')}`.toLowerCase()
+    return haystack.includes(query.toLowerCase())
+  }), [draft, query])
   return <div className="install-matrix-wrap">
     <label className="search-field install-search"><Search size={14} /><input aria-label="Filter discovered skills" value={query} disabled={busy} onChange={(event) => setQuery(event.target.value)} placeholder="Filter discovered skills…" /></label>
-    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{MANAGED_TOOLS.map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong><code>{candidate.relativePath}</code></td>{MANAGED_TOOLS.map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict'} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{cell.status.replace('-', ' ')}</small></label></td> })}</tr>)}</tbody></table></div>
+    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{MANAGED_TOOLS.map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} choices={choices} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong>{candidate.needsChoice ? <select aria-label={`Choose a copy of ${candidate.name} to install`} value={choices[candidate.name] ?? ''} disabled={busy} onChange={(event) => onChoose(candidate.name, event.target.value)}><option value="">Choose a copy…</option>{(candidate.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <><code>{candidate.relativePath}</code>{(candidate.identicalCopies ?? 0) > 1 && <small className="identical-copies">{candidate.identicalCopies} identical copies</small>}</>}</td>{MANAGED_TOOLS.map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); const awaitingChoice = candidate.needsChoice && !choices[candidate.name]; const displayStatus = awaitingChoice ? 'needs choice' : candidate.needsChoice ? 'copy chosen' : cell.status.replace('-', ' '); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={awaitingChoice ? 'Choose which copy to install first' : cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict' || awaitingChoice} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{displayStatus}</small></label></td> })}</tr>)}</tbody></table></div>
   </div>
 }
 
-function InstallColumnHeader({ tool, draft, selections, busy, onSetToolSelection }: {
+function InstallColumnHeader({ tool, draft, selections, choices, busy, onSetToolSelection }: {
   tool: ManagedTool
   draft: InstallDraft
   selections: Set<string>
+  choices: Record<string, string>
   busy: boolean
   onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
-  const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict')
+  const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict' && !(candidate.needsChoice && !choices[candidate.name]))
   const selectedCount = applicable.filter((candidate) => selections.has(key(candidate.name, tool))).length
   const state: ColumnSelectionState = applicable.length === 0 ? 'N/A' : selectedCount === 0 ? 'OFF' : selectedCount === applicable.length ? 'ON' : 'MIXED'
   const name = toolDisplayName(tool)
@@ -629,7 +655,8 @@ function DialogActions({ onClose, busy, secondaryLabel = 'Cancel', children }: {
 function DialogError({ message }: { message: string }) { return <div className="dialog-error" role="alert"><AlertTriangle size={14} /><span>{message}</span></div> }
 function ProgressState({ progress }: { progress: SourceProgress | null }) { return <div className="source-progress" role="status"><LoaderCircle size={17} className="spin" /><div><strong>{progress?.message ?? 'Working…'}</strong>{progress?.group && <small>{progress.group}{progress.total ? ` · ${progress.current}/${progress.total}` : ''}</small>}</div></div> }
 function useDialogEscape(onClose: () => void, busy: boolean) { useEffect(() => { const handler = (event: KeyboardEvent) => { if (event.key === 'Escape' && !busy) onClose() }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler) }, [busy, onClose]) }
-function selectedRequests(selections: Set<string>): InstallCellRequest[] { return [...selections].map((item) => { const [tool, ...name] = item.split(':'); return { tool, skillName: name.join(':') } as InstallCellRequest }) }
+function selectedRequests(selections: Set<string>, choices: Record<string, string>): InstallCellRequest[] { return [...selections].map((item) => { const [tool, ...name] = item.split(':'); const skillName = name.join(':'); const choice = choices[skillName]; return { tool, skillName, ...(choice ? { path: choice } : {}) } as InstallCellRequest }) }
+function selectedSkillNames(selections: Set<string>): Set<string> { return new Set([...selections].map((item) => { const [, ...name] = item.split(':'); return name.join(':') })) }
 function key(skill: string, tool: string) { return `${tool}:${skill}` }
 function shortCommit(commit: string) { return commit.slice(0, 8) }
 function errorMessage(reason: unknown) { return reason instanceof Error ? reason.message : String(reason) }

@@ -384,11 +384,26 @@ function counts(rows: SkillRow[], tool: ManagedTool) {
 }
 
 function demoCandidates() {
-  return ['release-notes', 'test-strategy', 'docs-review'].map((name) => ({
+  const available = (name: string) => ({
     name,
     relativePath: `skills/${name}`,
     ...Object.fromEntries(MANAGED_TOOLS.map((tool) => [tool, { tool, status: 'available', message: '' }])),
-  }))
+  })
+  return [
+    available('test-strategy'),
+    {
+      ...available('docs-review'),
+      relativePath: 'plugin/skills/docs-review',
+      identicalCopies: 3,
+    },
+    {
+      name: 'release-notes',
+      relativePath: '',
+      needsChoice: true,
+      options: ['packs/one/release-notes', 'packs/two/release-notes'],
+      ...Object.fromEntries(MANAGED_TOOLS.map((tool) => [tool, { tool, status: 'needs-choice', message: 'choose which copy to install' }])),
+    },
+  ]
 }
 
 export interface DemoBudgetSpec {

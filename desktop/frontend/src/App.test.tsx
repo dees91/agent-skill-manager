@@ -478,6 +478,69 @@ describe('Skill Manager desktop app', () => {
     ]), false))
   })
 
+  it('requires choosing a copy for conflicting duplicates and notes identical ones', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.prepareGitInstall = vi.fn(async () => new gui.InstallDraft({
+      draftId: 'draft:dupes',
+      kind: 'git',
+      group: 'demo/skills',
+      location: 'https://github.com/demo/skills',
+      candidates: [
+        { ...installCandidate('beta'), relativePath: 'plugin/skills/beta', identicalCopies: 2 },
+        {
+          ...installCandidate('gamma', 'needs-choice', 'needs-choice', 'needs-choice', 'needs-choice'),
+          relativePath: '',
+          needsChoice: true,
+          options: ['packs/one/gamma', 'packs/two/gamma'],
+        },
+      ],
+      cloned: false,
+      reused: true,
+      retainedClone: false,
+      cancelled: false,
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: /^Install source$/ }))
+    await user.type(screen.getByRole('textbox', { name: 'HTTPS or SSH Git URL' }), 'https://github.com/demo/skills')
+    await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install source' })
+    expect(await within(dialog).findByText('2 identical copies')).toBeInTheDocument()
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).toBeDisabled()
+    // Needs-choice rows are never preselected.
+    expect(within(dialog).getByRole('checkbox', { name: 'beta claude' })).toBeChecked()
+    expect(within(dialog).getByRole('button', { name: 'Review 4 targets' })).toBeInTheDocument()
+
+    // The column bulk toggle skips rows waiting for a copy choice.
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: ON (1 of 1 selected)' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeChecked()
+    expect(within(dialog).getByRole('button', { name: 'Review 3 targets' })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: OFF (0 of 1 selected)' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'beta claude' })).toBeChecked()
+
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Choose a copy of gamma to install' }), 'packs/two/gamma')
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeDisabled()
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: MIXED (1 of 2 selected)' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).toBeChecked()
+    expect(within(dialog).getByRole('button', { name: 'Claude all targets: ON (2 of 2 selected)' })).toBeInTheDocument()
+
+    // Reverting the picker drops the row's selections instead of stranding them.
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Choose a copy of gamma to install' }), '')
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: 'Review 4 targets' })).toBeInTheDocument()
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Choose a copy of gamma to install' }), 'packs/two/gamma')
+    await user.click(within(dialog).getByRole('checkbox', { name: 'gamma claude' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Review 5 targets' }))
+    await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:dupes', expect.arrayContaining([
+      { tool: 'claude', skillName: 'gamma', path: 'packs/two/gamma' },
+    ]), false))
+  })
+
   it('reviews and applies an install as OFF from the switch', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

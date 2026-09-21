@@ -57,14 +57,14 @@ func TestPlanInstallDefaultsToBothToolsAndAllSkills(t *testing.T) {
 	}
 
 	want := []LinkPlan{
-		{Skill: skills[0], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "alpha")},
-		{Skill: skills[0], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "alpha")},
-		{Skill: skills[0], Tool: model.ToolMuse, TargetPath: filepath.Join(p.MuseUserSkills, "alpha")},
-		{Skill: skills[0], Tool: model.ToolGrok, TargetPath: filepath.Join(p.GrokUserSkills, "alpha")},
-		{Skill: skills[1], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "beta")},
-		{Skill: skills[1], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "beta")},
-		{Skill: skills[1], Tool: model.ToolMuse, TargetPath: filepath.Join(p.MuseUserSkills, "beta")},
-		{Skill: skills[1], Tool: model.ToolGrok, TargetPath: filepath.Join(p.GrokUserSkills, "beta")},
+		{Skill: skills.Skills[0], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "alpha")},
+		{Skill: skills.Skills[0], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "alpha")},
+		{Skill: skills.Skills[0], Tool: model.ToolMuse, TargetPath: filepath.Join(p.MuseUserSkills, "alpha")},
+		{Skill: skills.Skills[0], Tool: model.ToolGrok, TargetPath: filepath.Join(p.GrokUserSkills, "alpha")},
+		{Skill: skills.Skills[1], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "beta")},
+		{Skill: skills.Skills[1], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "beta")},
+		{Skill: skills.Skills[1], Tool: model.ToolMuse, TargetPath: filepath.Join(p.MuseUserSkills, "beta")},
+		{Skill: skills.Skills[1], Tool: model.ToolGrok, TargetPath: filepath.Join(p.GrokUserSkills, "beta")},
 	}
 	assertLinkPlans(t, plan.Links, want)
 	if len(plan.AlreadyInstalled) != 0 {
@@ -72,6 +72,79 @@ func TestPlanInstallDefaultsToBothToolsAndAllSkills(t *testing.T) {
 	}
 	if plan.Group != model.GroupLabel("addyosmani/agent-skills") {
 		t.Fatalf("Group = %q, want addyosmani/agent-skills", plan.Group)
+	}
+}
+
+func TestPlanInstallResolvesIdenticalDuplicatesToCanonicalCopy(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	checkout := testCheckoutPath(t, p)
+	writeSkill(t, filepath.Join(checkout, ".agent", "skills", "demo"))
+	writeSkill(t, filepath.Join(checkout, "plugin", "skills", "demo"))
+	discovered, err := DiscoverSkills(checkout)
+	if err != nil {
+		t.Fatalf("DiscoverSkills() error = %v", err)
+	}
+
+	plan, err := PlanInstall(p, state.Manifest{}, mustIdentity(t), checkout, discovered, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
+	if err != nil {
+		t.Fatalf("PlanInstall() error = %v", err)
+	}
+	if len(plan.Links) != 1 || plan.Links[0].Skill.RelativePath != "plugin/skills/demo" {
+		t.Fatalf("Links = %#v, want canonical plugin/skills/demo", plan.Links)
+	}
+	if len(plan.ResolvedDuplicates) != 1 || plan.ResolvedDuplicates[0].Name != "demo" || plan.ResolvedDuplicates[0].Copies != 2 {
+		t.Fatalf("ResolvedDuplicates = %#v, want demo with 2 copies", plan.ResolvedDuplicates)
+	}
+}
+
+func TestPlanInstallQualifiedSelectionAndRecordedStability(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	checkout := testCheckoutPath(t, p)
+	writeSkillContent(t, filepath.Join(checkout, "packs", "one", "demo"), "# One\n")
+	writeSkillContent(t, filepath.Join(checkout, "packs", "two", "demo"), "# Two\n")
+	discovered, err := DiscoverSkills(checkout)
+	if err != nil {
+		t.Fatalf("DiscoverSkills() error = %v", err)
+	}
+
+	if _, err := PlanInstall(p, state.Manifest{}, mustIdentity(t), checkout, discovered, PlanOptions{Tools: []model.Tool{model.ToolClaude}}); err == nil {
+		t.Fatal("PlanInstall(bare conflicting) error = nil, want ambiguous error")
+	} else {
+		var ambiguous AmbiguousSkillsError
+		if !errors.As(err, &ambiguous) {
+			t.Fatalf("PlanInstall() error = %T %v, want AmbiguousSkillsError", err, err)
+		}
+	}
+
+	plan, err := PlanInstall(p, state.Manifest{}, mustIdentity(t), checkout, discovered, PlanOptions{
+		Tools:      []model.Tool{model.ToolClaude},
+		SkillNames: []string{"demo=packs/two/demo"},
+	})
+	if err != nil {
+		t.Fatalf("PlanInstall() error = %v", err)
+	}
+	if len(plan.Links) != 1 || plan.Links[0].Skill.RelativePath != "packs/two/demo" {
+		t.Fatalf("Links = %#v, want qualified packs/two/demo", plan.Links)
+	}
+	if len(plan.ResolvedDuplicates) != 0 {
+		t.Fatalf("ResolvedDuplicates = %#v, want none for an explicit choice", plan.ResolvedDuplicates)
+	}
+
+	// A recorded path is reused without an explicit choice.
+	identity := mustIdentity(t)
+	manifest := state.Manifest{Repositories: []state.RepositoryEntry{{
+		Host:     identity.Host,
+		RepoPath: identity.RepoPath,
+		InstalledSkills: []state.InstalledSkillEntry{
+			{Name: "demo", RelativePath: "packs/two/demo", Tools: []model.Tool{model.ToolCodex}},
+		},
+	}}}
+	plan, err = PlanInstall(p, manifest, identity, checkout, discovered, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
+	if err != nil {
+		t.Fatalf("PlanInstall() error = %v", err)
+	}
+	if len(plan.Links) != 1 || plan.Links[0].Skill.RelativePath != "packs/two/demo" {
+		t.Fatalf("Links = %#v, want recorded packs/two/demo", plan.Links)
 	}
 }
 
@@ -88,8 +161,8 @@ func TestPlanInstallSupportsSingleToolAndSelectedSkills(t *testing.T) {
 	}
 
 	want := []LinkPlan{
-		{Skill: skills[0], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "alpha")},
-		{Skill: skills[2], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "gamma")},
+		{Skill: skills.Skills[0], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "alpha")},
+		{Skill: skills.Skills[2], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "gamma")},
 	}
 	assertLinkPlans(t, plan.Links, want)
 }
@@ -107,8 +180,8 @@ func TestPlanInstallSupportsExactSkillToolCells(t *testing.T) {
 		t.Fatalf("PlanInstall() error = %v", err)
 	}
 	want := []LinkPlan{
-		{Skill: skills[0], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "alpha")},
-		{Skill: skills[1], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "beta")},
+		{Skill: skills.Skills[0], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "alpha")},
+		{Skill: skills.Skills[1], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "beta")},
 	}
 	assertLinkPlans(t, plan.Links, want)
 }
@@ -144,7 +217,7 @@ func TestPlanInstallTreatsSameActiveSymlinkAsAlreadyInstalled(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	skills := discoveredSkills(t, p, "alpha")
 	mkdirAll(t, p.ClaudeUserSkills)
-	if err := os.Symlink(skills[0].Path, filepath.Join(p.ClaudeUserSkills, "alpha")); err != nil {
+	if err := os.Symlink(skills.Skills[0].Path, filepath.Join(p.ClaudeUserSkills, "alpha")); err != nil {
 		t.Fatalf("create symlink: %v", err)
 	}
 
@@ -168,7 +241,7 @@ func TestPlanInstallMatchesRelativeActiveSymlinkTarget(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	skills := discoveredSkills(t, p, "alpha")
 	mkdirAll(t, p.ClaudeUserSkills)
-	relativeTarget, err := filepath.Rel(p.ClaudeUserSkills, skills[0].Path)
+	relativeTarget, err := filepath.Rel(p.ClaudeUserSkills, skills.Skills[0].Path)
 	if err != nil {
 		t.Fatalf("relative target: %v", err)
 	}
@@ -196,7 +269,7 @@ func TestPlanInstallTreatsSameDisabledSymlinkAsInstalledOff(t *testing.T) {
 		OriginalPath:  originalPath,
 		DisabledPath:  disabledPath,
 		EntryType:     model.EntryTypeSymlink,
-		SymlinkTarget: skills[0].Path,
+		SymlinkTarget: skills.Skills[0].Path,
 		Source:        model.SourceSymlinkRepo,
 		Group:         model.GroupLabel("addyosmani/agent-skills"),
 	}}}
@@ -222,7 +295,7 @@ func TestPlanInstallMatchesRelativeDisabledSymlinkTarget(t *testing.T) {
 	skills := discoveredSkills(t, p, "alpha")
 	disabledPath := filepath.Join(p.CodexDisabledDir, "alpha")
 	originalPath := filepath.Join(p.CodexUserSkills, "alpha")
-	relativeTarget, err := filepath.Rel(filepath.Dir(originalPath), skills[0].Path)
+	relativeTarget, err := filepath.Rel(filepath.Dir(originalPath), skills.Skills[0].Path)
 	if err != nil {
 		t.Fatalf("relative target: %v", err)
 	}
@@ -295,11 +368,24 @@ func TestPlanInstallValidatesInputs(t *testing.T) {
 	skills := discoveredSkills(t, p, "alpha")
 	identity := mustIdentity(t)
 	checkout := testCheckoutPath(t, p)
+	conflicting := Discovery{Groups: []DuplicateGroup{{
+		Name: "alpha",
+		Candidates: []DiscoveredSkill{
+			{Name: "alpha", Path: filepath.Join(checkout, "packs", "one", "alpha"), RelativePath: "packs/one/alpha"},
+			{Name: "alpha", Path: filepath.Join(checkout, "packs", "two", "alpha"), RelativePath: "packs/two/alpha"},
+		},
+	}}}
+	corrupt := Discovery{
+		Skills: []DiscoveredSkill{{Name: "alpha", Path: filepath.Join(checkout, "skills", "alpha"), RelativePath: "skills/alpha"}},
+		Groups: []DuplicateGroup{{Name: "alpha", Candidates: []DiscoveredSkill{
+			{Name: "alpha", Path: filepath.Join(checkout, "packs", "one", "alpha"), RelativePath: "packs/one/alpha"},
+		}}},
+	}
 	tests := []struct {
 		name      string
 		identity  RepoIdentity
 		checkout  string
-		skills    []DiscoveredSkill
+		skills    Discovery
 		options   PlanOptions
 		wantError string
 	}{
@@ -307,13 +393,14 @@ func TestPlanInstallValidatesInputs(t *testing.T) {
 		{name: "missing identity", identity: RepoIdentity{OriginalURL: identity.OriginalURL}, checkout: checkout, skills: skills, wantError: "repository identity"},
 		{name: "missing checkout", identity: identity, checkout: " ", skills: skills, wantError: "checkout path"},
 		{name: "invalid tool", identity: identity, checkout: checkout, skills: skills, options: PlanOptions{Tools: []model.Tool{model.Tool("bad")}}, wantError: "invalid install tool"},
-		{name: "duplicate discovered", identity: identity, checkout: checkout, skills: append(skills, skills[0]), wantError: "duplicate discovered skill name"},
+		{name: "ambiguous duplicates", identity: identity, checkout: checkout, skills: conflicting, wantError: "ambiguous skills"},
+		{name: "corrupt discovery index", identity: identity, checkout: checkout, skills: corrupt, wantError: "duplicate discovery entry"},
 		{name: "empty selected name", identity: identity, checkout: checkout, skills: skills, options: PlanOptions{SkillNames: []string{" "}}, wantError: "selected skill name"},
-		{name: "empty discovery", identity: identity, checkout: checkout, skills: nil, wantError: "no installable skills"},
-		{name: "unsafe discovered name", identity: identity, checkout: checkout, skills: []DiscoveredSkill{{Name: "../escape", Path: filepath.Join(checkout, "escape")}}, wantError: "valid basename"},
-		{name: "empty discovered path", identity: identity, checkout: checkout, skills: []DiscoveredSkill{{Name: "alpha"}}, wantError: "empty path"},
-		{name: "relative discovered path", identity: identity, checkout: checkout, skills: []DiscoveredSkill{{Name: "alpha", Path: "skills/alpha"}}, wantError: "path must be absolute"},
-		{name: "outside discovered path", identity: identity, checkout: checkout, skills: []DiscoveredSkill{{Name: "alpha", Path: filepath.Join(t.TempDir(), "alpha")}}, wantError: "escapes checkout"},
+		{name: "empty discovery", identity: identity, checkout: checkout, skills: Discovery{}, wantError: "no installable skills"},
+		{name: "unsafe discovered name", identity: identity, checkout: checkout, skills: Discovery{Skills: []DiscoveredSkill{{Name: "../escape", Path: filepath.Join(checkout, "escape")}}}, wantError: "valid basename"},
+		{name: "empty discovered path", identity: identity, checkout: checkout, skills: Discovery{Skills: []DiscoveredSkill{{Name: "alpha"}}}, wantError: "empty path"},
+		{name: "relative discovered path", identity: identity, checkout: checkout, skills: Discovery{Skills: []DiscoveredSkill{{Name: "alpha", Path: "skills/alpha"}}}, wantError: "path must be absolute"},
+		{name: "outside discovered path", identity: identity, checkout: checkout, skills: Discovery{Skills: []DiscoveredSkill{{Name: "alpha", Path: filepath.Join(t.TempDir(), "alpha")}}}, wantError: "escapes checkout"},
 	}
 
 	for _, test := range tests {
@@ -409,7 +496,7 @@ func TestPlanInstallRejectsCellOwnedByAnotherRepository(t *testing.T) {
 	}
 }
 
-func discoveredSkills(t *testing.T, p paths.Paths, names ...string) []DiscoveredSkill {
+func discoveredSkills(t *testing.T, p paths.Paths, names ...string) Discovery {
 	t.Helper()
 	skills := make([]DiscoveredSkill, 0, len(names))
 	for _, name := range names {
@@ -424,7 +511,7 @@ func discoveredSkills(t *testing.T, p paths.Paths, names ...string) []Discovered
 			RelativePath: "skills/" + name,
 		})
 	}
-	return skills
+	return Discovery{Skills: skills}
 }
 
 func mkdirAll(t *testing.T, dir string) {

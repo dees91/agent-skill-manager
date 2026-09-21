@@ -60,9 +60,12 @@ type PlanOptions struct {
 
 // InstallCell identifies one exact skill/tool target. When Cells is non-empty,
 // it replaces the Cartesian Tools x SkillNames selection used by the CLI.
+// Path optionally qualifies the skill with a source-relative copy when one
+// name was discovered at several paths.
 type InstallCell struct {
 	SkillName string
 	Tool      model.Tool
+	Path      string
 }
 
 type selectedInstallCell struct {
@@ -98,12 +101,13 @@ type AlreadyInstalled struct {
 
 // InstallPlan is a side-effect-free plan for installing repository skills.
 type InstallPlan struct {
-	Identity         RepoIdentity
-	CheckoutPath     string
-	Group            model.GroupLabel
-	Links            []LinkPlan
-	AlreadyInstalled []AlreadyInstalled
-	Off              bool
+	Identity           RepoIdentity
+	CheckoutPath       string
+	Group              model.GroupLabel
+	Links              []LinkPlan
+	AlreadyInstalled   []AlreadyInstalled
+	Off                bool
+	ResolvedDuplicates []ResolvedDuplicate
 }
 
 // PreflightConflict records a target that blocks install planning.
@@ -143,7 +147,7 @@ func (e PlanError) Error() string {
 }
 
 // PlanInstall builds and preflights a side-effect-free repository install plan.
-func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, checkoutPath string, discovered []DiscoveredSkill, options PlanOptions) (InstallPlan, error) {
+func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, checkoutPath string, discovered Discovery, options PlanOptions) (InstallPlan, error) {
 	if err := validatePlanIdentity(identity); err != nil {
 		return InstallPlan{}, err
 	}
@@ -157,17 +161,20 @@ func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, 
 		return InstallPlan{}, fmt.Errorf("resolve checkout path: %w", err)
 	}
 
-	selectedCells, missingSkills, err := selectInstallCells(p, checkoutPath, discovered, options)
+	recorded := RecordedGitSkillPaths(manifest, identity.Host, identity.RepoPath)
+	selectedCells, resolution, err := selectInstallCells(p, checkoutPath, discovered, options, recorded)
 	if err != nil {
 		return InstallPlan{}, err
 	}
+	missingSkills := resolution.Missing
 
 	plan := InstallPlan{
-		Identity:     identity,
-		CheckoutPath: checkoutPath,
-		Group:        identity.Group,
-		Links:        []LinkPlan{},
-		Off:          options.Off,
+		Identity:           identity,
+		CheckoutPath:       checkoutPath,
+		Group:              identity.Group,
+		Links:              []LinkPlan{},
+		Off:                options.Off,
+		ResolvedDuplicates: resolution.Resolved,
 	}
 	plan.AlreadyInstalled = []AlreadyInstalled{}
 	var conflicts []PreflightConflict
@@ -209,52 +216,55 @@ func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, 
 	return plan, nil
 }
 
-func selectInstallCells(p paths.Paths, root string, discovered []DiscoveredSkill, options PlanOptions) ([]selectedInstallCell, []string, error) {
+func selectInstallCells(p paths.Paths, root string, discovered Discovery, options PlanOptions, recorded map[string]string) ([]selectedInstallCell, Resolution, error) {
 	if len(options.Cells) == 0 {
 		tools, err := normalizePlanTools(p, options.Tools)
 		if err != nil {
-			return nil, nil, err
+			return nil, Resolution{}, err
 		}
-		skills, missing, err := selectDiscoveredSkills(root, discovered, options.SkillNames)
+		resolution, err := selectDiscoveredSkills(root, discovered, options.SkillNames, recorded)
 		if err != nil {
-			return nil, nil, err
+			return nil, Resolution{}, err
 		}
-		cells := make([]selectedInstallCell, 0, len(skills)*len(tools))
-		for _, skill := range skills {
+		cells := make([]selectedInstallCell, 0, len(resolution.Selected)*len(tools))
+		for _, skill := range resolution.Selected {
 			for _, tool := range tools {
 				cells = append(cells, selectedInstallCell{Skill: skill, Tool: tool})
 			}
 		}
-		return cells, missing, nil
+		return cells, resolution, nil
 	}
 	if len(options.Tools) > 0 || len(options.SkillNames) > 0 {
-		return nil, nil, fmt.Errorf("exact install cells cannot be combined with tools or skill names")
+		return nil, Resolution{}, fmt.Errorf("exact install cells cannot be combined with tools or skill names")
 	}
-	byName := make(map[string]DiscoveredSkill, len(discovered))
-	for _, skill := range discovered {
+	if len(options.Cells) == 0 {
+		return nil, Resolution{}, fmt.Errorf("at least one install cell is required")
+	}
+	names, explicit, err := CellsToRequests(options.Cells)
+	if err != nil {
+		return nil, Resolution{}, err
+	}
+	resolution, err := ResolveDiscovery(discovered, names, explicit, recorded)
+	if err != nil {
+		return nil, Resolution{}, err
+	}
+	byName := make(map[string]DiscoveredSkill, len(resolution.Selected))
+	for _, skill := range resolution.Selected {
 		normalized, err := validateDiscoveredSkill(root, skill)
 		if err != nil {
-			return nil, nil, err
-		}
-		if _, exists := byName[normalized.Name]; exists {
-			return nil, nil, fmt.Errorf("duplicate discovered skill name %q", normalized.Name)
+			return nil, Resolution{}, err
 		}
 		byName[normalized.Name] = normalized
 	}
 	seen := map[string]bool{}
-	missingSet := map[string]bool{}
 	cells := make([]selectedInstallCell, 0, len(options.Cells))
 	for _, requested := range options.Cells {
 		name := strings.TrimSpace(requested.SkillName)
-		if name == "" {
-			return nil, nil, fmt.Errorf("selected skill name is required")
-		}
 		if _, ok := p.UserSkillsDirFor(requested.Tool); !ok {
-			return nil, nil, fmt.Errorf("invalid install tool %q", requested.Tool)
+			return nil, Resolution{}, fmt.Errorf("invalid install tool %q", requested.Tool)
 		}
 		skill, ok := byName[name]
 		if !ok {
-			missingSet[name] = true
 			continue
 		}
 		key := repositoryCellKey(requested.Tool, name)
@@ -270,15 +280,10 @@ func selectInstallCells(p paths.Paths, root string, discovered []DiscoveredSkill
 		}
 		return toolRank(cells[i].Tool) < toolRank(cells[j].Tool)
 	})
-	missing := make([]string, 0, len(missingSet))
-	for name := range missingSet {
-		missing = append(missing, name)
+	if len(cells) == 0 && len(resolution.Missing) == 0 {
+		return nil, Resolution{}, fmt.Errorf("at least one install cell is required")
 	}
-	sort.Strings(missing)
-	if len(cells) == 0 && len(missing) == 0 {
-		return nil, nil, fmt.Errorf("at least one install cell is required")
-	}
-	return cells, missing, nil
+	return cells, resolution, nil
 }
 
 func validatePlanIdentity(identity RepoIdentity) error {
@@ -324,54 +329,27 @@ func toolRank(tool model.Tool) int {
 	return len(model.Tools()) + 1
 }
 
-func selectDiscoveredSkills(checkoutPath string, discovered []DiscoveredSkill, requested []string) ([]DiscoveredSkill, []string, error) {
-	if len(discovered) == 0 && len(requested) == 0 {
-		return nil, nil, fmt.Errorf("no installable skills discovered")
+func selectDiscoveredSkills(checkoutPath string, discovered Discovery, requested []string, recorded map[string]string) (Resolution, error) {
+	if discovered.Empty() && len(requested) == 0 {
+		return Resolution{}, fmt.Errorf("no installable skills discovered")
 	}
 
-	byName := map[string]DiscoveredSkill{}
-	for _, skill := range discovered {
+	names, explicit, err := SplitSkillRequests(discovered, requested)
+	if err != nil {
+		return Resolution{}, err
+	}
+	resolution, err := ResolveDiscovery(discovered, names, explicit, recorded)
+	if err != nil {
+		return Resolution{}, err
+	}
+	for i, skill := range resolution.Selected {
 		normalized, err := validateDiscoveredSkill(checkoutPath, skill)
 		if err != nil {
-			return nil, nil, err
+			return Resolution{}, err
 		}
-		if _, exists := byName[normalized.Name]; exists {
-			return nil, nil, fmt.Errorf("duplicate discovered skill name %q", normalized.Name)
-		}
-		byName[normalized.Name] = normalized
+		resolution.Selected[i] = normalized
 	}
-
-	if len(requested) == 0 {
-		selected := make([]DiscoveredSkill, 0, len(discovered))
-		for _, skill := range discovered {
-			selected = append(selected, byName[skill.Name])
-		}
-		return selected, nil, nil
-	}
-
-	requestedSet := map[string]bool{}
-	for _, name := range requested {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			return nil, nil, fmt.Errorf("selected skill name is required")
-		}
-		requestedSet[name] = true
-	}
-
-	var missing []string
-	for name := range requestedSet {
-		if _, ok := byName[name]; !ok {
-			missing = append(missing, name)
-		}
-	}
-
-	selected := make([]DiscoveredSkill, 0, len(requestedSet))
-	for _, skill := range discovered {
-		if requestedSet[skill.Name] {
-			selected = append(selected, byName[skill.Name])
-		}
-	}
-	return selected, missing, nil
+	return resolution, nil
 }
 
 func validateDiscoveredSkill(checkoutPath string, skill DiscoveredSkill) (DiscoveredSkill, error) {

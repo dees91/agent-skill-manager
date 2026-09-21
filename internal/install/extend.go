@@ -248,10 +248,11 @@ func planExtendLocalSource(p paths.Paths, manifest state.Manifest, tool model.To
 // extendCells derives exact install cells for the target tool from recorded
 // ownership. Skills already recorded for the target stay idempotent cells;
 // skills ON for another tool end ON; skills OFF everywhere are linked first
-// and disabled afterwards.
-func extendCells(manifest state.Manifest, tool model.Tool, installed []state.InstalledSkillEntry, discovered []DiscoveredSkill) ([]InstallCell, []string, []ExtendSkip) {
-	byRelative := make(map[string]DiscoveredSkill, len(discovered))
-	for _, skill := range discovered {
+// and disabled afterwards. Every cell carries its recorded path so resolution
+// reuses the recorded copy instead of switching to another duplicate.
+func extendCells(manifest state.Manifest, tool model.Tool, installed []state.InstalledSkillEntry, discovered Discovery) ([]InstallCell, []string, []ExtendSkip) {
+	byRelative := make(map[string]DiscoveredSkill)
+	for _, skill := range discovered.All() {
 		byRelative[normalizeRecordedRelativePath(skill.RelativePath)] = skill
 	}
 	cells := []InstallCell{}
@@ -262,19 +263,20 @@ func extendCells(manifest state.Manifest, tool model.Tool, installed []state.Ins
 		if name == "" {
 			continue
 		}
+		recordedPath := normalizeRecordedRelativePath(entry.RelativePath)
 		if hasRecordedTool(entry.Tools, tool) {
-			cells = append(cells, InstallCell{SkillName: name, Tool: tool})
+			cells = append(cells, InstallCell{SkillName: name, Tool: tool, Path: recordedPath})
 			continue
 		}
 		if len(recordedTools(entry.Tools)) == 0 {
 			skipped = append(skipped, ExtendSkip{SkillName: name, Reason: "no recorded tools"})
 			continue
 		}
-		if _, ok := byRelative[normalizeRecordedRelativePath(entry.RelativePath)]; !ok {
+		if _, ok := byRelative[recordedPath]; !ok {
 			skipped = append(skipped, ExtendSkip{SkillName: name, Reason: fmt.Sprintf("not found in source at recorded path %s", entry.RelativePath)})
 			continue
 		}
-		cells = append(cells, InstallCell{SkillName: name, Tool: tool})
+		cells = append(cells, InstallCell{SkillName: name, Tool: tool, Path: recordedPath})
 		if extendEndsOn(manifest, entry, tool) {
 			continue
 		}

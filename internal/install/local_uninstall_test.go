@@ -78,7 +78,7 @@ func TestAuditLocalSourceReferencesRejectsExtraManagedLink(t *testing.T) {
 		t.Fatalf("apply: %v", err)
 	}
 	extra := filepath.Join(p.CodexUserSkills, "extra")
-	mustSymlink(t, discovered[0].Path, extra)
+	mustSymlink(t, discovered.Skills[0].Path, extra)
 	manifest, _ := state.New(p).Load()
 	entry, _ := manifest.GetLocalSource(source.CanonicalPath)
 	_, err := AuditLocalSourceReferences(p, manifest, entry, false)
@@ -157,7 +157,7 @@ func TestLocalUninstallRemovesDisabledLinkAndPreservesActiveBlocker(t *testing.T
 	manifest, _ := state.New(p).Load()
 	manifest.Upsert(state.DisabledEntry{
 		Tool: model.ToolClaude, SkillName: "alpha", OriginalPath: activePath, DisabledPath: disabledPath,
-		EntryType: model.EntryTypeSymlink, SymlinkTarget: discovered[0].Path, Source: model.SourceLocalPath, Group: source.Group,
+		EntryType: model.EntryTypeSymlink, SymlinkTarget: discovered.Skills[0].Path, Source: model.SourceLocalPath, Group: source.Group,
 	})
 	if err := state.New(p).Save(manifest); err != nil {
 		t.Fatalf("save disabled state: %v", err)

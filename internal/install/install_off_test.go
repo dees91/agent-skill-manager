@@ -40,7 +40,7 @@ func TestPlanInstallOffRejectsOccupiedDisabledPath(t *testing.T) {
 			blocker := filepath.Join(p.ClaudeDisabledDir, "alpha")
 			mkdirAll(t, filepath.Dir(blocker))
 			if occupant == "symlink" {
-				if err := os.Symlink(skills[0].Path, blocker); err != nil {
+				if err := os.Symlink(skills.Skills[0].Path, blocker); err != nil {
 					t.Fatalf("create blocker: %v", err)
 				}
 			} else {

@@ -312,12 +312,12 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 			fmt.Fprintf(stdout, "current commit: %s\n", plan.Checkout.HeadCommit)
 			fmt.Fprintln(stdout, "would fetch origin and fast-forward after remote skill-path preflight")
 			fmt.Fprintln(stdout, "remote target unavailable without fetch; no Git refs were changed")
-			newSkills, discoveryErr := install.NewSkills(plan.Repository)
+			report, discoveryErr := install.NewSkills(plan.Repository)
 			discoveryError := ""
 			if discoveryErr != nil {
 				discoveryError = discoveryErr.Error()
 			}
-			reportNewSkills(stdout, stderr, plan.Repository, newSkills, discoveryError)
+			reportNewSkills(stdout, stderr, plan.Repository, report, discoveryError)
 		}
 		return 0
 	}
@@ -338,7 +338,7 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 			upToDate++
 			fmt.Fprintf(stdout, "up-to-date %s: %s\n", repositoryGroup(repository), result.CurrentCommit)
 		}
-		reportNewSkills(stdout, stderr, result.Repository, result.NewSkills, result.NewSkillsError)
+		reportNewSkills(stdout, stderr, result.Repository, install.NewSkillsReport{Skills: result.NewSkills, Ambiguous: result.AmbiguousNewSkills}, result.NewSkillsError)
 	}
 	fmt.Fprintf(stdout, "updated %d repository(s); %d up-to-date\n", updated, upToDate)
 	if updated > 0 {
@@ -385,8 +385,11 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 	plan, err := install.PlanLocalInstall(a.paths, manifest, source, discovered, install.PlanOptions{Tools: options.Tools, SkillNames: options.SkillNames, Off: options.Off})
 	if err != nil {
 		var planErr install.PlanError
+		var ambiguous install.AmbiguousSkillsError
 		if errors.As(err, &planErr) {
 			printInstallPlanError(stderr, planErr)
+		} else if errors.As(err, &ambiguous) {
+			printAmbiguousSkills(stderr, ambiguous)
 		} else {
 			fmt.Fprintf(stderr, "error: %v\n", err)
 		}
@@ -400,7 +403,8 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 	fmt.Fprintf(stdout, "group: %s\n", source.Group)
 	fmt.Fprintf(stdout, "tools: %s\n", formatTools(options.Tools))
 	printInstallMode(stdout, options.Off)
-	fmt.Fprintf(stdout, "discovered: %d skill(s)\n", len(discovered))
+	fmt.Fprintf(stdout, "discovered: %d skill(s)\n", discovered.NameCount())
+	printResolvedDuplicates(stdout, plan.ResolvedDuplicates)
 	if options.DryRun {
 		for _, link := range plan.Links {
 			printPlannedLink(stdout, link)
@@ -480,7 +484,7 @@ type preparedInstall struct {
 	Identity     install.RepoIdentity
 	CheckoutPath string
 	Checkout     install.CheckoutResult
-	Discovered   []install.DiscoveredSkill
+	Discovered   install.Discovery
 	Plan         install.InstallPlan
 }
 
@@ -521,7 +525,7 @@ func (a App) prepareInstall(stdout, stderr io.Writer, options installCLIOptions,
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return preparedInstall{}, 1
 	}
-	fmt.Fprintf(stdout, "discovered: %d skill(s)\n", len(discovered))
+	fmt.Fprintf(stdout, "discovered: %d skill(s)\n", discovered.NameCount())
 	manifest, err := state.New(a.paths).Load()
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
@@ -534,13 +538,17 @@ func (a App) prepareInstall(stdout, stderr io.Writer, options installCLIOptions,
 	})
 	if err != nil {
 		var planErr install.PlanError
+		var ambiguous install.AmbiguousSkillsError
 		if errors.As(err, &planErr) {
 			printInstallPlanError(stderr, planErr)
+		} else if errors.As(err, &ambiguous) {
+			printAmbiguousSkills(stderr, ambiguous)
 		} else {
 			fmt.Fprintf(stderr, "error: %v\n", err)
 		}
 		return preparedInstall{}, 1
 	}
+	printResolvedDuplicates(stdout, plan.ResolvedDuplicates)
 	return preparedInstall{
 		Identity:     identity,
 		CheckoutPath: checkoutPath,
@@ -837,10 +845,10 @@ func findLocalSource(manifest state.Manifest, lookup install.LocalSourceLookup) 
 
 func parseInstallArgs(args []string) (installCLIOptions, error) {
 	if len(args) == 0 {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--off] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--off] [--dry-run]")
 	}
 	if strings.HasPrefix(args[0], "-") {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--off] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--off] [--dry-run]")
 	}
 	options := installCLIOptions{GitURL: strings.TrimSpace(args[0])}
 	if options.GitURL == "" {
@@ -935,34 +943,53 @@ func groupSources(summary model.GroupSummary) string {
 
 // reportNewSkills lists skills present in a managed checkout but not recorded
 // as installed, with the install commands that add them for the tools the
-// repository already uses. Update itself never installs them.
-func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry, newSkills []install.DiscoveredSkill, discoveryError string) {
+// repository already uses. Update itself never installs them. Ambiguous names
+// list every copy with a qualified --skill template instead of a command.
+func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry, report install.NewSkillsReport, discoveryError string) {
 	if discoveryError != "" {
 		fmt.Fprintf(stderr, "warning: could not check for new skills in %s: %s\n", repositoryGroup(repository), printableText(discoveryError))
 		return
 	}
-	if len(newSkills) == 0 {
-		return
+	if len(report.Skills) > 0 {
+		// Skill names come from upstream directory names, so the pasteable command
+		// quotes every argument and is omitted when a name cannot be shown safely.
+		names := make([]string, len(report.Skills))
+		printable := true
+		for i, skill := range report.Skills {
+			names[i] = printableText(skill.Name)
+			printable = printable && names[i] == skill.Name
+		}
+		fmt.Fprintf(stdout, "new skills in %s (not installed): %s\n", repositoryGroup(repository), strings.Join(names, ", "))
+		if !printable {
+			fmt.Fprintln(stdout, "  install command omitted: a skill name contains control characters")
+		} else {
+			args := []string{"skill-manager", "install", shellQuote(repositoryURL(repository))}
+			for _, skill := range report.Skills {
+				args = append(args, "--skill", shellQuote(skill.Name))
+			}
+			printNewSkillsCommands(stdout, strings.Join(args, " "), recordedRepositoryTools(repository))
+		}
 	}
-	// Skill names come from upstream directory names, so the pasteable command
-	// quotes every argument and is omitted when a name cannot be shown safely.
-	names := make([]string, len(newSkills))
-	printable := true
-	for i, skill := range newSkills {
-		names[i] = printableText(skill.Name)
-		printable = printable && names[i] == skill.Name
+	for _, group := range report.Ambiguous {
+		name := printableText(group.Name)
+		paths := make([]string, len(group.Paths))
+		printable := name == group.Name
+		for i, path := range group.Paths {
+			paths[i] = printableText(path)
+			printable = printable && paths[i] == path
+		}
+		fmt.Fprintf(stdout, "ambiguous new skill in %s (not installed): %s\n", repositoryGroup(repository), name)
+		fmt.Fprintf(stdout, "  %s has %d copies with differing content: %s\n", name, len(paths), strings.Join(paths, ", "))
+		if !printable {
+			fmt.Fprintln(stdout, "  install command omitted: a skill name or path contains control characters")
+			continue
+		}
+		template := strings.Join([]string{"skill-manager", "install", shellQuote(repositoryURL(repository)), "--skill", shellQuote(group.Name + "=<path>")}, " ")
+		printNewSkillsCommands(stdout, template, recordedRepositoryTools(repository))
 	}
-	fmt.Fprintf(stdout, "new skills in %s (not installed): %s\n", repositoryGroup(repository), strings.Join(names, ", "))
-	if !printable {
-		fmt.Fprintln(stdout, "  install command omitted: a skill name contains control characters")
-		return
-	}
-	args := []string{"skill-manager", "install", shellQuote(repositoryURL(repository))}
-	for _, skill := range newSkills {
-		args = append(args, "--skill", shellQuote(skill.Name))
-	}
-	command := strings.Join(args, " ")
-	tools := recordedRepositoryTools(repository)
+}
+
+func printNewSkillsCommands(stdout io.Writer, command string, tools []model.Tool) {
 	if len(tools) == 0 || len(tools) == len(model.Tools()) {
 		fmt.Fprintf(stdout, "  install: %s\n", command)
 		return
@@ -1109,6 +1136,40 @@ func printInstallPlanError(stderr io.Writer, err install.PlanError) {
 func printInstallMode(stdout io.Writer, off bool) {
 	if off {
 		fmt.Fprintln(stdout, "mode: install as OFF")
+	}
+}
+
+// printResolvedDuplicates names the canonical copy used for every identical
+// group in the plan, so an automatic choice is never silent. Names and paths
+// come from upstream directories and are sanitized before printing.
+func printResolvedDuplicates(stdout io.Writer, resolved []install.ResolvedDuplicate) {
+	for _, item := range resolved {
+		fmt.Fprintf(stdout, "resolved %q: %d identical copies, using %s\n", item.Name, item.Copies, printableText(item.RelativePath))
+	}
+}
+
+// printAmbiguousSkills lists every copy of each conflicting skill name with
+// the qualified --skill form that installs it. Each form is shell-quoted so
+// it pastes as one argument; names or paths with control characters show a
+// quoted form with the pasteable line omitted instead.
+func printAmbiguousSkills(stderr io.Writer, err install.AmbiguousSkillsError) {
+	for _, missing := range err.Missing {
+		fmt.Fprintf(stderr, "missing skill: %s\n", printableText(missing))
+	}
+	for _, group := range err.Groups {
+		name := printableText(group.Name)
+		fmt.Fprintf(stderr, "ambiguous skill %q: %d copies with differing content; qualify with --skill %s=<path>:\n", group.Name, len(group.Paths), name)
+		for i, path := range group.Paths {
+			if name != group.Name || printableText(path) != path {
+				fmt.Fprintf(stderr, "  %s (pasteable --skill form omitted: contains control characters)\n", printableText(group.Name+"="+path))
+				continue
+			}
+			hash := ""
+			if i < len(group.Hashes) && group.Hashes[i] != "" && group.Hashes[i] != "-" {
+				hash = "  # " + group.Hashes[i]
+			}
+			fmt.Fprintf(stderr, "  --skill %s%s\n", shellQuote(group.Name+"="+path), hash)
+		}
 	}
 }
 

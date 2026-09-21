@@ -17,7 +17,8 @@
 - A source root containing a regular, non-symlink `SKILL.md` is exactly one
   skill; nested skills are not scanned in that case.
 - Otherwise discovery is recursive and shares Git install's ignored-directory,
-  duplicate-basename, selection, target-tool, and target-conflict rules.
+  duplicate-group resolution, qualified selection, recorded-path stability,
+  target-tool, and target-conflict rules.
 - Install creates direct symlinks from the selected Claude/Codex/Muse/Grok user skill
   cells to directories under the canonical source. It never copies or clones
   the source.

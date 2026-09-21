@@ -68,7 +68,9 @@ toggle changes are pending, block other mutations and app close while active,
 and emit phase progress. Install revalidates exact matrix selections before
 apply. `ReviewInstall(draftID, selections, off)` stores the Install as OFF mode
 in the review, and `ApplyInstall` uses only that stored mode, so toggling the
-switch clears the review in `InstallDialog`. Update, repair, and uninstall resolve opaque IDs against the current
+switch clears the review in `InstallDialog`. Since Iteration 25, selections
+may carry a duplicate-copy choice constrained to the draft's own options and
+revalidated against fresh discovery. Update, repair, and uninstall resolve opaque IDs against the current
 manifest; uninstall additionally requires an exact group-name confirmation.
 
 Source health is an explicit read-only inspection (`InspectSources`), never part
@@ -86,9 +88,11 @@ pulling), lists the new skills first, and preselects only their `available`
 cells for tools with a non-zero source count. There is no dismiss state; the
 hint disappears once the skills are installed and health reloads. Update
 results carry per-source `newSkills` and mention the count in the message.
-A discovery failure (such as a duplicate skill name) travels as
-`newSkillsError` on both the update item and source health; the message counts
-unchecked sources and the healthy row shows the cause. `newSkillsWarning`
+Since Iteration 25, unrecorded names with differing copies are reported as
+ambiguous new skills and resolved through the install-matrix copy picker;
+only checkout inspection failures travel as `newSkillsError` on both the
+update item and source health. The message counts unchecked sources and the
+healthy row shows the cause. `newSkillsWarning`
 replaces the checkout path so no absolute path crosses the bridge.
 
 `SourceMutationFailure` carries `sourceId`, `kind`, `cause`, `remedy`, and
@@ -204,9 +208,12 @@ the version.
 
 The Sources screen uses a dense manifest-owned source table and centered
 workflow dialogs. Install includes Git/local selection, discovery, a scrollable
-Claude/Codex/Muse/Grok matrix, review, and apply. Each tool column has an explicit bulk
+Claude/Codex/Muse/Grok matrix, review, and apply. Duplicate names collapse to
+one row with a copy picker for differing copies and an identical-copies note
+otherwise. Each tool column has an explicit bulk
 selection toggle whose `ON`, `OFF`, `MIXED`, or `N/A` state reflects every
-non-conflict discovered target, independent of the row filter. **Extend to
+non-conflict discovered target without a pending copy choice, independent of
+the row filter. **Extend to
 tool** offers one tool radio preselected to the first tool with a missing
 cell, a per-source link preview, and a confirm that stays disabled until the
 preview succeeds; the apply stops at the first failure. The synthetic 1440×960

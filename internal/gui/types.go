@@ -176,9 +176,13 @@ type ManagedSource struct {
 }
 
 // InstallCellRequest is one exact skill/tool selection from an inspected draft.
+// Path optionally qualifies the skill with a source-relative copy chosen in
+// the install matrix. It is validated against the rediscovered draft; any
+// path outside the draft is rejected.
 type InstallCellRequest struct {
 	SkillName string `json:"skillName"`
 	Tool      string `json:"tool"`
+	Path      string `json:"path,omitempty"`
 }
 
 // InstallCandidateCell describes preflight state for one tool target.
@@ -189,13 +193,20 @@ type InstallCandidateCell struct {
 }
 
 // InstallCandidate is one discovered skill exposed without its absolute path.
+// A skill discovered at several paths with identical content resolves to its
+// canonical copy and reports IdenticalCopies; conflicting copies set
+// NeedsChoice with every source-relative Option, and the frontend must send
+// one of them back as the selection path.
 type InstallCandidate struct {
-	Name         string               `json:"name"`
-	RelativePath string               `json:"relativePath"`
-	Claude       InstallCandidateCell `json:"claude"`
-	Codex        InstallCandidateCell `json:"codex"`
-	Muse         InstallCandidateCell `json:"muse"`
-	Grok         InstallCandidateCell `json:"grok"`
+	Name            string               `json:"name"`
+	RelativePath    string               `json:"relativePath"`
+	Options         []string             `json:"options,omitempty"`
+	NeedsChoice     bool                 `json:"needsChoice,omitempty"`
+	IdenticalCopies int                  `json:"identicalCopies,omitempty"`
+	Claude          InstallCandidateCell `json:"claude"`
+	Codex           InstallCandidateCell `json:"codex"`
+	Muse            InstallCandidateCell `json:"muse"`
+	Grok            InstallCandidateCell `json:"grok"`
 }
 
 // InstallDraft is the inspected source and its selectable matrix.

@@ -200,6 +200,23 @@ skill-manager install https://github.com/example/agent-skills --tool both
 skill-manager install git@github.com:example/agent-skills.git --tool codex --skill example-skill
 ```
 
+When one skill name ships from several directories (for example a repository
+that vendors the same skill for many harnesses), identical copies install
+from one canonical copy and the output names it:
+
+```text
+resolved "example-skill": 6 identical copies, using plugin/skills/example-skill
+```
+
+Copies with differing content are never guessed. The install fails and lists
+every copy as a qualified `--skill <name>=<path>` form to retry with:
+
+```bash
+skill-manager install https://github.com/example/agent-skills --tool codex --skill example-skill
+# ambiguous skill "example-skill": 2 copies with differing content; ...
+skill-manager install https://github.com/example/agent-skills --tool codex --skill example-skill=plugin/skills/example-skill
+```
+
 Add skills without making them visible to any tool yet. `--off` creates the
 links disabled; turn a skill ON later with `enable`:
 
@@ -247,12 +264,16 @@ from a source at a time.
 Update never installs skills that a repository gained after you installed it.
 It lists them instead, with the command that adds them for the tools the
 repository already uses. The dry-run lists skills already in the local
-checkout:
+checkout. A new name whose copies differ is listed separately with a
+qualified `--skill <name>=<path>` template instead of a command:
 
 ```text
 updated example/agent-skills: 1a2b3c4 -> 5d6e7f8
 new skills in example/agent-skills (not installed): new-skill, other-skill
   install: skill-manager install https://github.com/example/agent-skills --skill new-skill --skill other-skill
+ambiguous new skill in example/agent-skills (not installed): forked-skill
+  forked-skill has 2 copies with differing content: packs/one/forked-skill, packs/two/forked-skill
+  install: skill-manager install https://github.com/example/agent-skills --skill 'forked-skill=<path>'
 ```
 
 The desktop Sources screen shows the same skills on the repository row with an

@@ -31,10 +31,10 @@ func TestApplyCreatesSymlinksUpdatesManifestAndRescans(t *testing.T) {
 	if len(result.Created) != 4 {
 		t.Fatalf("Created len = %d, want 4", len(result.Created))
 	}
-	assertSymlinkTarget(t, filepath.Join(p.ClaudeUserSkills, "alpha"), skills[0].Path)
-	assertSymlinkTarget(t, filepath.Join(p.CodexUserSkills, "alpha"), skills[0].Path)
-	assertSymlinkTarget(t, filepath.Join(p.MuseUserSkills, "alpha"), skills[0].Path)
-	assertSymlinkTarget(t, filepath.Join(p.GrokUserSkills, "alpha"), skills[0].Path)
+	assertSymlinkTarget(t, filepath.Join(p.ClaudeUserSkills, "alpha"), skills.Skills[0].Path)
+	assertSymlinkTarget(t, filepath.Join(p.CodexUserSkills, "alpha"), skills.Skills[0].Path)
+	assertSymlinkTarget(t, filepath.Join(p.MuseUserSkills, "alpha"), skills.Skills[0].Path)
+	assertSymlinkTarget(t, filepath.Join(p.GrokUserSkills, "alpha"), skills.Skills[0].Path)
 
 	managed, err := scan.New(p).Managed()
 	if err != nil {
@@ -75,12 +75,12 @@ func TestApplyLeavesAlreadyInstalledEntriesUntouchedAndUpdatesManifest(t *testin
 	skills := discoveredSkills(t, p, "alpha", "beta")
 	mkdirAll(t, p.ClaudeUserSkills)
 	activeAlpha := filepath.Join(p.ClaudeUserSkills, "alpha")
-	if err := os.Symlink(skills[0].Path, activeAlpha); err != nil {
+	if err := os.Symlink(skills.Skills[0].Path, activeAlpha); err != nil {
 		t.Fatalf("create existing symlink: %v", err)
 	}
 	disabledBeta := filepath.Join(p.CodexDisabledDir, "beta")
 	mkdirAll(t, filepath.Dir(disabledBeta))
-	if err := os.Symlink(skills[1].Path, disabledBeta); err != nil {
+	if err := os.Symlink(skills.Skills[1].Path, disabledBeta); err != nil {
 		t.Fatalf("create disabled symlink: %v", err)
 	}
 	manifest := state.Manifest{Disabled: []state.DisabledEntry{{
@@ -89,7 +89,7 @@ func TestApplyLeavesAlreadyInstalledEntriesUntouchedAndUpdatesManifest(t *testin
 		OriginalPath:  filepath.Join(p.CodexUserSkills, "beta"),
 		DisabledPath:  disabledBeta,
 		EntryType:     model.EntryTypeSymlink,
-		SymlinkTarget: skills[1].Path,
+		SymlinkTarget: skills.Skills[1].Path,
 	}}}
 	if err := state.New(p).Save(manifest); err != nil {
 		t.Fatalf("Save() error = %v", err)
@@ -107,8 +107,8 @@ func TestApplyLeavesAlreadyInstalledEntriesUntouchedAndUpdatesManifest(t *testin
 	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
 	}
-	assertSymlinkTarget(t, activeAlpha, skills[0].Path)
-	assertSymlinkTarget(t, disabledBeta, skills[1].Path)
+	assertSymlinkTarget(t, activeAlpha, skills.Skills[0].Path)
+	assertSymlinkTarget(t, disabledBeta, skills.Skills[1].Path)
 	if _, err := os.Lstat(filepath.Join(p.CodexUserSkills, "beta")); !os.IsNotExist(err) {
 		t.Fatalf("disabled beta was enabled or unexpected lstat error: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestApplyAllAlreadyInstalledPlanUpdatesManifest(t *testing.T) {
 	skills := discoveredSkills(t, p, "alpha")
 	mkdirAll(t, p.ClaudeUserSkills)
 	activeAlpha := filepath.Join(p.ClaudeUserSkills, "alpha")
-	if err := os.Symlink(skills[0].Path, activeAlpha); err != nil {
+	if err := os.Symlink(skills.Skills[0].Path, activeAlpha); err != nil {
 		t.Fatalf("create existing symlink: %v", err)
 	}
 	plan, err := PlanInstall(p, state.Manifest{}, mustIdentity(t), testCheckoutPath(t, p), skills, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
@@ -231,7 +231,7 @@ func TestApplyRevalidatesAlreadyInstalledBeforeCreatingLinks(t *testing.T) {
 	skills := discoveredSkills(t, p, "alpha", "beta")
 	mkdirAll(t, p.ClaudeUserSkills)
 	activeAlpha := filepath.Join(p.ClaudeUserSkills, "alpha")
-	if err := os.Symlink(skills[0].Path, activeAlpha); err != nil {
+	if err := os.Symlink(skills.Skills[0].Path, activeAlpha); err != nil {
 		t.Fatalf("create existing symlink: %v", err)
 	}
 	manifest := state.Manifest{}
@@ -242,7 +242,7 @@ func TestApplyRevalidatesAlreadyInstalledBeforeCreatingLinks(t *testing.T) {
 	if err := os.Remove(activeAlpha); err != nil {
 		t.Fatalf("remove active alpha: %v", err)
 	}
-	if err := os.Symlink(skills[1].Path, activeAlpha); err != nil {
+	if err := os.Symlink(skills.Skills[1].Path, activeAlpha); err != nil {
 		t.Fatalf("create stale active alpha: %v", err)
 	}
 
@@ -271,7 +271,7 @@ func TestApplyRevalidatesDisabledStateBeforeCreatingLinks(t *testing.T) {
 		OriginalPath:  filepath.Join(p.ClaudeUserSkills, "alpha"),
 		DisabledPath:  filepath.Join(p.ClaudeDisabledDir, "alpha"),
 		EntryType:     model.EntryTypeSymlink,
-		SymlinkTarget: skills[0].Path,
+		SymlinkTarget: skills.Skills[0].Path,
 	}}}
 	if err := state.New(p).Save(manifest); err != nil {
 		t.Fatalf("Save() error = %v", err)
@@ -294,7 +294,7 @@ func TestApplyRevalidatesDisabledAlreadyInstalledActivePathAbsent(t *testing.T) 
 	skills := discoveredSkills(t, p, "alpha")
 	disabledAlpha := filepath.Join(p.ClaudeDisabledDir, "alpha")
 	mkdirAll(t, filepath.Dir(disabledAlpha))
-	if err := os.Symlink(skills[0].Path, disabledAlpha); err != nil {
+	if err := os.Symlink(skills.Skills[0].Path, disabledAlpha); err != nil {
 		t.Fatalf("create disabled symlink: %v", err)
 	}
 	manifest := state.Manifest{Disabled: []state.DisabledEntry{{
@@ -303,14 +303,14 @@ func TestApplyRevalidatesDisabledAlreadyInstalledActivePathAbsent(t *testing.T) 
 		OriginalPath:  filepath.Join(p.ClaudeUserSkills, "alpha"),
 		DisabledPath:  disabledAlpha,
 		EntryType:     model.EntryTypeSymlink,
-		SymlinkTarget: skills[0].Path,
+		SymlinkTarget: skills.Skills[0].Path,
 	}}}
 	plan, err := PlanInstall(p, manifest, mustIdentity(t), testCheckoutPath(t, p), skills, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
 	if err != nil {
 		t.Fatalf("PlanInstall() error = %v", err)
 	}
 	mkdirAll(t, p.ClaudeUserSkills)
-	if err := os.Symlink(skills[0].Path, filepath.Join(p.ClaudeUserSkills, "alpha")); err != nil {
+	if err := os.Symlink(skills.Skills[0].Path, filepath.Join(p.ClaudeUserSkills, "alpha")); err != nil {
 		t.Fatalf("create stale active symlink: %v", err)
 	}
 	if err := state.New(p).Save(manifest); err != nil {
@@ -363,7 +363,7 @@ func TestApplyRollsBackOnlyCreatedSymlinksOnFailure(t *testing.T) {
 	skills := discoveredSkills(t, p, "alpha", "beta")
 	mkdirAll(t, p.ClaudeUserSkills)
 	preExisting := filepath.Join(p.ClaudeUserSkills, "pre-existing")
-	if err := os.Symlink(skills[0].Path, preExisting); err != nil {
+	if err := os.Symlink(skills.Skills[0].Path, preExisting); err != nil {
 		t.Fatalf("create pre-existing symlink: %v", err)
 	}
 	plan := InstallPlan{
@@ -371,8 +371,8 @@ func TestApplyRollsBackOnlyCreatedSymlinksOnFailure(t *testing.T) {
 		CheckoutPath: testCheckoutPath(t, p),
 		Group:        mustIdentity(t).Group,
 		Links: []LinkPlan{
-			{Skill: skills[0], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "alpha")},
-			{Skill: skills[1], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "beta")},
+			{Skill: skills.Skills[0], Tool: model.ToolClaude, TargetPath: filepath.Join(p.ClaudeUserSkills, "alpha")},
+			{Skill: skills.Skills[1], Tool: model.ToolCodex, TargetPath: filepath.Join(p.CodexUserSkills, "beta")},
 		},
 	}
 	service := NewApplyService(p)
@@ -395,7 +395,7 @@ func TestApplyRollsBackOnlyCreatedSymlinksOnFailure(t *testing.T) {
 	if _, statErr := os.Lstat(filepath.Join(p.ClaudeUserSkills, "alpha")); !os.IsNotExist(statErr) {
 		t.Fatalf("alpha symlink was not rolled back, lstat err = %v", statErr)
 	}
-	assertSymlinkTarget(t, preExisting, skills[0].Path)
+	assertSymlinkTarget(t, preExisting, skills.Skills[0].Path)
 	assertExists(t, plan.CheckoutPath)
 	if _, ok := loadInstallManifest(t, p).GetRepository(mustIdentity(t).Host, mustIdentity(t).RepoPath); ok {
 		t.Fatal("repository state updated despite symlink failure")
@@ -411,14 +411,14 @@ func TestApplyBacksUpExistingStateOncePerService(t *testing.T) {
 	service := NewApplyService(p)
 	service.now = fixedApplyNow
 
-	planAlpha, err := PlanInstall(p, loadInstallManifest(t, p), mustIdentity(t), testCheckoutPath(t, p), []DiscoveredSkill{skills[0]}, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
+	planAlpha, err := PlanInstall(p, loadInstallManifest(t, p), mustIdentity(t), testCheckoutPath(t, p), Discovery{Skills: []DiscoveredSkill{skills.Skills[0]}}, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
 	if err != nil {
 		t.Fatalf("PlanInstall(alpha) error = %v", err)
 	}
 	if _, err := service.Apply(planAlpha, "a"); err != nil {
 		t.Fatalf("Apply(alpha) error = %v", err)
 	}
-	planBeta, err := PlanInstall(p, loadInstallManifest(t, p), mustIdentity(t), testCheckoutPath(t, p), []DiscoveredSkill{skills[1]}, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
+	planBeta, err := PlanInstall(p, loadInstallManifest(t, p), mustIdentity(t), testCheckoutPath(t, p), Discovery{Skills: []DiscoveredSkill{skills.Skills[1]}}, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
 	if err != nil {
 		t.Fatalf("PlanInstall(beta) error = %v", err)
 	}

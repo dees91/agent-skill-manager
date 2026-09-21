@@ -244,6 +244,70 @@ func TestRunInstallLocalDryRunDoesNotMutate(t *testing.T) {
 	assertExists(t, filepath.Join(source, "skills", "alpha", "SKILL.md"))
 }
 
+func TestRunInstallLocalDuplicateCopiesResolveOrQualify(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	source := filepath.Join(p.Home, "workspace", "local-pack")
+	mkdirSkill(t, filepath.Join(source, "plugin", "skills", "demo"))
+	mkdirSkill(t, filepath.Join(source, ".agent", "skills", "demo"))
+	mkdirSkill(t, filepath.Join(source, "packs", "one", "gamma"))
+	other := filepath.Join(source, "packs", "two", "gamma")
+	mkdirSkill(t, other)
+	if err := os.WriteFile(filepath.Join(other, "SKILL.md"), []byte("# Different\n"), 0o644); err != nil {
+		t.Fatalf("write SKILL.md: %v", err)
+	}
+
+	// Identical copies install from the canonical path with an explicit note.
+	var stdout, stderr strings.Builder
+	code := RunWithPaths([]string{"install", source, "--tool", "codex", "--skill", "demo"}, &stdout, &stderr, p)
+	if code != 0 || stderr.Len() != 0 {
+		t.Fatalf("install code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	for _, want := range []string{
+		`resolved "demo": 2 identical copies, using plugin/skills/demo`,
+		"created 1 symlink(s)",
+	} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+		}
+	}
+	canonicalSource, err := filepath.EvalSymlinks(source)
+	if err != nil {
+		t.Fatalf("resolve source: %v", err)
+	}
+	target, err := os.Readlink(filepath.Join(p.CodexUserSkills, "demo"))
+	if err != nil || target != filepath.Join(canonicalSource, "plugin", "skills", "demo") {
+		t.Fatalf("readlink = %q, %v; want canonical copy", target, err)
+	}
+
+	// Differing copies fail with qualified forms; the qualified retry works.
+	stdout.Reset()
+	stderr.Reset()
+	code = RunWithPaths([]string{"install", source, "--tool", "codex", "--skill", "gamma", "--dry-run"}, &stdout, &stderr, p)
+	if code == 0 {
+		t.Fatalf("bare conflicting install code=%d, want failure", code)
+	}
+	for _, want := range []string{
+		`ambiguous skill "gamma": 2 copies with differing content`,
+		"--skill 'gamma=packs/one/gamma'",
+		"--skill 'gamma=packs/two/gamma'",
+	} {
+		if !strings.Contains(stderr.String(), want) {
+			t.Fatalf("stderr = %q, want %q", stderr.String(), want)
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = RunWithPaths([]string{"install", source, "--tool", "codex", "--skill", "gamma=packs/two/gamma"}, &stdout, &stderr, p)
+	if code != 0 || stderr.Len() != 0 {
+		t.Fatalf("qualified install code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	target, err = os.Readlink(filepath.Join(p.CodexUserSkills, "gamma"))
+	if err != nil || target != filepath.Join(canonicalSource, "packs", "two", "gamma") {
+		t.Fatalf("readlink = %q, %v; want qualified copy", target, err)
+	}
+}
+
 func TestRunInstallLocalOffCreatesDisabledSkills(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	source := filepath.Join(p.Home, "workspace", "local-pack")
@@ -531,14 +595,14 @@ func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
 		},
 	}
 	var stdout, stderr strings.Builder
-	reportNewSkills(&stdout, &stderr, repository, []install.DiscoveredSkill{{Name: "delta"}}, "")
+	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "delta"}}}, "")
 	want := "new skills in owner/all (not installed): delta\n  install: skill-manager install https://github.com/owner/all --skill delta\n"
 	if stdout.String() != want || stderr.Len() != 0 {
 		t.Fatalf("stdout = %q stderr = %q, want %q", stdout.String(), stderr.String(), want)
 	}
 
 	stdout.Reset()
-	unsafe := []install.DiscoveredSkill{{Name: "my skill"}, {Name: "x;touch pwned"}, {Name: "it's"}}
+	unsafe := install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "my skill"}, {Name: "x;touch pwned"}, {Name: "it's"}}}
 	reportNewSkills(&stdout, &stderr, repository, unsafe, "")
 	want = "new skills in owner/all (not installed): my skill, x;touch pwned, it's\n" +
 		"  install: skill-manager install https://github.com/owner/all --skill 'my skill' --skill 'x;touch pwned' --skill 'it'\\''s'\n"
@@ -547,16 +611,103 @@ func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
 	}
 
 	stdout.Reset()
-	reportNewSkills(&stdout, &stderr, repository, []install.DiscoveredSkill{{Name: "alpha"}, {Name: "evil\x1b[2J"}}, "")
+	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "alpha"}, {Name: "evil\x1b[2J"}}}, "")
 	want = "new skills in owner/all (not installed): alpha, \"evil\\x1b[2J\"\n  install command omitted: a skill name contains control characters\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want omitted command %q", stdout.String(), want)
 	}
 
 	stdout.Reset()
-	reportNewSkills(&stdout, &stderr, repository, nil, "duplicate skill names discovered: x")
-	if stdout.Len() != 0 || stderr.String() != "warning: could not check for new skills in owner/all: duplicate skill names discovered: x\n" {
+	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{}, "inspect checkout path: permission denied")
+	if stdout.Len() != 0 || stderr.String() != "warning: could not check for new skills in owner/all: inspect checkout path: permission denied\n" {
 		t.Fatalf("stdout = %q stderr = %q, want warning", stdout.String(), stderr.String())
+	}
+}
+
+func TestReportNewSkillsPrintsQualifiedTemplateForAmbiguousNames(t *testing.T) {
+	repository := state.RepositoryEntry{
+		OriginalURL: "https://github.com/owner/all",
+		Group:       model.GroupLabel("owner/all"),
+		InstalledSkills: []state.InstalledSkillEntry{
+			{Name: "alpha", RelativePath: "alpha", Tools: []model.Tool{model.ToolClaude}},
+		},
+	}
+	report := install.NewSkillsReport{
+		Skills: []install.DiscoveredSkill{{Name: "delta"}},
+		Ambiguous: []install.AmbiguousGroup{{
+			Name:   "gamma",
+			Paths:  []string{"packs/one/gamma", "packs/two/gamma"},
+			Hashes: []string{"aaa", "bbb"},
+		}},
+	}
+	var stdout, stderr strings.Builder
+	reportNewSkills(&stdout, &stderr, repository, report, "")
+	want := "new skills in owner/all (not installed): delta\n" +
+		"  install: skill-manager install https://github.com/owner/all --skill delta --tool claude\n" +
+		"ambiguous new skill in owner/all (not installed): gamma\n" +
+		"  gamma has 2 copies with differing content: packs/one/gamma, packs/two/gamma\n" +
+		"  install: skill-manager install https://github.com/owner/all --skill 'gamma=<path>' --tool claude\n"
+	if stdout.String() != want || stderr.Len() != 0 {
+		t.Fatalf("stdout = %q stderr = %q, want %q", stdout.String(), stderr.String(), want)
+	}
+}
+
+func TestPrintAmbiguousSkillsListsQualifiedForms(t *testing.T) {
+	var stderr strings.Builder
+	printAmbiguousSkills(&stderr, install.AmbiguousSkillsError{
+		Missing: []string{"absent"},
+		Groups: []install.AmbiguousGroup{{
+			Name:   "gamma",
+			Paths:  []string{"packs/one/gamma", "packs/two/gamma"},
+			Hashes: []string{"aaa111", "bbb222"},
+		}},
+	})
+	want := "missing skill: absent\n" +
+		"ambiguous skill \"gamma\": 2 copies with differing content; qualify with --skill gamma=<path>:\n" +
+		"  --skill 'gamma=packs/one/gamma'  # aaa111\n" +
+		"  --skill 'gamma=packs/two/gamma'  # bbb222\n"
+	if stderr.String() != want {
+		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
+	}
+}
+
+func TestPrintAmbiguousSkillsQuotesUnsafeNamesAndPaths(t *testing.T) {
+	var stderr strings.Builder
+	printAmbiguousSkills(&stderr, install.AmbiguousSkillsError{
+		Missing: []string{"gone\x1b[2J"},
+		Groups: []install.AmbiguousGroup{
+			{
+				Name:   "my skill",
+				Paths:  []string{"packs/my pack/one", "packs/two"},
+				Hashes: []string{"aaa111", "bbb222"},
+			},
+			{
+				Name:  "evil\x1b[2J",
+				Paths: []string{"packs/one"},
+			},
+		},
+	})
+	want := "missing skill: \"gone\\x1b[2J\"\n" +
+		"ambiguous skill \"my skill\": 2 copies with differing content; qualify with --skill my skill=<path>:\n" +
+		"  --skill 'my skill=packs/my pack/one'  # aaa111\n" +
+		"  --skill 'my skill=packs/two'  # bbb222\n" +
+		"ambiguous skill \"evil\\x1b[2J\": 1 copies with differing content; qualify with --skill \"evil\\x1b[2J\"=<path>:\n" +
+		"  \"evil\\x1b[2J=packs/one\" (pasteable --skill form omitted: contains control characters)\n"
+	if stderr.String() != want {
+		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
+	}
+}
+
+func TestPrintResolvedDuplicatesSanitizesPaths(t *testing.T) {
+	var stdout strings.Builder
+	printResolvedDuplicates(&stdout, []install.ResolvedDuplicate{
+		{Name: "demo", Copies: 2, RelativePath: "plugin/skills/demo"},
+		{Name: "evil\x1b[2J", Copies: 2, RelativePath: "packs/\x07/demo"},
+	})
+	want := "resolved \"demo\": 2 identical copies, using plugin/skills/demo\n" +
+		"resolved \"evil\\x1b[2J\": 2 identical copies, using \"packs/\\a/demo\"\n"
+	if stdout.String() != want {
+		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
 }
 

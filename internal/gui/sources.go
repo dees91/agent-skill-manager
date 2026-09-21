@@ -25,7 +25,7 @@ type installDraftState struct {
 	CheckoutPath string
 	Checkout     install.CheckoutResult
 	LocalSource  install.LocalSource
-	Discovered   []install.DiscoveredSkill
+	Discovered   install.Discovery
 }
 
 type installReviewState struct {
@@ -58,7 +58,7 @@ func (s *Service) PrepareGitInstall(rawURL string) (InstallDraft, error) {
 		if err != nil {
 			return err
 		}
-		if len(discovered) == 0 {
+		if discovered.Empty() {
 			return fmt.Errorf("no installable skills discovered")
 		}
 		manifest, err := s.store.Load()
@@ -100,7 +100,7 @@ func (s *Service) PrepareLocalInstall(selectedPath string) (InstallDraft, error)
 		if err != nil {
 			return err
 		}
-		if len(discovered) == 0 {
+		if discovered.Empty() {
 			return fmt.Errorf("no installable skills discovered")
 		}
 		manifest, err := s.store.Load()
@@ -270,7 +270,7 @@ func (s *Service) UpdateSource(sourceID string, includeReadOnly bool) SourceMuta
 		if updated.Updated {
 			status = "updated"
 		}
-		result.Completed = append(result.Completed, SourceMutationItem{SourceID: sourceID, Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit, NewSkills: discoveredSkillNames(updated.NewSkills), NewSkillsError: newSkillsWarning(repository, updated.NewSkillsError)})
+		result.Completed = append(result.Completed, SourceMutationItem{SourceID: sourceID, Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit, NewSkills: updatedSkillNames(updated), NewSkillsError: newSkillsWarning(repository, updated.NewSkillsError)})
 		result.Message = sourceUpdateMessage(result.Completed)
 		return nil
 	})
@@ -317,7 +317,7 @@ func (s *Service) UpdateAllSources(includeReadOnly bool) SourceMutationResult {
 			if updated.Updated {
 				status = "updated"
 			}
-			result.Completed = append(result.Completed, SourceMutationItem{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit, NewSkills: discoveredSkillNames(updated.NewSkills), NewSkillsError: newSkillsWarning(repository, updated.NewSkillsError)})
+			result.Completed = append(result.Completed, SourceMutationItem{SourceID: repositorySourceID(repository), Group: repository.Group.String(), Status: status, Before: updated.PreviousCommit, After: updated.CurrentCommit, NewSkills: updatedSkillNames(updated), NewSkillsError: newSkillsWarning(repository, updated.NewSkillsError)})
 		}
 		result.Message = sourceUpdateMessage(result.Completed)
 		return nil
@@ -456,16 +456,45 @@ func (s *Service) emitProgress(progress SourceProgress) {
 }
 
 func (s *Service) projectInstallCandidates(draft installDraftState, manifest state.Manifest) []InstallCandidate {
-	candidates := make([]InstallCandidate, 0, len(draft.Discovered))
-	for _, skill := range draft.Discovered {
-		candidate := InstallCandidate{Name: skill.Name, RelativePath: skill.RelativePath}
-		candidate.Claude = s.projectCandidateCell(draft, manifest, skill, model.ToolClaude)
-		candidate.Codex = s.projectCandidateCell(draft, manifest, skill, model.ToolCodex)
-		candidate.Muse = s.projectCandidateCell(draft, manifest, skill, model.ToolMuse)
-		candidate.Grok = s.projectCandidateCell(draft, manifest, skill, model.ToolGrok)
-		candidates = append(candidates, candidate)
+	candidates := make([]InstallCandidate, 0, draft.Discovered.NameCount())
+	for _, skill := range draft.Discovered.Skills {
+		candidates = append(candidates, s.projectResolvedCandidate(draft, manifest, skill))
 	}
+	for _, group := range draft.Discovered.Groups {
+		if group.Identical {
+			candidates = append(candidates, s.projectResolvedCandidate(draft, manifest, group.Candidates[0]))
+			candidates[len(candidates)-1].IdenticalCopies = len(group.Candidates)
+			continue
+		}
+		options := make([]string, len(group.Candidates))
+		for i, candidate := range group.Candidates {
+			options[i] = candidate.RelativePath
+		}
+		candidates = append(candidates, InstallCandidate{
+			Name:        group.Name,
+			Options:     options,
+			NeedsChoice: true,
+			Claude:      needsChoiceCandidateCell(model.ToolClaude),
+			Codex:       needsChoiceCandidateCell(model.ToolCodex),
+			Muse:        needsChoiceCandidateCell(model.ToolMuse),
+			Grok:        needsChoiceCandidateCell(model.ToolGrok),
+		})
+	}
+	sort.SliceStable(candidates, func(i, j int) bool { return candidates[i].Name < candidates[j].Name })
 	return candidates
+}
+
+func (s *Service) projectResolvedCandidate(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill) InstallCandidate {
+	candidate := InstallCandidate{Name: skill.Name, RelativePath: skill.RelativePath}
+	candidate.Claude = s.projectCandidateCell(draft, manifest, skill, model.ToolClaude)
+	candidate.Codex = s.projectCandidateCell(draft, manifest, skill, model.ToolCodex)
+	candidate.Muse = s.projectCandidateCell(draft, manifest, skill, model.ToolMuse)
+	candidate.Grok = s.projectCandidateCell(draft, manifest, skill, model.ToolGrok)
+	return candidate
+}
+
+func needsChoiceCandidateCell(tool model.Tool) InstallCandidateCell {
+	return InstallCandidateCell{Tool: tool.String(), Status: "needs-choice", Message: "choose which copy to install"}
 }
 
 func (s *Service) projectCandidateCell(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill, tool model.Tool) InstallCandidateCell {
@@ -525,6 +554,9 @@ func (s *Service) planDraftWithManifest(draft installDraftState, manifest state.
 		if err != nil {
 			return plan, localPlan, nil, err
 		}
+		if err := validateBridgeCopyChoices(discovered, options.Cells); err != nil {
+			return plan, localPlan, nil, err
+		}
 		plan, planErr = install.PlanInstall(s.paths, manifest, draft.Identity, draft.CheckoutPath, discovered, options)
 	} else {
 		resolved, err := install.ResolveLocalSource(s.paths, s.paths.Home, draft.LocalSource.CanonicalPath)
@@ -538,9 +570,55 @@ func (s *Service) planDraftWithManifest(draft installDraftState, manifest state.
 		if err != nil {
 			return plan, localPlan, nil, err
 		}
+		if err := validateBridgeCopyChoices(discovered, options.Cells); err != nil {
+			return plan, localPlan, nil, err
+		}
 		localPlan, planErr = install.PlanLocalInstall(s.paths, manifest, resolved, discovered, options)
 	}
 	return convertPlanError(plan, localPlan, planErr)
+}
+
+// validateBridgeCopyChoices enforces the draft's own options before the
+// resolver runs: a choice naming an existing copy is accepted only for a
+// conflicting group, where the draft exposed a picker. Unknown names and
+// choices matching no copy stay the resolver's job against fresh discovery,
+// so vanished copies keep their precise errors.
+func validateBridgeCopyChoices(discovered install.Discovery, cells []install.InstallCell) error {
+	conflicting := map[string]bool{}
+	unoffered := map[string]map[string]bool{}
+	for _, skill := range discovered.Skills {
+		paths, ok := unoffered[skill.Name]
+		if !ok {
+			paths = map[string]bool{}
+			unoffered[skill.Name] = paths
+		}
+		paths[skill.RelativePath] = true
+	}
+	for _, group := range discovered.Groups {
+		if group.Identical {
+			paths := map[string]bool{}
+			for _, candidate := range group.Candidates {
+				paths[candidate.RelativePath] = true
+			}
+			unoffered[group.Name] = paths
+			continue
+		}
+		conflicting[group.Name] = true
+	}
+	for _, cell := range cells {
+		path := strings.TrimSpace(cell.Path)
+		if path == "" {
+			continue
+		}
+		name := strings.TrimSpace(cell.SkillName)
+		if conflicting[name] {
+			continue
+		}
+		if unoffered[name][path] {
+			return fmt.Errorf("copy choice for skill %q is not offered by the draft", name)
+		}
+	}
+	return nil
 }
 
 func convertPlanError(plan install.InstallPlan, localPlan install.LocalInstallPlan, planErr error) (install.InstallPlan, install.LocalInstallPlan, []InstallConflict, error) {
@@ -590,6 +668,7 @@ func normalizeInstallSelections(selections []InstallCellRequest) ([]InstallCellR
 		return nil, install.PlanOptions{}, fmt.Errorf("select at least one skill target")
 	}
 	seen := map[string]bool{}
+	choiceByName := map[string]string{}
 	normalized := make([]InstallCellRequest, 0, len(selections))
 	cells := make([]install.InstallCell, 0, len(selections))
 	for _, selection := range selections {
@@ -598,13 +677,18 @@ func normalizeInstallSelections(selections []InstallCellRequest) ([]InstallCellR
 		if name == "" || !ok {
 			return nil, install.PlanOptions{}, fmt.Errorf("invalid install selection")
 		}
+		path := strings.TrimSpace(selection.Path)
+		if previous, exists := choiceByName[name]; exists && previous != path {
+			return nil, install.PlanOptions{}, fmt.Errorf("conflicting copies selected for skill %q", name)
+		}
+		choiceByName[name] = path
 		key := tool.String() + "\x00" + name
 		if seen[key] {
 			continue
 		}
 		seen[key] = true
-		normalized = append(normalized, InstallCellRequest{SkillName: name, Tool: tool.String()})
-		cells = append(cells, install.InstallCell{SkillName: name, Tool: tool})
+		normalized = append(normalized, InstallCellRequest{SkillName: name, Tool: tool.String(), Path: path})
+		cells = append(cells, install.InstallCell{SkillName: name, Tool: tool, Path: path})
 	}
 	sort.SliceStable(normalized, func(i, j int) bool {
 		if normalized[i].SkillName != normalized[j].SkillName {
