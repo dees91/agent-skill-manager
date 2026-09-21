@@ -18,6 +18,10 @@ sources:
     path: "docs/images/sources-extend.png"
     platform: desktop
     dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/install-duplicates.png"
+    platform: desktop
+    dimensions: "1440x960"
 confidence:
   overall: high
   colors: high
