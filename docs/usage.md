@@ -388,7 +388,8 @@ skill-manager advisor provider remove
 
 A stored or environment key alone does not enable cloud use. Development builds
 are ad-hoc signed, so macOS may prompt for keychain access after each rebuild.
-If a hidden key prompt is interrupted, run `stty sane`.
+Ctrl-C at the hidden key prompt restores terminal echo and exits. If the prompt
+is killed another way, run `stty sane`.
 
 `activate` accepts one tool and 1-5 unique skill names. The advisor reports the
 selected names as already active or needing activation before it calls the API.

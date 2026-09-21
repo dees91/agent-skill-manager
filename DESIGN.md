@@ -97,9 +97,13 @@ in public documentation.
 - **Navigation rail:** persistent product navigation with compact icon/label
   rows, a deep selected state, connection status, and last-scan metadata. The
   fifth item is **Advisor**.
-- **Advisor settings:** Local/TypeSafe choice cards, a disclosure of what is
-  sent, a masked key field, Save key / Cancel / Check connection / Remove key,
-  and `role="alert"` errors. The panel never displays the stored secret.
+- **Advisor settings:** Local/TypeSafe choice cards with `aria-pressed`, a
+  disclosure of what is sent, a masked key field, Save key / Cancel / Check
+  connection / Remove key, and `role="alert"` errors. The key panel appears
+  when TypeSafe is selected or saved, or when a stored or environment key
+  exists. Saving a key keeps an unsaved TypeSafe selection; saving the provider
+  or removing the key follows the saved mode. The panel never displays the
+  stored secret.
 - **Native About:** the standard macOS application menu exposes the app icon,
   product name, current build version, and short description without repeating
   release metadata inside the workspace.
