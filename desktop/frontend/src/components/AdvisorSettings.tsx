@@ -56,7 +56,12 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
     }
   }
 
-  const showKeyPanel = selectedMode === 'typesafe' || view?.mode === 'typesafe' || view?.storedKey === 'present' || Boolean(view?.environmentKey)
+  // The key panel belongs to the TypeSafe choice. A key that exists while
+  // Local is selected is still surfaced below the cards so it can be removed.
+  const showKeyPanel = selectedMode === 'typesafe'
+  const storedKeyPresent = view?.storedKey === 'present'
+  const keyPresent = storedKeyPresent || Boolean(view?.environmentKey)
+  const keyStatus = `Stored key: ${view?.storedKey ?? 'absent'}. Environment key: ${view?.environmentKey ? 'present' : 'absent'}. Store: ${view?.credentialStore ?? 'unknown'}.`
 
   return (
     <section className="advisor-page">
@@ -82,6 +87,12 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
           </button>
         </div>
         <button type="button" className="primary-button" disabled={busy || !view} onClick={() => void run('provider', () => backend.saveAdvisorProvider(selectedMode))}>Save</button>
+        {!showKeyPanel && keyPresent && (
+          <div className="advisor-key-note">
+            <p className="advisor-status">{keyStatus}</p>
+            {storedKeyPresent && <button type="button" className="danger-button" disabled={busy} onClick={() => void run('removeKey', () => backend.removeAdvisorKey())}>Remove key</button>}
+          </div>
+        )}
       </article>
 
       {showKeyPanel && (
@@ -93,8 +104,8 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
           </label>
           <div className="advisor-key-actions">
             <button type="button" className="primary-button" disabled={busy || keyValue.trim() === ''} onClick={() => void run('saveKey', () => backend.setAdvisorKey(keyValue))}>Save key</button>
-            <button type="button" disabled={busy} onClick={() => setKeyValue('')}>Cancel</button>
-            <button type="button" disabled={busy} onClick={() => void (async () => {
+            <button type="button" className="secondary-button" disabled={busy} onClick={() => setKeyValue('')}>Cancel</button>
+            <button type="button" className="secondary-button" disabled={busy} onClick={() => void (async () => {
               setBusy(true)
               setError(null)
               try {
@@ -106,9 +117,9 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
                 setBusy(false)
               }
             })()}>Check connection</button>
-            <button type="button" disabled={busy} onClick={() => void run('removeKey', () => backend.removeAdvisorKey())}>Remove key</button>
+            <button type="button" className="danger-button" disabled={busy} onClick={() => void run('removeKey', () => backend.removeAdvisorKey())}>Remove key</button>
           </div>
-          <p className="advisor-status">{status || `Stored key: ${view?.storedKey ?? 'absent'}. Environment key: ${view?.environmentKey ? 'present' : 'absent'}. Store: ${view?.credentialStore ?? 'unknown'}.`}</p>
+          <p className="advisor-status">{status || keyStatus}</p>
         </article>
       )}
       {error && <p className="advisor-error" role="alert">{error}</p>}

@@ -78,8 +78,25 @@ describe('AdvisorSettings', () => {
     render(<AdvisorSettings backend={backend} />)
     expect(await screen.findByRole('button', { name: 'Remove key' })).toBeInTheDocument()
     expect(screen.getByText(/Stored key: present/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('TypeSafe API key')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check connection' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Local' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'TypeSafe' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('shows only the key status for an environment key under Local', async () => {
+    const backend = mockBackend()
+    vi.mocked(backend.getAdvisorSettings).mockResolvedValueOnce({
+      mode: 'local',
+      environmentKey: true,
+      storedKey: 'absent',
+      credentialStore: 'memory',
+      model: 'jev-1.13.0',
+    })
+    render(<AdvisorSettings backend={backend} />)
+    expect(await screen.findByText(/Environment key: present/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Remove key' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('TypeSafe API key')).not.toBeInTheDocument()
   })
 
   it('keeps a typed key on provider save and resets status after removal', async () => {
@@ -105,8 +122,9 @@ describe('AdvisorSettings', () => {
     await waitFor(() => expect(backend.removeAdvisorKey).toHaveBeenCalledTimes(1))
     expect(screen.queryByText(/Check failed/)).not.toBeInTheDocument()
     expect(screen.getByText(/Environment key: present/)).toBeInTheDocument()
-    expect(screen.getByLabelText('TypeSafe API key')).toHaveValue('')
+    expect(screen.queryByLabelText('TypeSafe API key')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Local' })).toHaveAttribute('aria-pressed', 'true')
+    expect(document.body.innerHTML).not.toContain('sk-typed-not-saved')
   })
 
   it('shows the reset provider when key removal is refused', async () => {
