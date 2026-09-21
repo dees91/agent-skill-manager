@@ -10,7 +10,8 @@
 - Managed user rows are eligible while ON, OFF, or conflicted. Read-only-only
   Codex system and Claude plugin rows are excluded.
 - A missing basename stays saved but hidden. Reinstalling the same basename
-  reconnects it regardless of source.
+  reconnects it regardless of source. The basename is the installed name, so a
+  skill installed under another name with `--as` is a separate favorite.
 - CLI, TUI, list JSON, Skill Advisor recommendations, synchronization, tags,
   notes, and project-local favorites remain outside Phase 16.
 

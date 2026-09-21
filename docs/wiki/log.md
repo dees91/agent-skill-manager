@@ -964,3 +964,27 @@ literal `=` names before splitting, and fingerprints permission bits. Demo
 candidates now carry the duplicate shapes so the committed screenshot is
 reproducible. Verification: full `go test ./...`, `go vet ./...`, desktop
 module tests, frontend typecheck/tests/build, and the synthetic fan-out repro.
+
+## [2026-09-21] implement | Iteration 26 cross-source skill alias
+
+Implemented explicit install names for a skill whose basename another
+recorded source already owns. `install … --as <name>=<install-name>` links the
+second source's skill under another link basename; SKILL.md is never edited.
+A blocked install suggests `<name>-<owner>` (Git owner segment or local root
+basename) with `<name>-<owner>-<repo>` and numeric fallbacks, printed as a
+shell-quoted pasteable form. The manifest moved to version 3 with an optional
+`installedAs`; the recorded install name wins on reinstall and extend, and a
+different `--as` is drift. Ownership, audits, uninstall, extend claims, OFF
+records, and the scan's local-source classification key on the install name;
+update, new-skill discovery, and repair stay on source names. The desktop
+install matrix shows `needs-name` rows with a prefilled, validated input and a
+host note, and the bridge revalidates install names on review and apply.
+
+Host caveat recorded in AGENTS and usage: Claude Code gets a distinct command
+from the folder name, while Codex and Grok identify skills by the frontmatter
+`name`, so both installs may share one label there; Muse is unverified.
+
+Updated `AGENTS.md` (Iteration 3/5/state/extend lines plus the new Iteration 26
+contract), `CLAUDE.md` routing, the Phase 26 planning file, `docs/usage.md`,
+`DESIGN.md`, and the state, install, local, discovery, desktop, favorites, and
+Skill Set wiki topics.

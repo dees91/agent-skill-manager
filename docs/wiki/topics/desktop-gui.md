@@ -70,7 +70,12 @@ apply. `ReviewInstall(draftID, selections, off)` stores the Install as OFF mode
 in the review, and `ApplyInstall` uses only that stored mode, so toggling the
 switch clears the review in `InstallDialog`. Since Iteration 25, selections
 may carry a duplicate-copy choice constrained to the draft's own options and
-revalidated against fresh discovery. Update, repair, and uninstall resolve opaque IDs against the current
+revalidated against fresh discovery. Since Iteration 26, a skill whose name
+another source owns is a `needs-name` candidate with a suggested install name;
+selections carry `installedAs`, which the bridge accepts only as the recorded
+install name or when the plain name is owned elsewhere in the fresh manifest.
+Needs-name messages name the owner by group, never by path, and the rows are
+never preselected or bulk-toggled. Update, repair, and uninstall resolve opaque IDs against the current
 manifest; uninstall additionally requires an exact group-name confirmation.
 
 Source health is an explicit read-only inspection (`InspectSources`), never part

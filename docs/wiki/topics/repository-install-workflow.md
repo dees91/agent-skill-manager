@@ -30,7 +30,9 @@ the separate [local path workflow](local-path-install-workflow.md).
 - Every directory containing `SKILL.md` is an installable skill.
 - Discovery is recursive and ignores `.git`, `node_modules`, `.venv`, `vendor`,
   `build`, and `dist` directories.
-- The install name is the directory basename.
+- The install name is the directory basename unless the skill is installed
+  under another name with `--as` (Iteration 26); the link basename in every
+  tool directory is the install name.
 - Since Iteration 25, duplicate basenames are grouped instead of failing:
   identical copies resolve to one canonical copy (test/example copies last,
   then hidden after visible, deeper after shallower, lexicographic ties),
@@ -50,7 +52,16 @@ Every selected skill/tool cell is checked before creating links:
 - Any missing requested skill: preflight failure.
 - A requested name with differing copies and no qualified choice: ambiguity
   failure listing every pasteable `--skill <name>=<path>` form.
-- A cell recorded as owned by another Git or local source: ownership conflict.
+- A tool/install-name cell recorded as owned by another Git or local source:
+  ownership conflict. When the plain skill name is blocked and this source has
+  no record for it, the conflict carries a suggested install name
+  (`<name>-<owner>`, then `<name>-<owner>-<repo>`, then a numeric suffix) and
+  the CLI prints a pasteable `--as '<name>=<install-name>'`. A recorded plain
+  name blocked on a new tool gets uninstall-plus-reinstall guidance instead
+  (`documented`, `implemented`, `internal/install/alias.go`,
+  `internal/install/planner.go`).
+- A recorded install name wins on reinstall and extend; a different `--as` for
+  a recorded skill is drift, like a drifted recorded path.
 - Resolution reuses the same source's recorded copy when it still holds the
   skill; a recorded path that no longer does is drift (uninstall plus
   reinstall), never a silent switch.

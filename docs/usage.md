@@ -94,16 +94,18 @@ have their own confirmations and cannot run while a toggle batch is pending.
 Skill Sets are overlapping recipes, not active profiles. Each use asks which
 tools to change, in any combination such as Claude and Grok, and enters the
 ordinary Pending/Apply flow. Missing members stay in
-the recipe and reconnect when a skill with the same basename is installed
-again. The CLI and TUI do not manage Skill Sets yet.
+the recipe and reconnect when a skill with the same installed name is
+installed again. A skill installed under another name with `--as` is a
+separate member. The CLI and TUI do not manage Skill Sets yet.
 
 ### Favorites
 
 Favorites make large catalogs easier to revisit. Star a managed user skill
 from its row or details, then use the **Favorites** availability filter.
 Favorites sort ahead of other skills and survive ON/OFF changes or source
-removal. Installing the same basename reconnects the favorite. The CLI, TUI,
-and Skill Advisor do not manage favorites yet.
+removal. Installing a skill under the same installed name reconnects the
+favorite; a skill installed under another name with `--as` is favorited
+separately. The CLI, TUI, and Skill Advisor do not manage favorites yet.
 
 ### Dashboard and context estimates
 
@@ -130,6 +132,11 @@ Muse and Grok always use filesystem estimates. See
    Agents will not see them until you turn them ON in Skills; skills that are
    already installed keep their current state.
 5. Choose **Review**, check the proposed links and conflicts, then **Install**.
+
+When another installed source already owns a skill's name, its row asks for an
+install name instead. The field is prefilled with a suggestion such as
+`alpha-acme`; the row is never preselected, so tick its cells to install it
+under that name. See [Same skill name from two sources](#same-skill-name-from-two-sources).
 
 Git inspection may clone a missing checkout before the final installation.
 Cancelling retains that checkout for a later retry. Local folders stay in
@@ -217,6 +224,38 @@ skill-manager install https://github.com/example/agent-skills --tool codex --ski
 skill-manager install https://github.com/example/agent-skills --tool codex --skill example-skill=plugin/skills/example-skill
 ```
 
+#### Same skill name from two sources
+
+Each tool directory holds one entry per name, so a second source that ships
+a skill named like one you already installed is blocked. The error suggests
+an install name that you can paste to link the second skill beside the first:
+
+```bash
+skill-manager install https://github.com/acme/tools --tool claude
+# conflict claude/alpha: cell is already owned by repository github.com/example/agent-skills ...
+# skill "alpha" is owned by repository github.com/example/agent-skills for claude; install it under another name:
+#   --as 'alpha=alpha-acme'
+skill-manager install https://github.com/acme/tools --tool claude --as 'alpha=alpha-acme'
+# installed "alpha" as "alpha-acme"
+```
+
+The suggestion is `<name>-<owner>` for a Git source and `<name>-<folder>` for a
+local folder, with a longer fallback when that name is taken. An install name
+uses 1-64 lowercase letters, digits, and single hyphens, and must differ from
+every skill name in the same source. Repeat `--as` for several skills.
+
+The second skill is an independent entry: toggle, favorite, or add it to a
+Skill Set by its install name. One install name covers every tool of that
+source, and reinstall, update, and `extend` keep it. To choose a different
+install name later, uninstall the source and install it again with the new
+`--as`.
+
+Skill Manager never edits `SKILL.md`. Claude Code uses the folder name as the
+command (`/alpha-acme`). Codex and Grok list the `name` inside `SKILL.md`, so
+both installs load but may show the same label there. Claude
+`settings.json` skill overrides are keyed by folder name and do not follow an
+install name.
+
 Add skills without making them visible to any tool yet. `--off` creates the
 links disabled; turn a skill ON later with `enable`:
 
@@ -275,6 +314,9 @@ ambiguous new skill in example/agent-skills (not installed): forked-skill
   forked-skill has 2 copies with differing content: packs/one/forked-skill, packs/two/forked-skill
   install: skill-manager install https://github.com/example/agent-skills --skill 'forked-skill=<path>'
 ```
+
+When another source already owns a new skill's name, the listed command
+includes a suggested `--as` for it.
 
 The desktop Sources screen shows the same skills on the repository row with an
 `Install new` action that opens the install matrix with only them preselected.
@@ -512,6 +554,9 @@ These rules apply to every interface:
   and repair can change files in managed checkouts. Provider plugin caches and
   external manager lockfiles stay read-only.
 - Every mutating CLI command supports `--dry-run`.
+- `state.json` is written as manifest version 3, which records install names
+  chosen with `--as`. Skill Manager releases before this change refuse a
+  version 3 file; to go back, restore a pre-upgrade copy from `backups/`.
 
 Installed skills contain instructions that an agent may follow. Skill Manager
 does not audit or sandbox third-party skill contents. Review a source before

@@ -14,7 +14,8 @@
   a partial selection); the backend already accepted any tool list.
 - Placement and state come from the live scan. A missing member remains saved
   as unavailable and reconnects when the same basename is discovered again,
-  regardless of source.
+  regardless of source. Members are installed names, so a skill installed with
+  `--as` is a separate member.
 - CLI and TUI management, task-history suggestions, active-profile ownership,
   project-local sets, import/export, per-skill notes, and ordered workflow steps
   remain outside Phase 14.
