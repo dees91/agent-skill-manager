@@ -59,7 +59,7 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
         <p className="dialog-description">Local BM25F stays the default. TypeSafe is explicit opt-in with your key and your billing. Skill Manager sends the task brief plus names and bounded descriptions of every toggleable skill for the selected host. It does not send transcripts, project files, or full skill bodies.</p>
         <p className="dialog-description">Pinned model: {view?.model ?? 'jev-1.13.0'}.</p>
         <div className="advisor-choice-row">
-          <button type="button" aria-label="Local" className={selectedMode === 'local' ? 'advisor-choice active' : 'advisor-choice'} onClick={() => setSelectedMode('local')} disabled={busy}>
+          <button type="button" aria-label="Local" className={selectedMode === 'local' ? 'advisor-choice active' : 'advisor-choice'} onClick={() => { setSelectedMode('local'); setKeyValue('') }} disabled={busy}>
             <strong>Local</strong>
             <small>Offline ranked search only</small>
           </button>
@@ -71,32 +71,34 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
         <button type="button" className="primary-button" disabled={busy || !view} onClick={() => void run(() => backend.saveAdvisorProvider(selectedMode))}>Save</button>
       </article>
 
-      <article className="advisor-panel">
-        <h2>API key</h2>
-        <label className="dialog-field">
-          TypeSafe API key
-          <input type="password" autoComplete="off" value={keyValue} onChange={(event) => setKeyValue(event.target.value)} disabled={busy} />
-        </label>
-        <div className="advisor-key-actions">
-          <button type="button" className="primary-button" disabled={busy || keyValue.trim() === ''} onClick={() => void run(() => backend.setAdvisorKey(keyValue))}>Save key</button>
-          <button type="button" disabled={busy} onClick={() => setKeyValue('')}>Cancel</button>
-          <button type="button" disabled={busy} onClick={() => void (async () => {
-            setBusy(true)
-            setError(null)
-            try {
-              const check = await backend.checkAdvisorConnection()
-              setStatus(check.ok ? `Connected (${check.keySource})` : `Check failed: ${check.reason ?? 'unknown'}`)
-            } catch (reason) {
-              setError(reason instanceof Error ? reason.message : String(reason))
-            } finally {
-              setBusy(false)
-            }
-          })()}>Check connection</button>
-          <button type="button" disabled={busy} onClick={() => void run(() => backend.removeAdvisorKey())}>Remove key</button>
-        </div>
-        <p className="advisor-status">{status || `Stored key: ${view?.storedKey ?? 'absent'}. Environment key: ${view?.environmentKey ? 'present' : 'absent'}. Store: ${view?.credentialStore ?? 'unknown'}.`}</p>
-        {error && <p className="advisor-error" role="alert">{error}</p>}
-      </article>
+      {selectedMode === 'typesafe' && (
+        <article className="advisor-panel">
+          <h2>API key</h2>
+          <label className="dialog-field">
+            TypeSafe API key
+            <input type="password" autoComplete="off" value={keyValue} onChange={(event) => setKeyValue(event.target.value)} disabled={busy} />
+          </label>
+          <div className="advisor-key-actions">
+            <button type="button" className="primary-button" disabled={busy || keyValue.trim() === ''} onClick={() => void run(() => backend.setAdvisorKey(keyValue))}>Save key</button>
+            <button type="button" disabled={busy} onClick={() => setKeyValue('')}>Cancel</button>
+            <button type="button" disabled={busy} onClick={() => void (async () => {
+              setBusy(true)
+              setError(null)
+              try {
+                const check = await backend.checkAdvisorConnection()
+                setStatus(check.ok ? `Connected (${check.keySource})` : `Check failed: ${check.reason ?? 'unknown'}`)
+              } catch (reason) {
+                setError(reason instanceof Error ? reason.message : String(reason))
+              } finally {
+                setBusy(false)
+              }
+            })()}>Check connection</button>
+            <button type="button" disabled={busy} onClick={() => void run(() => backend.removeAdvisorKey())}>Remove key</button>
+          </div>
+          <p className="advisor-status">{status || `Stored key: ${view?.storedKey ?? 'absent'}. Environment key: ${view?.environmentKey ? 'present' : 'absent'}. Store: ${view?.credentialStore ?? 'unknown'}.`}</p>
+        </article>
+      )}
+      {error && <p className="advisor-error" role="alert">{error}</p>}
     </section>
   )
 }
