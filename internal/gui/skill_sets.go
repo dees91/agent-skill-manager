@@ -444,7 +444,7 @@ func (s *Service) sourceSkillSetImpacts(installed []state.InstalledSkillEntry) (
 	}
 	sourceSkills := make(map[string]bool, len(installed))
 	for _, skill := range installed {
-		sourceSkills[skill.Name] = true
+		sourceSkills[skill.InstalledName()] = true
 	}
 	impacts := make([]SkillSetImpact, 0)
 	for _, set := range file.Sets {

@@ -20,6 +20,7 @@ const seedRows: SkillRow[] = [
   row('incident-summary', 'Turn incident notes into a concise report.', 'example-labs/engineering-skills', 'symlink repo', { claude: 'ON', codex: 'OFF' }),
   row('ui-accessibility', 'Audit interface semantics and keyboard access.', 'sample-org/product-skills', 'symlink repo', { claude: 'ON', codex: 'ON' }),
   row('performance-profile', 'Plan and interpret application profiling.', 'sample-org/product-skills', 'symlink repo', { claude: 'ON', codex: 'ON' }),
+  installedAs(row('release-checklist-sample-org', 'Release checklist variant shipped by another source.', 'sample-org/product-skills', 'symlink repo', { claude: 'ON', codex: 'OFF' }), 'release-checklist'),
   row('media-compose', 'Assemble a short product demo from interface captures.', 'sample-org/media-skills', 'symlink repo', { claude: 'OFF', codex: 'OFF' }),
   row('video-encode', 'Encode and optimize video deliverables.', 'sample-org/media-skills', 'symlink repo', { codex: 'OFF' }),
   row('local-notes', 'Maintain a private, link-in-place workflow.', 'local', 'local', { claude: 'ON', muse: 'ON' }),
@@ -29,6 +30,12 @@ const seedRows: SkillRow[] = [
   readOnlyRow('system-docs', 'Consult product documentation.', 'Codex system', 'Codex system', 'codex'),
   readOnlyRow('plugin-runtime', 'Plugin-provided runtime skill.', 'Claude plugin', 'Claude plugin', 'claude'),
 ]
+
+// installedAs marks a demo row linked under another name; its SKILL.md keeps the original name.
+function installedAs(skill: SkillRow, displayName: string): SkillRow {
+  MANAGED_TOOLS.forEach((tool) => { const cell = skill[tool]; if (cell) cell.displayName = displayName })
+  return skill
+}
 
 class DemoBackend implements Backend {
   private rows = seedRows
@@ -402,6 +409,13 @@ function demoCandidates() {
       needsChoice: true,
       options: ['packs/one/release-notes', 'packs/two/release-notes'],
       ...Object.fromEntries(MANAGED_TOOLS.map((tool) => [tool, { tool, status: 'needs-choice', message: 'choose which copy to install' }])),
+    },
+    {
+      name: 'code-review',
+      relativePath: 'skills/code-review',
+      needsName: true,
+      suggestedAs: 'code-review-demo',
+      ...Object.fromEntries(MANAGED_TOOLS.map((tool) => [tool, { tool, status: 'needs-name', message: 'choose an install name; code-review is owned by example-labs/skills' }])),
     },
   ]
 }

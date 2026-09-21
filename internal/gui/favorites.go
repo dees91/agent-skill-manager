@@ -94,7 +94,7 @@ func (s *Service) sourceFavoriteImpacts(installed []state.InstalledSkillEntry) (
 	}
 	installedNames := make(map[string]bool, len(installed))
 	for _, skill := range installed {
-		installedNames[skill.Name] = true
+		installedNames[skill.InstalledName()] = true
 	}
 	impacts := make([]string, 0)
 	for _, name := range file.Skills {

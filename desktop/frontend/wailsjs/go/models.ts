@@ -820,6 +820,7 @@ export namespace gui {
 	    tool: string;
 	    reason: string;
 	    path?: string;
+	    suggestedAs?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstallConflict(source);
@@ -831,6 +832,7 @@ export namespace gui {
 	        this.tool = source["tool"];
 	        this.reason = source["reason"];
 	        this.path = source["path"];
+	        this.suggestedAs = source["suggestedAs"];
 	    }
 	}
 	export class ExtendSkip {
@@ -974,6 +976,9 @@ export namespace gui {
 	    options?: string[];
 	    needsChoice?: boolean;
 	    identicalCopies?: number;
+	    installedAs?: string;
+	    needsName?: boolean;
+	    suggestedAs?: string;
 	    claude: InstallCandidateCell;
 	    codex: InstallCandidateCell;
 	    muse: InstallCandidateCell;
@@ -990,6 +995,9 @@ export namespace gui {
 	        this.options = source["options"];
 	        this.needsChoice = source["needsChoice"];
 	        this.identicalCopies = source["identicalCopies"];
+	        this.installedAs = source["installedAs"];
+	        this.needsName = source["needsName"];
+	        this.suggestedAs = source["suggestedAs"];
 	        this.claude = this.convertValues(source["claude"], InstallCandidateCell);
 	        this.codex = this.convertValues(source["codex"], InstallCandidateCell);
 	        this.muse = this.convertValues(source["muse"], InstallCandidateCell);
@@ -1019,6 +1027,7 @@ export namespace gui {
 	    skillName: string;
 	    tool: string;
 	    path?: string;
+	    installedAs?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstallCellRequest(source);
@@ -1029,6 +1038,7 @@ export namespace gui {
 	        this.skillName = source["skillName"];
 	        this.tool = source["tool"];
 	        this.path = source["path"];
+	        this.installedAs = source["installedAs"];
 	    }
 	}
 	

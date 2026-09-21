@@ -253,6 +253,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
   const [review, setReview] = useState<InstallReview | null>(null)
   const [selections, setSelections] = useState<Set<string>>(new Set())
   const [choices, setChoices] = useState<Record<string, string>>({})
+  const [names, setNames] = useState<Record<string, string>>({})
   const [installOff, setInstallOff] = useState(false)
   const initialFocus = useRef<HTMLInputElement>(null)
 
@@ -268,7 +269,9 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       setDraft(newSkills ? newSkillsFirst(next, newSkills.skills) : next)
       setReview(null)
       setChoices({})
-      setSelections(newSkills ? newSkillSelections(next, newSkills) : new Set(next.candidates.flatMap((candidate) => MANAGED_TOOLS.map((tool) => candidate[tool]).filter((cell) => cell.status !== 'conflict' && cell.status !== 'needs-choice').map((cell) => key(candidate.name, cell.tool)))))
+      setNames(Object.fromEntries(next.candidates.filter((candidate) => candidate.needsName).map((candidate) => [candidate.name, candidate.suggestedAs ?? ''])))
+      // Needs-name rows are never preselected: installing under another name is an explicit choice.
+      setSelections(newSkills ? newSkillSelections(next, newSkills) : new Set(next.candidates.flatMap((candidate) => MANAGED_TOOLS.map((tool) => candidate[tool]).filter((cell) => cell.status !== 'conflict' && cell.status !== 'needs-choice' && cell.status !== 'needs-name').map((cell) => key(candidate.name, cell.tool)))))
       if (next.cloned) onAnnounce('Repository cloned for inspection. The checkout will be retained if you cancel.')
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -277,7 +280,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
     if (!draft) return
     onBusy(true); onError(null)
     try {
-      const next = await backend.reviewInstall(draft.draftId, selectedRequests(selections, choices), installOff)
+      const next = await backend.reviewInstall(draft.draftId, selectedRequests(selections, choices, installedNames(draft, names)), installOff)
       setReview(next)
     } catch (reason) { onError(errorMessage(reason)) } finally { onBusy(false) }
   }
@@ -306,6 +309,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
       draft.candidates.forEach((candidate) => {
         if (candidate[tool].status === 'conflict') return
         if (candidate.needsChoice && !choices[candidate.name]) return
+        if (candidate.needsName) return
         const cell = key(candidate.name, tool)
         selected ? next.add(cell) : next.delete(cell)
       })
@@ -327,7 +331,23 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
     }
   }
 
+  const chooseName = (skill: string, value: string) => {
+    setReview(null)
+    const nextNames = { ...names, [skill]: value }
+    setNames(nextNames)
+    const candidate = draft?.candidates.find((item) => item.name === skill)
+    if (draft && candidate && installNameError(draft, nextNames, candidate) !== null) {
+      // An invalid name would strand checked-but-disabled cells, so drop them.
+      setSelections((current) => {
+        const next = new Set(current)
+        MANAGED_TOOLS.forEach((tool) => next.delete(key(skill, tool)))
+        return next
+      })
+    }
+  }
+
   const missingChoice = draft?.candidates.some((candidate) => candidate.needsChoice && !choices[candidate.name] && selectedSkillNames(selections).has(candidate.name)) ?? false
+  const missingName = draft?.candidates.some((candidate) => candidate.needsName && installNameError(draft, names, candidate) !== null && selectedSkillNames(selections).has(candidate.name)) ?? false
 
   return (
     <Modal title={newSkills ? 'Install new skills' : 'Install source'} onClose={onClose} busy={busy} wide>
@@ -354,26 +374,29 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
           </button>
           <p>{installOff ? 'New links are created disabled. Agents will not see these skills until you turn them ON in Skills. Installed skills keep their state.' : 'New links are created ON and become visible to agents immediately.'}</p>
         </div>
-        <InstallMatrix draft={draft} selections={selections} choices={choices} busy={busy} onToggle={toggle} onChoose={chooseCopy} onSetToolSelection={setToolSelection} />
+        <InstallMatrix draft={draft} selections={selections} choices={choices} names={names} busy={busy} onToggle={toggle} onChoose={chooseCopy} onName={chooseName} onSetToolSelection={setToolSelection} />
+        {draft.candidates.some((candidate) => candidate.needsName) && <div className="dialog-note"><AlertTriangle size={14} /><p>Another source already installs a skill with the same name. Pick an install name to link this copy beside it. Claude Code uses the folder name as the command; Codex and Grok list the name inside SKILL.md, so both installs may show the same label there.</p></div>}
         {review && <ReviewSummary review={review} />}
         {missingChoice && !review?.ready && <div className="dialog-note"><AlertTriangle size={14} /><p>Choose which copy to install for every selected skill with multiple versions.</p></div>}
         {error && <DialogError message={error} />}
         {busy && <ProgressState progress={progress} />}
         <DialogActions onClose={onClose} busy={busy} secondaryLabel="Cancel">
-          {!review?.ready ? <button className="primary-button" disabled={busy || selections.size === 0 || missingChoice} onClick={() => void reviewSelection()}>Review {selections.size} target{selections.size === 1 ? '' : 's'}</button> : <button className="primary-button" disabled={busy} onClick={() => void apply()}>Install {review.createCount} link{review.createCount === 1 ? '' : 's'}{review.off ? ' as OFF' : ''}</button>}
+          {!review?.ready ? <button className="primary-button" disabled={busy || selections.size === 0 || missingChoice || missingName} onClick={() => void reviewSelection()}>Review {selections.size} target{selections.size === 1 ? '' : 's'}</button> : <button className="primary-button" disabled={busy} onClick={() => void apply()}>Install {review.createCount} link{review.createCount === 1 ? '' : 's'}{review.off ? ' as OFF' : ''}</button>}
         </DialogActions>
       </>}
     </Modal>
   )
 }
 
-function InstallMatrix({ draft, selections, choices, busy, onToggle, onChoose, onSetToolSelection }: {
+function InstallMatrix({ draft, selections, choices, names, busy, onToggle, onChoose, onName, onSetToolSelection }: {
   draft: InstallDraft
   selections: Set<string>
   choices: Record<string, string>
+  names: Record<string, string>
   busy: boolean
   onToggle: (skill: string, tool: string) => void
   onChoose: (skill: string, path: string) => void
+  onName: (skill: string, value: string) => void
   onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
   const [query, setQuery] = useState('')
@@ -383,8 +406,16 @@ function InstallMatrix({ draft, selections, choices, busy, onToggle, onChoose, o
   }), [draft, query])
   return <div className="install-matrix-wrap">
     <label className="search-field install-search"><Search size={14} /><input aria-label="Filter discovered skills" value={query} disabled={busy} onChange={(event) => setQuery(event.target.value)} placeholder="Filter discovered skills…" /></label>
-    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{MANAGED_TOOLS.map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} choices={choices} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => <tr key={candidate.name}><td><strong>{candidate.name}</strong>{candidate.needsChoice ? <select aria-label={`Choose a copy of ${candidate.name} to install`} value={choices[candidate.name] ?? ''} disabled={busy} onChange={(event) => onChoose(candidate.name, event.target.value)}><option value="">Choose a copy…</option>{(candidate.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <><code>{candidate.relativePath}</code>{(candidate.identicalCopies ?? 0) > 1 && <small className="identical-copies">{candidate.identicalCopies} identical copies</small>}</>}</td>{MANAGED_TOOLS.map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); const awaitingChoice = candidate.needsChoice && !choices[candidate.name]; const displayStatus = awaitingChoice ? 'needs choice' : candidate.needsChoice ? 'copy chosen' : cell.status.replace('-', ' '); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={awaitingChoice ? 'Choose which copy to install first' : cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict' || awaitingChoice} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{displayStatus}</small></label></td> })}</tr>)}</tbody></table></div>
+    <div className="install-matrix-scroll"><table className="install-matrix"><thead><tr><th scope="col">Skill</th>{MANAGED_TOOLS.map((tool) => <InstallColumnHeader key={tool} tool={tool} draft={draft} selections={selections} choices={choices} busy={busy} onSetToolSelection={onSetToolSelection} />)}</tr></thead><tbody>{visible.map((candidate) => { const nameError = candidate.needsName ? installNameError(draft, names, candidate) : null; return <tr key={candidate.name}><td><strong>{candidate.name}</strong>{candidate.installedAs && <small className="installed-as">installed as {candidate.installedAs}</small>}{candidate.needsName && <InstallNameField skill={candidate.name} value={names[candidate.name] ?? ''} error={nameError} busy={busy} onName={onName} />}{candidate.needsChoice ? <select aria-label={`Choose a copy of ${candidate.name} to install`} value={choices[candidate.name] ?? ''} disabled={busy} onChange={(event) => onChoose(candidate.name, event.target.value)}><option value="">Choose a copy…</option>{(candidate.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <><code>{candidate.relativePath}</code>{(candidate.identicalCopies ?? 0) > 1 && <small className="identical-copies">{candidate.identicalCopies} identical copies</small>}</>}</td>{MANAGED_TOOLS.map((tool) => { const cell = candidate[tool]; const checked = selections.has(key(candidate.name, tool)); const awaitingChoice = candidate.needsChoice && !choices[candidate.name]; const awaitingName = nameError !== null; const displayStatus = awaitingChoice ? 'needs choice' : awaitingName ? 'needs name' : candidate.needsName ? 'new name' : candidate.needsChoice ? 'copy chosen' : cell.status.replace('-', ' '); return <td key={tool}><label className={`matrix-cell status-${cell.status}`} title={awaitingChoice ? 'Choose which copy to install first' : awaitingName ? 'Choose a valid install name first' : cell.message}><input type="checkbox" aria-label={`${candidate.name} ${tool}`} checked={checked} disabled={busy || cell.status === 'conflict' || awaitingChoice || awaitingName} onChange={() => onToggle(candidate.name, tool)} /><span>{checked && <Check size={11} />}</span><small>{displayStatus}</small></label></td> })}</tr> })}</tbody></table></div>
   </div>
+}
+
+function InstallNameField({ skill, value, error, busy, onName }: { skill: string; value: string; error: string | null; busy: boolean; onName: (skill: string, value: string) => void }) {
+  const errorId = `install-name-error-${skill}`
+  return <span className="install-name-field">
+    <input aria-label={`Install name for ${skill}`} value={value} disabled={busy} spellCheck={false} aria-invalid={error !== null} aria-describedby={error ? errorId : undefined} onChange={(event) => onName(skill, event.target.value)} />
+    {error && <small id={errorId} className="install-name-error">{error}</small>}
+  </span>
 }
 
 function InstallColumnHeader({ tool, draft, selections, choices, busy, onSetToolSelection }: {
@@ -395,7 +426,7 @@ function InstallColumnHeader({ tool, draft, selections, choices, busy, onSetTool
   busy: boolean
   onSetToolSelection: (tool: ManagedTool, selected: boolean) => void
 }) {
-  const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict' && !(candidate.needsChoice && !choices[candidate.name]))
+  const applicable = draft.candidates.filter((candidate) => candidate[tool].status !== 'conflict' && !(candidate.needsChoice && !choices[candidate.name]) && !candidate.needsName)
   const selectedCount = applicable.filter((candidate) => selections.has(key(candidate.name, tool))).length
   const state: ColumnSelectionState = applicable.length === 0 ? 'N/A' : selectedCount === 0 ? 'OFF' : selectedCount === applicable.length ? 'ON' : 'MIXED'
   const name = toolDisplayName(tool)
@@ -655,7 +686,21 @@ function DialogActions({ onClose, busy, secondaryLabel = 'Cancel', children }: {
 function DialogError({ message }: { message: string }) { return <div className="dialog-error" role="alert"><AlertTriangle size={14} /><span>{message}</span></div> }
 function ProgressState({ progress }: { progress: SourceProgress | null }) { return <div className="source-progress" role="status"><LoaderCircle size={17} className="spin" /><div><strong>{progress?.message ?? 'Working…'}</strong>{progress?.group && <small>{progress.group}{progress.total ? ` · ${progress.current}/${progress.total}` : ''}</small>}</div></div> }
 function useDialogEscape(onClose: () => void, busy: boolean) { useEffect(() => { const handler = (event: KeyboardEvent) => { if (event.key === 'Escape' && !busy) onClose() }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler) }, [busy, onClose]) }
-function selectedRequests(selections: Set<string>, choices: Record<string, string>): InstallCellRequest[] { return [...selections].map((item) => { const [tool, ...name] = item.split(':'); const skillName = name.join(':'); const choice = choices[skillName]; return { tool, skillName, ...(choice ? { path: choice } : {}) } as InstallCellRequest }) }
+function selectedRequests(selections: Set<string>, choices: Record<string, string>, names: Record<string, string>): InstallCellRequest[] { return [...selections].map((item) => { const [tool, ...name] = item.split(':'); const skillName = name.join(':'); const choice = choices[skillName]; const installedAs = names[skillName]; return { tool, skillName, ...(choice ? { path: choice } : {}), ...(installedAs ? { installedAs } : {}) } as InstallCellRequest }) }
+// installedNames returns the trimmed install name of every needs-name row.
+function installedNames(draft: InstallDraft, names: Record<string, string>): Record<string, string> { return Object.fromEntries(draft.candidates.filter((candidate) => candidate.needsName).map((candidate) => [candidate.name, (names[candidate.name] ?? '').trim()])) }
+const INSTALL_NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
+// installNameError mirrors the backend rule: 1-64 lowercase letters, digits, and
+// single hyphens, distinct from every discovered skill and every other install name.
+function installNameError(draft: InstallDraft, names: Record<string, string>, candidate: InstallDraft['candidates'][number]): string | null {
+  const value = (names[candidate.name] ?? '').trim()
+  if (value === '') return 'Enter an install name.'
+  if (value.length > 64 || !INSTALL_NAME_PATTERN.test(value)) return 'Use lowercase letters, digits, and single hyphens.'
+  if (draft.candidates.some((other) => other.name === value)) return 'This name is already a skill in this source.'
+  const taken = draft.candidates.some((other) => other.name !== candidate.name && ((other.needsName && (names[other.name] ?? '').trim() === value) || other.installedAs === value))
+  if (taken) return 'Another skill already uses this install name.'
+  return null
+}
 function selectedSkillNames(selections: Set<string>): Set<string> { return new Set([...selections].map((item) => { const [, ...name] = item.split(':'); return name.join(':') })) }
 function key(skill: string, tool: string) { return `${tool}:${skill}` }
 function shortCommit(commit: string) { return commit.slice(0, 8) }

@@ -541,6 +541,74 @@ describe('Skill Manager desktop app', () => {
     ]), false))
   })
 
+  it('requires a valid install name for a skill owned by another source', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.prepareGitInstall = vi.fn(async () => new gui.InstallDraft({
+      draftId: 'draft:alias',
+      kind: 'git',
+      group: 'acme/tools',
+      location: 'https://github.com/acme/tools',
+      candidates: [
+        installCandidate('beta'),
+        {
+          ...installCandidate('alpha', 'needs-name', 'needs-name', 'needs-name', 'needs-name'),
+          needsName: true,
+          suggestedAs: 'alpha-acme',
+        },
+      ],
+      cloned: false,
+      reused: true,
+      retainedClone: false,
+      cancelled: false,
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: /^Install source$/ }))
+    await user.type(screen.getByRole('textbox', { name: 'HTTPS or SSH Git URL' }), 'https://github.com/acme/tools')
+    await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install source' })
+    const nameInput = await within(dialog).findByRole('textbox', { name: 'Install name for alpha' })
+    expect(nameInput).toHaveValue('alpha-acme')
+    expect(within(dialog).getByText(/Claude Code uses the folder name as the command/)).toBeInTheDocument()
+    // Needs-name rows are prefilled but never preselected.
+    expect(within(dialog).getByRole('checkbox', { name: 'alpha claude' })).not.toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'alpha claude' })).not.toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: 'Review 4 targets' })).toBeInTheDocument()
+
+    // The column bulk toggle skips needs-name rows.
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: ON (1 of 1 selected)' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: OFF (0 of 1 selected)' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'alpha claude' })).not.toBeChecked()
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'alpha claude' }))
+    expect(within(dialog).getByRole('button', { name: 'Review 5 targets' })).toBeEnabled()
+
+    // An invalid name marks the input, disables the row, and drops its selections.
+    await user.clear(nameInput)
+    await user.type(nameInput, 'beta')
+    expect(nameInput).toHaveAttribute('aria-invalid', 'true')
+    expect(within(dialog).getByText('This name is already a skill in this source.')).toBeInTheDocument()
+    expect(within(dialog).getByRole('checkbox', { name: 'alpha claude' })).toBeDisabled()
+    expect(within(dialog).getByRole('checkbox', { name: 'alpha claude' })).not.toBeChecked()
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Alpha_Acme')
+    expect(within(dialog).getByText('Use lowercase letters, digits, and single hyphens.')).toBeInTheDocument()
+    await user.clear(nameInput)
+    expect(within(dialog).getByText('Enter an install name.')).toBeInTheDocument()
+
+    await user.type(nameInput, 'alpha-acme')
+    expect(nameInput).toHaveAttribute('aria-invalid', 'false')
+    await user.click(within(dialog).getByRole('checkbox', { name: 'alpha claude' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Review 5 targets' }))
+    await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:alias', expect.arrayContaining([
+      { tool: 'claude', skillName: 'alpha', installedAs: 'alpha-acme' },
+      { tool: 'claude', skillName: 'beta' },
+    ]), false))
+  })
+
   it('reviews and applies an install as OFF from the switch', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()
