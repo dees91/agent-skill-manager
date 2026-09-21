@@ -103,21 +103,21 @@ func ResolveLocalSourceLookup(p paths.Paths, cwd, raw string) (LocalSourceLookup
 
 // DiscoverLocalSkills treats a root SKILL.md as one exact skill and otherwise
 // uses recursive repository-style discovery.
-func DiscoverLocalSkills(source LocalSource) ([]DiscoveredSkill, error) {
+func DiscoverLocalSkills(source LocalSource) (Discovery, error) {
 	skillFile := filepath.Join(source.CanonicalPath, "SKILL.md")
 	info, err := os.Lstat(skillFile)
 	if err == nil {
 		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("local root skill file %s is not a regular file", skillFile)
+			return Discovery{}, fmt.Errorf("local root skill file %s is not a regular file", skillFile)
 		}
-		return []DiscoveredSkill{{
+		return Discovery{Skills: []DiscoveredSkill{{
 			Name:         filepath.Base(source.CanonicalPath),
 			Path:         source.CanonicalPath,
 			RelativePath: ".",
-		}}, nil
+		}}}, nil
 	}
 	if !errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("inspect local root skill file %s: %w", skillFile, err)
+		return Discovery{}, fmt.Errorf("inspect local root skill file %s: %w", skillFile, err)
 	}
 	return DiscoverSkills(source.CanonicalPath)
 }

@@ -15,10 +15,11 @@ import (
 
 // LocalInstallPlan is a side-effect-free plan for link-in-place installation.
 type LocalInstallPlan struct {
-	Source           LocalSource
-	Links            []LinkPlan
-	AlreadyInstalled []AlreadyInstalled
-	Off              bool
+	Source             LocalSource
+	Links              []LinkPlan
+	AlreadyInstalled   []AlreadyInstalled
+	Off                bool
+	ResolvedDuplicates []ResolvedDuplicate
 }
 
 // LocalApplyResult describes local symlink application and state persistence.
@@ -54,14 +55,16 @@ func NewLocalApplyService(p paths.Paths) *LocalApplyService {
 }
 
 // PlanLocalInstall builds and preflights a local link-in-place install.
-func PlanLocalInstall(p paths.Paths, manifest state.Manifest, source LocalSource, discovered []DiscoveredSkill, options PlanOptions) (LocalInstallPlan, error) {
+func PlanLocalInstall(p paths.Paths, manifest state.Manifest, source LocalSource, discovered Discovery, options PlanOptions) (LocalInstallPlan, error) {
 	if strings.TrimSpace(source.OriginalPath) == "" || strings.TrimSpace(source.CanonicalPath) == "" || source.Group == "" {
 		return LocalInstallPlan{}, fmt.Errorf("local source identity is incomplete")
 	}
-	selectedCells, missingSkills, err := selectInstallCells(p, source.CanonicalPath, discovered, options)
+	recorded := RecordedLocalSkillPaths(manifest, source.CanonicalPath)
+	selectedCells, resolution, err := selectInstallCells(p, source.CanonicalPath, discovered, options, recorded)
 	if err != nil {
 		return LocalInstallPlan{}, err
 	}
+	missingSkills := resolution.Missing
 	if existing, ok := manifest.GetLocalSource(source.CanonicalPath); ok {
 		allowedLinks, allowedDisabled := prospectiveLocalAuditAllowances(p, manifest, selectedCells)
 		if _, err := auditLocalSourceReferences(p, manifest, existing, true, allowedLinks, allowedDisabled); err != nil {
@@ -69,7 +72,7 @@ func PlanLocalInstall(p paths.Paths, manifest state.Manifest, source LocalSource
 		}
 	}
 
-	plan := LocalInstallPlan{Source: source, Links: []LinkPlan{}, AlreadyInstalled: []AlreadyInstalled{}, Off: options.Off}
+	plan := LocalInstallPlan{Source: source, Links: []LinkPlan{}, AlreadyInstalled: []AlreadyInstalled{}, Off: options.Off, ResolvedDuplicates: resolution.Resolved}
 	conflicts := []PreflightConflict{}
 	if len(missingSkills) == 0 {
 		for _, selected := range selectedCells {

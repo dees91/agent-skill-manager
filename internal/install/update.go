@@ -25,9 +25,12 @@ type UpdateResult struct {
 	UpToDate       bool
 	// NewSkills lists skills in the updated checkout that are not recorded as
 	// installed. Update never installs them; NewSkillsError reports a discovery
-	// failure without failing the completed update.
-	NewSkills      []DiscoveredSkill
-	NewSkillsError string
+	// failure without failing the completed update. AmbiguousNewSkills lists
+	// unrecorded names whose copies differ, which need an explicit
+	// --skill <name>=<path> choice before they can be installed.
+	NewSkills          []DiscoveredSkill
+	AmbiguousNewSkills []AmbiguousGroup
+	NewSkillsError     string
 }
 
 // UpdateService validates and fast-forwards managed repository checkouts.
@@ -133,10 +136,11 @@ func (s *UpdateService) Apply(repository state.RepositoryEntry) (UpdateResult, e
 		return result, err
 	}
 	result.Repository = current
-	if newSkills, err := NewSkills(current); err != nil {
+	if report, err := NewSkills(current); err != nil {
 		result.NewSkillsError = err.Error()
 	} else {
-		result.NewSkills = newSkills
+		result.NewSkills = report.Skills
+		result.AmbiguousNewSkills = report.Ambiguous
 	}
 	return result, nil
 }

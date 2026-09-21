@@ -184,7 +184,7 @@ Tool targeting:
 
 - Default target is every supported tool. Empty, `both`, and `all` are equivalent.
 - `--tool claude`, `--tool codex`, `--tool muse`, `--tool grok`, `--tool both`, and `--tool all` are accepted. Empty, `both`, and `all` all target every supported tool.
-- `--skill <name>` may be repeated to install selected skills only.
+- `--skill <name>[=<path>]` may be repeated to install selected skills only. The optional `=<path>` qualifies one source-relative copy when a name was discovered at several paths with differing content.
 - If no `--skill` is provided, install all valid skills discovered in the repository.
 
 Repository reuse:
@@ -200,7 +200,7 @@ Skill discovery:
 - Discovery is recursive inside the checkout.
 - Ignore heavy or generated directories such as `.git`, `node_modules`, `.venv`, `vendor`, `build`, and `dist`.
 - Skill name is the basename of the directory containing `SKILL.md`.
-- If two discovered skills have the same basename, fail preflight with a duplicate-name conflict.
+- Skills sharing one basename are grouped instead of failing discovery (Iteration 25). Identical copies resolve to one canonical copy; differing copies need an explicit `--skill <name>=<path>` choice.
 - Invalid directories without `SKILL.md` are skipped.
 
 Conflict and idempotency rules:
@@ -277,9 +277,9 @@ Iteration 5 adds CLI-first link-in-place installation from local folders. Do not
 
 Local install commands and discovery:
 
-- `skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]`
+- `skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--dry-run]`
 - Accept absolute paths, explicit relative paths (`./` and `../`), `~/` paths resolved from `$HOME`, and bare relative paths only when they currently exist.
-- Resolve the source to a canonical absolute directory path. A root containing a regular, non-symlinked `SKILL.md` is exactly one skill; otherwise recursively discover skills with the existing ignored-directory and duplicate-name rules.
+- Resolve the source to a canonical absolute directory path. A root containing a regular, non-symlinked `SKILL.md` is exactly one skill; otherwise recursively discover skills with the existing ignored-directory rules and the shared duplicate-group resolution (Iteration 25).
 - Use link-in-place symlinks directly to skill directories. Never copy, move, edit, update, or delete the local source.
 - Reuse Git install tool targeting, skill selection, all-or-nothing preflight, idempotency, blocker handling, apply rollback, and strict dry-run semantics.
 - Reject local roots that overlap in either direction with Skill Manager state, Claude/Codex/Muse/Grok user skill paths, disabled paths, Codex system skills, or Claude plugin cache paths.
@@ -544,7 +544,7 @@ skill-manager disable --tool claude release-checklist --dry-run
 Iteration 3 repository install commands:
 
 ```bash
-skill-manager install <git-url> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]
+skill-manager install <git-url> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--dry-run]
 skill-manager repos
 ```
 
@@ -564,7 +564,7 @@ skill-manager uninstall <git-url> [--dry-run]
 Iteration 5 local path commands:
 
 ```bash
-skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name...] [--dry-run]
+skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--dry-run]
 skill-manager uninstall <local-path> [--dry-run]
 ```
 
@@ -661,8 +661,10 @@ preserving the CLI contracts and the ownership/safety rules above.
 - Each install-matrix tool column has one explicit bulk-selection toggle. It
   reports `ON`, `OFF`, `MIXED`, or `N/A`; `ON` clears every non-conflict target
   in that column, while `OFF` or `MIXED` selects all of them. Its scope is every
-  discovered skill, including rows hidden by the text filter. This changes only
-  the install selection and never toggles visibility of an installed skill.
+  discovered skill, including rows hidden by the text filter. Since Iteration 25,
+  cells waiting for a duplicate-copy choice are skipped like conflicts until a
+  copy is chosen. This changes only the install selection and never toggles
+  visibility of an installed skill.
 - Update is available per Git repository and for all recorded repositories.
   Local link-in-place sources remain live and do not require update.
 - The Sources table labels this distinction as `Update mode`: `Managed Git`
@@ -684,7 +686,9 @@ preserving the CLI contracts and the ownership/safety rules above.
   blocked while Skills toggles are pending, and no other mutation or app close
   is allowed while a source operation is active.
 - Frontend mutation calls use opaque draft/review/source identifiers plus skill
-  and tool names. They never accept filesystem paths or prebuilt operations.
+  and tool names. They never accept filesystem paths or prebuilt operations,
+  except the Iteration 25 duplicate-copy choice, which is a selection from the
+  draft's own options and is revalidated against fresh discovery.
   A Git URL is the only raw source locator accepted from the frontend.
 - Long source operations expose phase progress but are not cancellable in this
   iteration. Keep the existing rollback and cleanup reporting semantics.
@@ -1059,7 +1063,9 @@ installation visible. It does not change the rule that update never installs.
   them with an `Install new` action that reuses the Git install flow on the
   recorded URL (reusing the checkout without pulling) and preselects new skills
   for the tools the source already uses, never conflict or already-installed
-  cells. Update result messages mention how many new skills are available and
+  cells. Since Iteration 25, unrecorded names whose copies differ are reported
+  as ambiguous new skills and resolved through the install-matrix copy picker.
+  Update result messages mention how many new skills are available and
   how many sources could not be checked. A healthy source whose check failed
   shows the path-free cause instead of new skills.
 - Toggle, uninstall, extend, and repair semantics do not change.
@@ -1115,6 +1121,60 @@ until the relevant tasks are implemented and verified.
   credentials do not block implementation or offline validation. Read the plan
   for acceptance criteria and genuine re-plan conditions.
 
+### Duplicate Skill-Name Resolution (Iteration 25)
+
+Iteration 25 replaces the duplicate-basename install blockade with grouped
+resolution. One repository may ship the same skill name from several
+directories (multi-harness fan-out, generated copies, test fixtures); that
+alone no longer fails discovery, inspection, update checks, or extend.
+
+- Discovery groups skills by basename. A name found at exactly one path
+  behaves as before. A name found at two or more paths becomes a duplicate
+  group with every copy ranked canonically: test/example copies last, then
+  hidden directories after visible ones, then deeper paths after shallower
+  ones, then lexicographic order.
+- Copies are compared by a bounded content hash over file names, entry kinds,
+  and bytes inside each skill directory (symlinks by target text, never
+  followed). Only skills in multi-copy groups are hashed. A copy that exceeds
+  the file or byte bound is treated as differing.
+- A group whose copies are all identical resolves automatically to the
+  canonical copy. The CLI prints which copy was used
+  (`resolved "demo": 6 identical copies, using plugin/skills/demo`); the
+  desktop matrix shows the canonical path with an identical-copies note.
+- A group whose copies differ is ambiguous and is never guessed. The CLI
+  fails with every copy listed as a pasteable `--skill <name>=<path>` form;
+  the desktop matrix shows one row with a copy picker and `needs-choice`
+  cells that stay unselectable until a copy is chosen. Review and apply
+  revalidate the choice against fresh discovery and reject any path outside
+  the draft.
+- `skill-manager install <git-url|local-path> [--tool …] [--skill <name>[=<path>]] …]`
+  accepts the qualified form for both Git and local sources. A bare name
+  resolves automatically when possible and reports ambiguity otherwise. A
+  value whose qualified form matches nothing but whose whole text matches a
+  discovered name is treated as a bare name, so literal `=` names keep
+  working.
+- Resolution reuses the manifest-recorded path of the same source when it
+  still holds the skill, so reinstalls and extend stay stable when upstream
+  gains another identical copy. An explicit choice wins over the recorded
+  path. A recorded path that no longer holds the skill is drift: the
+  operation fails and names uninstall plus reinstall as the way to adopt a
+  new location. Nothing silently switches copies.
+- `update` reports unrecorded identical groups as ordinary new skills and
+  unrecorded conflicting groups as ambiguous new skills with a qualified
+  `--skill <name>=<path>` template instead of a command. Recorded names are
+  never reported as new, even when new copies appear. `update --dry-run`
+  still does not fetch.
+- The desktop `Install new` flow preselects ambiguous new skills like any
+  other new skill; the copy picker appears in the matrix. The install-matrix
+  bulk-selection toggle skips `needs-choice` cells without a chosen copy,
+  like conflicts.
+- Frontend mutation calls still use opaque draft/review/source identifiers
+  plus skill and tool names; the copy choice is an additional
+  draft-constrained selection, never an arbitrary filesystem path.
+- Toggle, uninstall, repair, advisor, favorites, skill sets, strict dry-run,
+  ownership, backup, rollback, and `.agents/.skill-lock.json` semantics do
+  not change.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1167,7 +1227,7 @@ Backend tests should cover:
 - Deterministic apply ordering
 - Repo URL normalization for HTTPS and SSH Git URLs
 - Managed checkout path resolution
-- Recursive skill discovery with ignored directories and duplicate-name conflicts
+- Recursive skill discovery with ignored directories, duplicate grouping, content fingerprints, canonical ranking, qualified selection, and recorded-path stability
 - Install manifest persistence
 - Install preflight conflicts and idempotency
 - Strict install dry-run without clone

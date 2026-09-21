@@ -43,12 +43,12 @@ func inspectRepositoryHealth(service *install.UpdateService, repository state.Re
 	_, err := service.PlanLocal(repository)
 	if err == nil {
 		// A discovery failure is a warning next to the healthy state.
-		newSkills, discoveryErr := install.NewSkills(repository)
+		report, discoveryErr := install.NewSkills(repository)
 		if discoveryErr != nil {
 			entry.NewSkillsError = newSkillsWarning(repository, discoveryErr.Error())
 			return entry
 		}
-		entry.NewSkills = discoveredSkillNames(newSkills)
+		entry.NewSkills = append(discoveredSkillNames(report.Skills), ambiguousSkillNames(report.Ambiguous)...)
 		return entry
 	}
 	var conflict install.CheckoutConflictError
@@ -191,6 +191,20 @@ func discoveredSkillNames(skills []install.DiscoveredSkill) []string {
 		names[i] = skill.Name
 	}
 	return names
+}
+
+func ambiguousSkillNames(groups []install.AmbiguousGroup) []string {
+	names := make([]string, len(groups))
+	for i, group := range groups {
+		names[i] = group.Name
+	}
+	return names
+}
+
+// updatedSkillNames merges resolved and ambiguous new skills. Ambiguous names
+// carry no path here; the install-new dialog offers every copy for choosing.
+func updatedSkillNames(updated install.UpdateResult) []string {
+	return append(discoveredSkillNames(updated.NewSkills), ambiguousSkillNames(updated.AmbiguousNewSkills)...)
 }
 
 // newSkillsWarning keeps absolute checkout paths off the desktop bridge.

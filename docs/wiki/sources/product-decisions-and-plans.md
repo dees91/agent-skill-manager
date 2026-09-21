@@ -121,6 +121,11 @@ to seed the wiki. It summarizes their roles; it does not replace them.
 - [`planning/phase-24-typesafe-advisor-tasks.md`](../../../planning/phase-24-typesafe-advisor-tasks.md)
   - `planned`: optional TypeSafe BYOK recommendation, local default and fallback,
     credential ownership, bounded cloud inputs, and one complete agent assignment.
+- [`planning/phase-25-duplicate-skill-discovery-tasks.md`](../../../planning/phase-25-duplicate-skill-discovery-tasks.md)
+  - `documented`, `implemented`: grouped duplicate discovery with content
+    fingerprints and canonical ranking, identical auto-resolution, qualified
+    `--skill <name>=<path>` selection, recorded-path stability, an install
+    matrix copy picker, and ambiguous new-skill reporting.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.

@@ -94,7 +94,7 @@ func TestInspectSourcesAndUpdateReportNewSkills(t *testing.T) {
 	}
 }
 
-func TestNewSkillDiscoveryFailureIsAPathFreeWarning(t *testing.T) {
+func TestRecordedNameDuplicatesAreIgnoredInNewSkills(t *testing.T) {
 	fixture := newRepairFixture(t)
 	writeRepairFile(t, filepath.Join(fixture.sourcePath, "other", "alpha", "SKILL.md"), "---\nname: alpha\ndescription: Copy\n---\n")
 	runGitRepair(t, "-C", fixture.sourcePath, "add", ".")
@@ -110,23 +110,53 @@ func TestNewSkillDiscoveryFailureIsAPathFreeWarning(t *testing.T) {
 	if result.Failure != nil {
 		t.Fatalf("UpdateSource() failure = %#v, want a successful update", result.Failure)
 	}
-	if len(result.Completed) != 1 || !strings.Contains(result.Completed[0].NewSkillsError, "duplicate skill names") {
-		t.Fatalf("completed = %#v, want a duplicate-name warning", result.Completed)
-	}
-	if !strings.Contains(result.Message, "Could not check 1 source(s) for new skills.") {
-		t.Fatalf("message = %q, want the unchecked source count", result.Message)
+	if len(result.Completed) != 1 || len(result.Completed[0].NewSkills) != 0 || result.Completed[0].NewSkillsError != "" {
+		t.Fatalf("completed = %#v, want no new skills", result.Completed)
 	}
 
 	health, err := service.InspectSources()
 	if err != nil {
 		t.Fatalf("InspectSources() error = %v", err)
 	}
-	if len(health) != 1 || health[0].Status != SourceHealthOK || len(health[0].NewSkills) != 0 || !strings.Contains(health[0].NewSkillsError, "duplicate skill names") {
-		t.Fatalf("health = %#v, want a healthy source with a warning", health)
+	if len(health) != 1 || health[0].Status != SourceHealthOK || len(health[0].NewSkills) != 0 || health[0].NewSkillsError != "" {
+		t.Fatalf("health = %#v, want a healthy source with no new skills", health)
 	}
-	for _, text := range []string{result.Completed[0].NewSkillsError, health[0].NewSkillsError} {
+}
+
+func TestAmbiguousNewSkillsSurfaceAsNewSkillNames(t *testing.T) {
+	fixture := newRepairFixture(t)
+	writeRepairFile(t, filepath.Join(fixture.sourcePath, "packs", "one", "gamma", "SKILL.md"), "---\nname: gamma\ndescription: One\n---\n")
+	writeRepairFile(t, filepath.Join(fixture.sourcePath, "packs", "two", "gamma", "SKILL.md"), "---\nname: gamma\ndescription: Two\n---\n")
+	runGitRepair(t, "-C", fixture.sourcePath, "add", ".")
+	runGitRepair(t, "-C", fixture.sourcePath, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add conflicting copies")
+	runGitRepair(t, "-C", fixture.sourcePath, "push", "origin", "main")
+	service := New(fixture.paths)
+	before, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+
+	result := service.UpdateSource(before[0].SourceID, false)
+	if result.Failure != nil {
+		t.Fatalf("UpdateSource() failure = %#v, want a successful update", result.Failure)
+	}
+	if len(result.Completed) != 1 || strings.Join(result.Completed[0].NewSkills, ",") != "gamma" || result.Completed[0].NewSkillsError != "" {
+		t.Fatalf("completed = %#v, want gamma as a new skill", result.Completed)
+	}
+	if !strings.Contains(result.Message, "1 new skill(s) available to install.") {
+		t.Fatalf("message = %q, want new skill count", result.Message)
+	}
+
+	health, err := service.InspectSources()
+	if err != nil {
+		t.Fatalf("InspectSources() error = %v", err)
+	}
+	if len(health) != 1 || health[0].Status != SourceHealthOK || strings.Join(health[0].NewSkills, ",") != "gamma" {
+		t.Fatalf("health = %#v, want gamma as a new skill", health)
+	}
+	for _, text := range []string{strings.Join(result.Completed[0].NewSkills, ","), strings.Join(health[0].NewSkills, ",")} {
 		if strings.Contains(text, fixture.paths.Home) {
-			t.Fatalf("warning leaks filesystem paths: %q", text)
+			t.Fatalf("new skills leak filesystem paths: %q", text)
 		}
 	}
 }

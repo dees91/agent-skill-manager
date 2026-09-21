@@ -32,8 +32,8 @@ func TestLocalInstallApplyCreatesLinksAndPersistsOwnership(t *testing.T) {
 		dir, _ := p.UserSkillsDirFor(tool)
 		linkPath := filepath.Join(dir, "alpha")
 		target, err := os.Readlink(linkPath)
-		if err != nil || target != discovered[0].Path {
-			t.Fatalf("%s link target=%q err=%v, want %s", tool, target, err, discovered[0].Path)
+		if err != nil || target != discovered.Skills[0].Path {
+			t.Fatalf("%s link target=%q err=%v, want %s", tool, target, err, discovered.Skills[0].Path)
 		}
 	}
 	manifest, err := state.New(p).Load()
@@ -88,7 +88,7 @@ func TestLocalInstallAdoptsExactUnmanagedLink(t *testing.T) {
 		t.Fatalf("create Claude dir: %v", err)
 	}
 	linkPath := filepath.Join(p.ClaudeUserSkills, "alpha")
-	if err := os.Symlink(discovered[0].Path, linkPath); err != nil {
+	if err := os.Symlink(discovered.Skills[0].Path, linkPath); err != nil {
 		t.Fatalf("create unmanaged link: %v", err)
 	}
 	plan, err := PlanLocalInstall(p, state.Manifest{}, source, discovered, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
@@ -220,7 +220,7 @@ func TestLocalInstallRejectsOwnershipAndRecordedDrift(t *testing.T) {
 
 func TestLocalInstallApplyRejectsOwnershipAddedAfterPlanning(t *testing.T) {
 	p, source, discovered := localInstallFixture(t, "alpha")
-	mustSymlink(t, discovered[0].Path, filepath.Join(p.ClaudeUserSkills, "alpha"))
+	mustSymlink(t, discovered.Skills[0].Path, filepath.Join(p.ClaudeUserSkills, "alpha"))
 	plan, err := PlanLocalInstall(p, state.Manifest{}, source, discovered, PlanOptions{Tools: []model.Tool{model.ToolClaude}})
 	if err != nil || len(plan.AlreadyInstalled) != 1 {
 		t.Fatalf("plan = %#v err=%v, want adoptable link", plan, err)
@@ -265,7 +265,7 @@ func TestLocalInstallRollsBackCreatedLinksWhenStateSaveFails(t *testing.T) {
 	}
 }
 
-func localInstallFixture(t *testing.T, names ...string) (paths.Paths, LocalSource, []DiscoveredSkill) {
+func localInstallFixture(t *testing.T, names ...string) (paths.Paths, LocalSource, Discovery) {
 	t.Helper()
 	home := t.TempDir()
 	p := paths.ForHome(home)

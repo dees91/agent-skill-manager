@@ -179,6 +179,89 @@ func TestLocalInstallReviewApplyAndTypedUninstall(t *testing.T) {
 	}
 }
 
+func TestLocalInstallDuplicateDraftNeedsChoiceForConflictingCopies(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	sourcePath := filepath.Join(p.Home, "workspace", "local-pack")
+	writeSkill(t, filepath.Join(sourcePath, "plugin", "skills", "beta"), "Beta")
+	writeSkill(t, filepath.Join(sourcePath, ".agent", "skills", "beta"), "Beta")
+	writeSkill(t, filepath.Join(sourcePath, "packs", "one", "gamma"), "Gamma one")
+	writeSkill(t, filepath.Join(sourcePath, "packs", "two", "gamma"), "Gamma two")
+	service := New(p)
+
+	draft, err := service.PrepareLocalInstall(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(draft.Candidates) != 2 {
+		t.Fatalf("draft = %#v, want beta and gamma", draft)
+	}
+	beta, gamma := draft.Candidates[0], draft.Candidates[1]
+	if beta.Name != "beta" || beta.RelativePath != "plugin/skills/beta" || beta.IdenticalCopies != 2 || beta.NeedsChoice {
+		t.Fatalf("beta = %#v, want resolved canonical copy", beta)
+	}
+	if gamma.Name != "gamma" || !gamma.NeedsChoice || gamma.RelativePath != "" || len(gamma.Options) != 2 {
+		t.Fatalf("gamma = %#v, want a choice between two copies", gamma)
+	}
+	for _, cell := range []InstallCandidateCell{gamma.Claude, gamma.Codex, gamma.Muse, gamma.Grok} {
+		if cell.Status != "needs-choice" {
+			t.Fatalf("gamma cell = %#v, want needs-choice", cell)
+		}
+	}
+
+	if _, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "gamma", Tool: "claude"}}, false); err == nil {
+		t.Fatal("ReviewInstall() without a copy choice succeeded, want ambiguous error")
+	} else if !strings.Contains(err.Error(), "ambiguous skills") {
+		t.Fatalf("ReviewInstall() error = %q, want ambiguous skills", err.Error())
+	}
+
+	if _, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "gamma", Tool: "claude", Path: "packs/missing/gamma"}}, false); err == nil {
+		t.Fatal("ReviewInstall() with an unknown copy succeeded, want error")
+	} else if !strings.Contains(err.Error(), "has no copy at") {
+		t.Fatalf("ReviewInstall() error = %q, want no-copy error", err.Error())
+	}
+
+	if _, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{
+		{SkillName: "gamma", Tool: "claude", Path: "packs/one/gamma"},
+		{SkillName: "gamma", Tool: "codex", Path: "packs/two/gamma"},
+	}, false); err == nil {
+		t.Fatal("ReviewInstall() with conflicting copies succeeded, want error")
+	} else if !strings.Contains(err.Error(), "conflicting copies") {
+		t.Fatalf("ReviewInstall() error = %q, want conflicting copies", err.Error())
+	}
+
+	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{
+		{SkillName: "beta", Tool: "claude"},
+		{SkillName: "gamma", Tool: "claude", Path: "packs/two/gamma"},
+	}, false)
+	if err != nil || !review.Ready || review.CreateCount != 2 {
+		t.Fatalf("review = %#v err=%v", review, err)
+	}
+	result := service.ApplyInstall(review.ReviewID, false)
+	if result.Failure != nil || result.CreatedLinks != 2 {
+		t.Fatalf("apply = %#v", result)
+	}
+	for skill, want := range map[string]string{
+		"beta":  filepath.Join(sourcePath, "plugin", "skills", "beta"),
+		"gamma": filepath.Join(sourcePath, "packs", "two", "gamma"),
+	} {
+		target, err := os.Readlink(filepath.Join(p.ClaudeUserSkills, skill))
+		if err != nil {
+			t.Fatalf("readlink %s: %v", skill, err)
+		}
+		resolvedTarget, err := filepath.EvalSymlinks(target)
+		if err != nil {
+			t.Fatalf("resolve target %s: %v", target, err)
+		}
+		resolvedWant, err := filepath.EvalSymlinks(want)
+		if err != nil {
+			t.Fatalf("resolve want %s: %v", want, err)
+		}
+		if resolvedTarget != resolvedWant {
+			t.Fatalf("readlink %s = %q, want %q", skill, target, want)
+		}
+	}
+}
+
 func TestLocalInstallAsOffAppliesTheReviewedMode(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	sourcePath := filepath.Join(p.Home, "workspace", "local-pack")
