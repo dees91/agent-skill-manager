@@ -14,7 +14,7 @@ import (
 	"github.com/dees91/agent-skill-manager/internal/paths"
 )
 
-const manifestVersion = 2
+const manifestVersion = 3
 
 const (
 	privateDirMode    = 0o700
@@ -48,6 +48,8 @@ type Manifest struct {
 }
 
 // DisabledEntry records enough information to restore a disabled skill entry.
+// SkillName is the link basename in the tool directory, which is the installed
+// name for aliased managed skills.
 type DisabledEntry struct {
 	Tool          model.Tool        `json:"tool"`
 	SkillName     string            `json:"skillName"`
@@ -74,10 +76,48 @@ type RepositoryEntry struct {
 }
 
 // InstalledSkillEntry records one skill installed from a managed source.
+// Name is the source directory basename; InstalledAs, when set, is the link
+// basename used in every tool directory instead of Name (Iteration 26).
 type InstalledSkillEntry struct {
 	Name         string       `json:"name"`
+	InstalledAs  string       `json:"installedAs,omitempty"`
 	RelativePath string       `json:"relativePath"`
 	Tools        []model.Tool `json:"tools"`
+}
+
+// InstalledName is the link basename of the skill in tool directories.
+func (e InstalledSkillEntry) InstalledName() string {
+	if e.InstalledAs != "" {
+		return e.InstalledAs
+	}
+	return e.Name
+}
+
+// ValidInstalledName reports whether name is usable as an installed skill
+// name: 1-64 lowercase letters, digits, and single hyphens, with no leading
+// or trailing hyphen (the Agent Skills name rule).
+func ValidInstalledName(name string) bool {
+	if len(name) == 0 || len(name) > 64 || !validSkillName(name) {
+		return false
+	}
+	if name[0] == '-' || name[len(name)-1] == '-' {
+		return false
+	}
+	previousHyphen := false
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			previousHyphen = false
+		case r == '-':
+			if previousHyphen {
+				return false
+			}
+			previousHyphen = true
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // LocalSourceEntry records skills linked directly from a user-owned local directory.
@@ -453,7 +493,7 @@ func (m *Manifest) RemoveLocalSource(canonicalPath string) bool {
 }
 
 func (m *Manifest) ensure() {
-	if m.Version == 0 || m.Version == 1 {
+	if m.Version >= 0 && m.Version < manifestVersion {
 		m.Version = manifestVersion
 	}
 	if m.Disabled == nil {
@@ -550,6 +590,9 @@ func normalizeInstalledSkills(skills []InstalledSkillEntry) []InstalledSkillEntr
 	}
 	for i := range skills {
 		skills[i].Tools = normalizeTools(skills[i].Tools)
+		if skills[i].InstalledAs == skills[i].Name {
+			skills[i].InstalledAs = ""
+		}
 	}
 	sort.SliceStable(skills, func(i, j int) bool {
 		if skills[i].Name != skills[j].Name {
