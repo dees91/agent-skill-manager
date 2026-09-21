@@ -5,6 +5,9 @@
   "tool": "codex",
   "query": "macos notarization ticket",
   "task": "Create a signed macOS notarization ticket for an app archive.",
+  "chunkTokenBudget": 2500,
+  "minChunks": 2,
+  "lastChunkSkill": "needed-last",
   "catalog": [
     {
       "name": "filler-000",

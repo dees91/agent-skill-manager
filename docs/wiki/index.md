@@ -75,9 +75,8 @@ page is added, removed, renamed, or materially repurposed.
   - dated package-level source inspection and verification status used to seed
     the initial topic pages.
 
-## Planned implementation
+## Implemented from plan
 
 - [Phase 24: optional TypeSafe advisor](../../planning/phase-24-typesafe-advisor-tasks.md)
-  - implemented BYOK recommendations, credentials, CLI/desktop Advisor
-    settings, and first-party skill negotiation. Live quality measurement
-    remains opt-in.
+  - BYOK recommendations, credentials, CLI/desktop Advisor settings, and
+    first-party skill negotiation. Live quality measurement remains opt-in.

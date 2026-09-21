@@ -246,7 +246,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
         <div className="sidebar-spacer" />
         <div className="local-note">
           <span className="status-dot" />
-          <div><strong>Local state</strong><small>{view === 'advisor' ? 'TypeSafe uses your key' : 'Git actions use network'}</small></div>
+          <div><strong>Local state</strong><small>Git and TypeSafe use the network when you opt in</small></div>
         </div>
         <div className="scan-meta">
           <span>Last scan</span>

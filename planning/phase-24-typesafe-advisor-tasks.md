@@ -2,7 +2,7 @@
 
 # Phase 24: Optional TypeSafe advisor with BYOK
 
-**Status:** implemented.
+**Status:** done.
 **Source:** user-requested implementation plan, corrected to one complete agent run on 2026-09-19.
 **Planned against:** `main` at `7afd675`.
 **Local state:** committed baseline at `7afd675` with a clean worktree.
@@ -181,7 +181,7 @@ cleanup protocol. Older binaries retain the existing local search path.
 
 | ID | Task | Status |
 | --- | --- | --- |
-| P24-T01 | Implement and verify optional TypeSafe BYOK recommendations across Go, CLI, desktop, and the first-party advisor | implemented |
+| P24-T01 | Implement and verify optional TypeSafe BYOK recommendations across Go, CLI, desktop, and the first-party advisor | done |
 
 ## Execution in one run
 

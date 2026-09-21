@@ -2,16 +2,11 @@ package cli
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 )
-
-func backgroundContext() context.Context {
-	return context.Background()
-}
 
 func readHiddenSecret(stdin io.Reader, stderr io.Writer, keyStdin bool) (string, error) {
 	if keyStdin {

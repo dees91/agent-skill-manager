@@ -28,22 +28,35 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
     }
   }, [backend])
 
-  const run = async (action: () => Promise<AdvisorSettingsView | void>) => {
+  const run = async (kind: 'provider' | 'saveKey' | 'removeKey', action: () => Promise<AdvisorSettingsView>) => {
     setBusy(true)
     setError(null)
+    setStatus('')
     try {
       const next = await action()
-      if (next) {
-        setView(next)
-        setSelectedMode(next.mode)
-      }
+      setView(next)
+      // Saving a key never changes the saved provider, so keep an unsaved
+      // TypeSafe selection; saving the provider and removing the key do.
+      if (kind !== 'saveKey') setSelectedMode(next.mode)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
+      if (kind === 'removeKey') {
+        // A refused removal still resets the saved provider to local.
+        try {
+          const current = await backend.getAdvisorSettings()
+          setView(current)
+          setSelectedMode(current.mode)
+        } catch {
+          // Keep the reported error.
+        }
+      }
     } finally {
       setBusy(false)
-      setKeyValue('')
+      if (kind !== 'provider') setKeyValue('')
     }
   }
+
+  const showKeyPanel = selectedMode === 'typesafe' || view?.mode === 'typesafe' || view?.storedKey === 'present' || Boolean(view?.environmentKey)
 
   return (
     <section className="advisor-page">
@@ -59,19 +72,19 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
         <p className="dialog-description">Local BM25F stays the default. TypeSafe is explicit opt-in with your key and your billing. Skill Manager sends the task brief plus names and bounded descriptions of every toggleable skill for the selected host. It does not send transcripts, project files, or full skill bodies.</p>
         <p className="dialog-description">Pinned model: {view?.model ?? 'jev-1.13.0'}.</p>
         <div className="advisor-choice-row">
-          <button type="button" aria-label="Local" className={selectedMode === 'local' ? 'advisor-choice active' : 'advisor-choice'} onClick={() => { setSelectedMode('local'); setKeyValue('') }} disabled={busy}>
+          <button type="button" aria-label="Local" aria-pressed={selectedMode === 'local'} className={selectedMode === 'local' ? 'advisor-choice active' : 'advisor-choice'} onClick={() => { setSelectedMode('local'); setKeyValue(''); setStatus('') }} disabled={busy}>
             <strong>Local</strong>
             <small>Offline ranked search only</small>
           </button>
-          <button type="button" aria-label="TypeSafe" className={selectedMode === 'typesafe' ? 'advisor-choice active' : 'advisor-choice'} onClick={() => setSelectedMode('typesafe')} disabled={busy}>
+          <button type="button" aria-label="TypeSafe" aria-pressed={selectedMode === 'typesafe'} className={selectedMode === 'typesafe' ? 'advisor-choice active' : 'advisor-choice'} onClick={() => { setSelectedMode('typesafe'); setStatus('') }} disabled={busy}>
             <strong>TypeSafe</strong>
             <small>Your key, your billing</small>
           </button>
         </div>
-        <button type="button" className="primary-button" disabled={busy || !view} onClick={() => void run(() => backend.saveAdvisorProvider(selectedMode))}>Save</button>
+        <button type="button" className="primary-button" disabled={busy || !view} onClick={() => void run('provider', () => backend.saveAdvisorProvider(selectedMode))}>Save</button>
       </article>
 
-      {selectedMode === 'typesafe' && (
+      {showKeyPanel && (
         <article className="advisor-panel">
           <h2>API key</h2>
           <label className="dialog-field">
@@ -79,7 +92,7 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
             <input type="password" autoComplete="off" value={keyValue} onChange={(event) => setKeyValue(event.target.value)} disabled={busy} />
           </label>
           <div className="advisor-key-actions">
-            <button type="button" className="primary-button" disabled={busy || keyValue.trim() === ''} onClick={() => void run(() => backend.setAdvisorKey(keyValue))}>Save key</button>
+            <button type="button" className="primary-button" disabled={busy || keyValue.trim() === ''} onClick={() => void run('saveKey', () => backend.setAdvisorKey(keyValue))}>Save key</button>
             <button type="button" disabled={busy} onClick={() => setKeyValue('')}>Cancel</button>
             <button type="button" disabled={busy} onClick={() => void (async () => {
               setBusy(true)
@@ -93,7 +106,7 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
                 setBusy(false)
               }
             })()}>Check connection</button>
-            <button type="button" disabled={busy} onClick={() => void run(() => backend.removeAdvisorKey())}>Remove key</button>
+            <button type="button" disabled={busy} onClick={() => void run('removeKey', () => backend.removeAdvisorKey())}>Remove key</button>
           </div>
           <p className="advisor-status">{status || `Stored key: ${view?.storedKey ?? 'absent'}. Environment key: ${view?.environmentKey ? 'present' : 'absent'}. Store: ${view?.credentialStore ?? 'unknown'}.`}</p>
         </article>

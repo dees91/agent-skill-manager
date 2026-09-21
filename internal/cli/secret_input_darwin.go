@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 
 	"golang.org/x/sys/unix"
 )
@@ -27,12 +26,8 @@ func readTTYSecret(file *os.File, stderr io.Writer) (string, error) {
 	}
 	restore := func() { _ = unix.IoctlSetTermios(fd, unix.TIOCSETA, &old) }
 	defer restore()
-	ctx, stop := signal.NotifyContext(backgroundContext(), os.Interrupt)
+	stop := watchInterrupt(restore)
 	defer stop()
-	go func() {
-		<-ctx.Done()
-		restore()
-	}()
 	fmt.Fprint(stderr, "TypeSafe API key: ")
 	secret, err := readSecretLine(file)
 	fmt.Fprintln(stderr)

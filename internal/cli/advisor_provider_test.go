@@ -115,6 +115,43 @@ func TestAdvisorProviderRemoveAndCheck(t *testing.T) {
 	})
 }
 
+func TestAdvisorProviderRemoveResetsWhenStoreUnavailable(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	if err := advisor.NewSettingsStore(p).Save(advisor.Settings{Version: 1, Provider: advisor.ProviderTypeSafe}); err != nil {
+		t.Fatal(err)
+	}
+	app := newApp(p)
+	app.credentials = &credentials.Memory{Fail: credentials.ErrUnavailable}
+	var stdout, stderr strings.Builder
+	if code := app.Run([]string{"advisor", "provider", "remove", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("code=%d stderr=%s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"removed": false`) {
+		t.Fatalf("stdout = %s", stdout.String())
+	}
+	settings, err := advisor.NewSettingsStore(p).Load()
+	if err != nil || settings.Provider != advisor.ProviderLocal {
+		t.Fatalf("settings = %#v err=%v", settings, err)
+	}
+}
+
+func TestAdvisorProviderRemoveDeniedStillResetsProvider(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	if err := advisor.NewSettingsStore(p).Save(advisor.Settings{Version: 1, Provider: advisor.ProviderTypeSafe}); err != nil {
+		t.Fatal(err)
+	}
+	app := newApp(p)
+	app.credentials = &credentials.Memory{Fail: credentials.ErrDenied}
+	var stdout, stderr strings.Builder
+	if code := app.Run([]string{"advisor", "provider", "remove", "--json"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	settings, err := advisor.NewSettingsStore(p).Load()
+	if err != nil || settings.Provider != advisor.ProviderLocal {
+		t.Fatalf("settings = %#v err=%v", settings, err)
+	}
+}
+
 func TestAdvisorProviderDenied(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	app := newApp(p)

@@ -2,7 +2,9 @@
 
 Synthetic cases for optional TypeSafe recommendations. Labels were fixed before
 threshold tuning. Names and descriptions are invented and contain no real
-inventory.
+inventory. Offline `go test` fixtures drive a scripted provider from the
+expected labels; they verify request plumbing, chunking, and mapping, not Jev
+quality. Live measurement uses the same files with the real API.
 
 ## Splits
 

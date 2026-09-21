@@ -163,22 +163,32 @@ func (a App) runProviderRemove(stdout, stderr io.Writer, args []string, jsonOutp
 	if err := parseProviderFlags(args, jsonOutput); err != nil {
 		return advisorUsageError(stderr, jsonOutput, err)
 	}
-	if err := a.credentials.Delete(context.Background(), credentials.AccountTypeSafe); err != nil && !errors.Is(err, credentials.ErrNotFound) {
-		return advisorCommandError(stderr, jsonOutput, "PROVIDER_FAILED", redactStoreError(err), "")
+	removed := true
+	deleteErr := a.credentials.Delete(context.Background(), credentials.AccountTypeSafe)
+	if errors.Is(deleteErr, credentials.ErrNotFound) || errors.Is(deleteErr, credentials.ErrUnavailable) {
+		removed, deleteErr = false, nil
 	}
+	// Revoke cloud consent even when the credential store refuses the delete.
 	if err := advisor.NewSettingsStore(a.paths).Save(advisor.Settings{Version: 1, Provider: advisor.ProviderLocal}); err != nil {
 		return advisorCommandError(stderr, jsonOutput, "PROVIDER_FAILED", err, "")
+	}
+	if deleteErr != nil {
+		return advisorCommandError(stderr, jsonOutput, "PROVIDER_FAILED", redactStoreError(deleteErr), "")
 	}
 	envPresent := environmentKeyPresent(a.lookupEnv)
 	if jsonOutput {
 		return writeAdvisorJSON(stdout, stderr, map[string]any{
 			"apiVersion":            advisor.APIVersion,
-			"removed":               true,
+			"removed":               removed,
 			"provider":              map[string]any{"mode": advisor.ProviderLocal},
 			"environmentKeyPresent": envPresent,
 		})
 	}
-	fmt.Fprintln(stdout, "Stored TypeSafe API key removed. Provider set to local.")
+	if removed {
+		fmt.Fprintln(stdout, "Stored TypeSafe API key removed. Provider set to local.")
+	} else {
+		fmt.Fprintln(stdout, "No stored TypeSafe API key found. Provider set to local.")
+	}
 	return 0
 }
 

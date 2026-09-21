@@ -92,15 +92,18 @@ func (s *Service) SetAdvisorKey(key string) (AdvisorSettingsView, error) {
 // RemoveAdvisorKey deletes the stored key and returns the provider to local.
 func (s *Service) RemoveAdvisorKey() (AdvisorSettingsView, error) {
 	s.advisorMu.Lock()
-	err := s.credentialStore().Delete(context.Background(), credentials.AccountTypeSafe)
-	if err != nil && !errors.Is(err, credentials.ErrNotFound) {
-		s.advisorMu.Unlock()
-		return AdvisorSettingsView{}, err
+	deleteErr := s.credentialStore().Delete(context.Background(), credentials.AccountTypeSafe)
+	if errors.Is(deleteErr, credentials.ErrNotFound) || errors.Is(deleteErr, credentials.ErrUnavailable) {
+		deleteErr = nil
 	}
-	err = s.settingsStore().Save(advisor.Settings{Version: 1, Provider: advisor.ProviderLocal})
+	// Revoke cloud consent even when the credential store refuses the delete.
+	saveErr := s.settingsStore().Save(advisor.Settings{Version: 1, Provider: advisor.ProviderLocal})
 	s.advisorMu.Unlock()
-	if err != nil {
-		return AdvisorSettingsView{}, err
+	if deleteErr != nil {
+		return AdvisorSettingsView{}, deleteErr
+	}
+	if saveErr != nil {
+		return AdvisorSettingsView{}, saveErr
 	}
 	return s.GetAdvisorSettings()
 }

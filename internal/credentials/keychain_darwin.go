@@ -4,7 +4,6 @@ package credentials
 
 import (
 	"context"
-	"errors"
 
 	"github.com/keybase/go-keychain"
 )
@@ -48,11 +47,8 @@ func (darwinStore) Get(ctx context.Context, account string) (string, error) {
 	return string(results[0].Data), nil
 }
 
-func (s darwinStore) Set(ctx context.Context, account, secret string) error {
+func (darwinStore) Set(ctx context.Context, account, secret string) error {
 	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if err := s.Delete(ctx, account); err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
 	item := genericQuery(account)
@@ -60,10 +56,15 @@ func (s darwinStore) Set(ctx context.Context, account, secret string) error {
 	item.SetData([]byte(secret))
 	item.SetSynchronizable(keychain.SynchronizableNo)
 	item.SetAccessible(keychain.AccessibleWhenUnlocked)
-	if err := keychain.AddItem(item); err != nil {
+	if err := keychain.AddItem(item); err != keychain.ErrorDuplicateItem {
 		return mapKeychainError(err)
 	}
-	return nil
+	// Replace only the secret in place, so a failed update keeps the
+	// previous key instead of leaving the user with none.
+	update := keychain.NewItem()
+	update.SetLabel(keychainLabel)
+	update.SetData([]byte(secret))
+	return mapKeychainError(keychain.UpdateItem(genericQuery(account), update))
 }
 
 func (darwinStore) Delete(ctx context.Context, account string) error {

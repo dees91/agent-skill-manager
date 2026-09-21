@@ -40,6 +40,14 @@ func TestDarwinKeychainRoundTrip(t *testing.T) {
 	if err != nil || got != secret {
 		t.Fatalf("get = %q err=%v", got, err)
 	}
+	replacement := "synthetic-test-secret-replacement"
+	if err := store.Set(ctx, account, replacement); err != nil {
+		t.Fatalf("set existing: %v", err)
+	}
+	got, err = store.Get(ctx, account)
+	if err != nil || got != replacement {
+		t.Fatalf("get after replace = %q err=%v", got, err)
+	}
 	if err := store.Delete(ctx, account); err != nil {
 		t.Fatalf("delete: %v", err)
 	}

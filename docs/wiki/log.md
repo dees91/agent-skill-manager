@@ -920,3 +920,12 @@ Moved Skill Advisor out of a CLI footnote into the product bullets, How it
 works, and a dedicated section with the TypeSafe settings screenshot. Local
 search remains the default; TypeSafe Jev stays optional BYOK. Detailed
 commands remain in the user guide.
+
+## [2026-09-21] fix | Address TypeSafe advisor review findings
+
+Questions reference skills only by index (`catalog[k]`, `shortlist[k]`); names
+stay in state. Saving a key keeps an unsaved TypeSafe selection. The last-chunk
+fixture injects a token budget and asserts two or more chunks. Fallback reports
+every billed response, chunking is linear, Ctrl-C at the key prompt restores
+echo and re-raises SIGINT, remove always resets the provider to local, and
+keychain `Set` updates in place.
