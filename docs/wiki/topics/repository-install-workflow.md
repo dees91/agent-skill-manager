@@ -61,7 +61,10 @@ Every selected skill/tool cell is checked before creating links:
   (`documented`, `implemented`, `internal/install/alias.go`,
   `internal/install/planner.go`).
 - A recorded install name wins on reinstall and extend; a different `--as` for
-  a recorded skill is drift, like a drifted recorded path.
+  a recorded skill is drift, like a drifted recorded path. Install names the
+  source records for its other skills stay reserved even when those skills are
+  not selected, and apply rejects a source record with a shared install name
+  before saving (`implemented`, `internal/install/alias.go`).
 - Resolution reuses the same source's recorded copy when it still holds the
   skill; a recorded path that no longer does is drift (uninstall plus
   reinstall), never a silent switch.
