@@ -514,8 +514,26 @@ describe('Skill Manager desktop app', () => {
     expect(within(dialog).getByRole('checkbox', { name: 'beta claude' })).toBeChecked()
     expect(within(dialog).getByRole('button', { name: 'Review 4 targets' })).toBeInTheDocument()
 
+    // The column bulk toggle skips rows waiting for a copy choice.
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: ON (1 of 1 selected)' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeChecked()
+    expect(within(dialog).getByRole('button', { name: 'Review 3 targets' })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: OFF (0 of 1 selected)' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'beta claude' })).toBeChecked()
+
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Choose a copy of gamma to install' }), 'packs/two/gamma')
     expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeDisabled()
+    await user.click(within(dialog).getByRole('button', { name: 'Claude all targets: MIXED (1 of 2 selected)' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).toBeChecked()
+    expect(within(dialog).getByRole('button', { name: 'Claude all targets: ON (2 of 2 selected)' })).toBeInTheDocument()
+
+    // Reverting the picker drops the row's selections instead of stranding them.
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Choose a copy of gamma to install' }), '')
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).not.toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'gamma claude' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: 'Review 4 targets' })).toBeInTheDocument()
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Choose a copy of gamma to install' }), 'packs/two/gamma')
     await user.click(within(dialog).getByRole('checkbox', { name: 'gamma claude' }))
     await user.click(within(dialog).getByRole('button', { name: 'Review 5 targets' }))
     await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:dupes', expect.arrayContaining([

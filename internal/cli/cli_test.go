@@ -288,8 +288,8 @@ func TestRunInstallLocalDuplicateCopiesResolveOrQualify(t *testing.T) {
 	}
 	for _, want := range []string{
 		`ambiguous skill "gamma": 2 copies with differing content`,
-		"--skill gamma=packs/one/gamma",
-		"--skill gamma=packs/two/gamma",
+		"--skill 'gamma=packs/one/gamma'",
+		"--skill 'gamma=packs/two/gamma'",
 	} {
 		if !strings.Contains(stderr.String(), want) {
 			t.Fatalf("stderr = %q, want %q", stderr.String(), want)
@@ -664,10 +664,50 @@ func TestPrintAmbiguousSkillsListsQualifiedForms(t *testing.T) {
 	})
 	want := "missing skill: absent\n" +
 		"ambiguous skill \"gamma\": 2 copies with differing content; qualify with --skill gamma=<path>:\n" +
-		"  --skill gamma=packs/one/gamma  # aaa111\n" +
-		"  --skill gamma=packs/two/gamma  # bbb222\n"
+		"  --skill 'gamma=packs/one/gamma'  # aaa111\n" +
+		"  --skill 'gamma=packs/two/gamma'  # bbb222\n"
 	if stderr.String() != want {
 		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
+	}
+}
+
+func TestPrintAmbiguousSkillsQuotesUnsafeNamesAndPaths(t *testing.T) {
+	var stderr strings.Builder
+	printAmbiguousSkills(&stderr, install.AmbiguousSkillsError{
+		Missing: []string{"gone\x1b[2J"},
+		Groups: []install.AmbiguousGroup{
+			{
+				Name:   "my skill",
+				Paths:  []string{"packs/my pack/one", "packs/two"},
+				Hashes: []string{"aaa111", "bbb222"},
+			},
+			{
+				Name:  "evil\x1b[2J",
+				Paths: []string{"packs/one"},
+			},
+		},
+	})
+	want := "missing skill: \"gone\\x1b[2J\"\n" +
+		"ambiguous skill \"my skill\": 2 copies with differing content; qualify with --skill my skill=<path>:\n" +
+		"  --skill 'my skill=packs/my pack/one'  # aaa111\n" +
+		"  --skill 'my skill=packs/two'  # bbb222\n" +
+		"ambiguous skill \"evil\\x1b[2J\": 1 copies with differing content; qualify with --skill \"evil\\x1b[2J\"=<path>:\n" +
+		"  \"evil\\x1b[2J=packs/one\" (pasteable --skill form omitted: contains control characters)\n"
+	if stderr.String() != want {
+		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
+	}
+}
+
+func TestPrintResolvedDuplicatesSanitizesPaths(t *testing.T) {
+	var stdout strings.Builder
+	printResolvedDuplicates(&stdout, []install.ResolvedDuplicate{
+		{Name: "demo", Copies: 2, RelativePath: "plugin/skills/demo"},
+		{Name: "evil\x1b[2J", Copies: 2, RelativePath: "packs/\x07/demo"},
+	})
+	want := "resolved \"demo\": 2 identical copies, using plugin/skills/demo\n" +
+		"resolved \"evil\\x1b[2J\": 2 identical copies, using \"packs/\\a/demo\"\n"
+	if stdout.String() != want {
+		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
 }
 

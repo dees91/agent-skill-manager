@@ -172,7 +172,10 @@ func ResolveDiscovery(d Discovery, requested []string, explicit, recorded map[st
 	for _, name := range names {
 		if skill, ok := unique[name]; ok {
 			if choice, hasChoice := resolveChoice(name, explicit, recorded); hasChoice && choice != skill.RelativePath {
-				return Resolution{}, fmt.Errorf("skill %q has a single copy at %q, not %q", name, skill.RelativePath, choice)
+				if explicitHas(explicit, name) {
+					return Resolution{}, fmt.Errorf("skill %q has a single copy at %q, not %q", name, skill.RelativePath, choice)
+				}
+				return Resolution{}, fmt.Errorf("skill %q was recorded at %q, which no longer holds the skill (now a single copy at %q); uninstall the source and reinstall to adopt the new location", name, choice, skill.RelativePath)
 			}
 			result.Selected = append(result.Selected, skill)
 			continue
@@ -253,14 +256,25 @@ func mismatchedChoiceError(name, choice string, group DuplicateGroup, isExplicit
 }
 
 // SplitSkillRequests parses raw --skill values into requested names and
-// qualified path choices. A value containing "=" whose qualified form matches
-// nothing but whose whole text matches a discovered name is treated as a bare
-// name, so literal "=" names keep working.
+// qualified path choices. A value whose whole text matches a discovered name
+// is treated as a bare name before any "=" split, so literal "=" names
+// (including "demo=" and "=demo") keep working.
 func SplitSkillRequests(d Discovery, raws []string) ([]string, map[string]string, error) {
 	names := []string{}
 	explicit := map[string]string{}
 	seen := map[string]bool{}
 	for _, raw := range raws {
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" {
+			return nil, nil, fmt.Errorf("selected skill name is required")
+		}
+		if d.HasName(trimmed) {
+			if !seen[trimmed] {
+				names = append(names, trimmed)
+				seen[trimmed] = true
+			}
+			continue
+		}
 		selection, err := ParseSkillSelection(raw)
 		if err != nil {
 			return nil, nil, err
@@ -269,13 +283,6 @@ func SplitSkillRequests(d Discovery, raws []string) ([]string, map[string]string
 			if !seen[selection.Name] {
 				names = append(names, selection.Name)
 				seen[selection.Name] = true
-			}
-			continue
-		}
-		if !discoveryHasPath(d, selection.Name, selection.Path) && d.HasName(selection.Raw) {
-			if !seen[selection.Raw] {
-				names = append(names, selection.Raw)
-				seen[selection.Raw] = true
 			}
 			continue
 		}
@@ -318,24 +325,6 @@ func CellsToRequests(cells []InstallCell) ([]string, map[string]string, error) {
 		}
 	}
 	return names, explicit, nil
-}
-
-func discoveryHasPath(d Discovery, name, relativePath string) bool {
-	for _, skill := range d.Skills {
-		if skill.Name == name && skill.RelativePath == relativePath {
-			return true
-		}
-	}
-	for _, group := range d.Groups {
-		if group.Name != name {
-			continue
-		}
-		if _, ok := groupCandidateAt(group, relativePath); ok {
-			return true
-		}
-		return false
-	}
-	return false
 }
 
 // RecordedGitSkillPaths returns manifest skill paths for one recorded

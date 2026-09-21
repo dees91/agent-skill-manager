@@ -65,6 +65,21 @@ func TestSplitSkillRequestsQualifiedAndLiteralFallback(t *testing.T) {
 		t.Fatalf("explicit = %#v, want no choice for literal name", explicit)
 	}
 
+	edgeCheckout := t.TempDir()
+	writeSkill(t, edgeCheckout+"/skills/demo=")
+	writeSkill(t, edgeCheckout+"/skills/=demo")
+	edgeDiscovered, err := DiscoverSkills(edgeCheckout)
+	if err != nil {
+		t.Fatalf("DiscoverSkills() error = %v", err)
+	}
+	names, explicit, err = SplitSkillRequests(edgeDiscovered, []string{"demo=", "=demo"})
+	if err != nil {
+		t.Fatalf("SplitSkillRequests() error = %v", err)
+	}
+	if len(names) != 2 || len(explicit) != 0 {
+		t.Fatalf("names = %q explicit = %#v, want two bare literal names", names, explicit)
+	}
+
 	if _, _, err := SplitSkillRequests(discovered, []string{"demo=skills/demo", "demo=other/demo"}); err == nil {
 		t.Fatal("SplitSkillRequests(conflicting paths) error = nil, want error")
 	}
@@ -172,8 +187,16 @@ func TestResolveDiscoveryPrefersRecordedPathAndReportsDrift(t *testing.T) {
 	_, err = ResolveDiscovery(discovered, []string{"beta"}, nil, map[string]string{"beta": "gone/beta"})
 	if err == nil {
 		t.Fatal("ResolveDiscovery(drift) error = nil, want error")
-	} else if !strings.Contains(err.Error(), "no longer holds the skill") {
-		t.Fatalf("error = %q, want drift message", err.Error())
+	} else if !strings.Contains(err.Error(), "no longer holds the skill") || !strings.Contains(err.Error(), "uninstall the source and reinstall") {
+		t.Fatalf("error = %q, want drift message with guidance", err.Error())
+	}
+
+	// Drift on a now-unique skill carries the same guidance.
+	_, err = ResolveDiscovery(discovered, []string{"alpha"}, nil, map[string]string{"alpha": "gone/alpha"})
+	if err == nil {
+		t.Fatal("ResolveDiscovery(unique drift) error = nil, want error")
+	} else if !strings.Contains(err.Error(), "no longer holds the skill") || !strings.Contains(err.Error(), "uninstall the source and reinstall") {
+		t.Fatalf("error = %q, want drift message with guidance", err.Error())
 	}
 }
 

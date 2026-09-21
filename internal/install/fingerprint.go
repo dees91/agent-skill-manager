@@ -36,9 +36,9 @@ func (f skillFingerprint) short() string {
 }
 
 // fingerprintSkillDir hashes every file and symlink inside a skill directory.
-// Entries are hashed in relative-path order over names, entry kinds, and file
-// bytes, so identical copies hash equally regardless of absolute location.
-// Directory traversal never follows symlinks.
+// Entries are hashed in relative-path order over names, entry kinds,
+// permission bits, and file bytes, so identical copies hash equally
+// regardless of absolute location. Directory traversal never follows symlinks.
 func fingerprintSkillDir(dir string) (skillFingerprint, error) {
 	type entry struct {
 		relative string
@@ -97,7 +97,9 @@ func fingerprintSkillDir(dir string) (skillFingerprint, error) {
 			if err != nil {
 				return skillFingerprint{}, fmt.Errorf("read skill file %s: %w", item.path, err)
 			}
-			fmt.Fprintf(hasher, "file\x00%s\x00%s\x00", item.relative, strconv.FormatInt(size, 10))
+			// Permission bits matter because the canonical copy is symlinked
+			// in place: a script that lost its executable bit runs differently.
+			fmt.Fprintf(hasher, "file\x00%s\x00%s\x00%o\x00", item.relative, strconv.FormatInt(size, 10), mode.Perm())
 			written, copyErr := io.Copy(hasher, file)
 			closeErr := file.Close()
 			if copyErr != nil {
@@ -109,7 +111,7 @@ func fingerprintSkillDir(dir string) (skillFingerprint, error) {
 			hashedBytes += written
 			hasher.Write([]byte{0})
 		default:
-			fmt.Fprintf(hasher, "other\x00%s\x00%s\x00", item.relative, mode.Type().String())
+			fmt.Fprintf(hasher, "other\x00%s\x00%s\x00%o\x00", item.relative, mode.Type().String(), mode.Perm())
 		}
 	}
 	return skillFingerprint{hash: hex.EncodeToString(hasher.Sum(nil))}, nil

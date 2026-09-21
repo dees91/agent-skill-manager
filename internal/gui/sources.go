@@ -554,6 +554,9 @@ func (s *Service) planDraftWithManifest(draft installDraftState, manifest state.
 		if err != nil {
 			return plan, localPlan, nil, err
 		}
+		if err := validateBridgeCopyChoices(discovered, options.Cells); err != nil {
+			return plan, localPlan, nil, err
+		}
 		plan, planErr = install.PlanInstall(s.paths, manifest, draft.Identity, draft.CheckoutPath, discovered, options)
 	} else {
 		resolved, err := install.ResolveLocalSource(s.paths, s.paths.Home, draft.LocalSource.CanonicalPath)
@@ -567,9 +570,55 @@ func (s *Service) planDraftWithManifest(draft installDraftState, manifest state.
 		if err != nil {
 			return plan, localPlan, nil, err
 		}
+		if err := validateBridgeCopyChoices(discovered, options.Cells); err != nil {
+			return plan, localPlan, nil, err
+		}
 		localPlan, planErr = install.PlanLocalInstall(s.paths, manifest, resolved, discovered, options)
 	}
 	return convertPlanError(plan, localPlan, planErr)
+}
+
+// validateBridgeCopyChoices enforces the draft's own options before the
+// resolver runs: a choice naming an existing copy is accepted only for a
+// conflicting group, where the draft exposed a picker. Unknown names and
+// choices matching no copy stay the resolver's job against fresh discovery,
+// so vanished copies keep their precise errors.
+func validateBridgeCopyChoices(discovered install.Discovery, cells []install.InstallCell) error {
+	conflicting := map[string]bool{}
+	unoffered := map[string]map[string]bool{}
+	for _, skill := range discovered.Skills {
+		paths, ok := unoffered[skill.Name]
+		if !ok {
+			paths = map[string]bool{}
+			unoffered[skill.Name] = paths
+		}
+		paths[skill.RelativePath] = true
+	}
+	for _, group := range discovered.Groups {
+		if group.Identical {
+			paths := map[string]bool{}
+			for _, candidate := range group.Candidates {
+				paths[candidate.RelativePath] = true
+			}
+			unoffered[group.Name] = paths
+			continue
+		}
+		conflicting[group.Name] = true
+	}
+	for _, cell := range cells {
+		path := strings.TrimSpace(cell.Path)
+		if path == "" {
+			continue
+		}
+		name := strings.TrimSpace(cell.SkillName)
+		if conflicting[name] {
+			continue
+		}
+		if unoffered[name][path] {
+			return fmt.Errorf("copy choice for skill %q is not offered by the draft", name)
+		}
+	}
+	return nil
 }
 
 func convertPlanError(plan install.InstallPlan, localPlan install.LocalInstallPlan, planErr error) (install.InstallPlan, install.LocalInstallPlan, []InstallConflict, error) {

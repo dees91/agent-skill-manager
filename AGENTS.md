@@ -1134,9 +1134,9 @@ alone no longer fails discovery, inspection, update checks, or extend.
   hidden directories after visible ones, then deeper paths after shallower
   ones, then lexicographic order.
 - Copies are compared by a bounded content hash over file names, entry kinds,
-  and bytes inside each skill directory (symlinks by target text, never
-  followed). Only skills in multi-copy groups are hashed. A copy that exceeds
-  the file or byte bound is treated as differing.
+  permission bits, and bytes inside each skill directory (symlinks by target
+  text, never followed). Only skills in multi-copy groups are hashed. A copy
+  that exceeds the file or byte bound is treated as differing.
 - A group whose copies are all identical resolves automatically to the
   canonical copy. The CLI prints which copy was used
   (`resolved "demo": 6 identical copies, using plugin/skills/demo`); the
@@ -1147,12 +1147,11 @@ alone no longer fails discovery, inspection, update checks, or extend.
   cells that stay unselectable until a copy is chosen. Review and apply
   revalidate the choice against fresh discovery and reject any path outside
   the draft.
-- `skill-manager install <git-url|local-path> [--tool …] [--skill <name>[=<path>]] …]`
+- `skill-manager install <git-url|local-path> [--tool …] [--skill <name>[=<path>] …]`
   accepts the qualified form for both Git and local sources. A bare name
   resolves automatically when possible and reports ambiguity otherwise. A
-  value whose qualified form matches nothing but whose whole text matches a
-  discovered name is treated as a bare name, so literal `=` names keep
-  working.
+  value whose whole text matches a discovered name is treated as a bare name
+  before any `=` split, so literal `=` names keep working.
 - Resolution reuses the manifest-recorded path of the same source when it
   still holds the skill, so reinstalls and extend stay stable when upstream
   gains another identical copy. An explicit choice wins over the recorded
@@ -1164,10 +1163,10 @@ alone no longer fails discovery, inspection, update checks, or extend.
   `--skill <name>=<path>` template instead of a command. Recorded names are
   never reported as new, even when new copies appear. `update --dry-run`
   still does not fetch.
-- The desktop `Install new` flow preselects ambiguous new skills like any
-  other new skill; the copy picker appears in the matrix. The install-matrix
-  bulk-selection toggle skips `needs-choice` cells without a chosen copy,
-  like conflicts.
+- The desktop `Install new` flow lists ambiguous new skills first with the copy
+  picker; their cells stay `needs-choice` and unselected until a copy is
+  chosen. The install-matrix bulk-selection toggle skips `needs-choice` cells
+  without a chosen copy, like conflicts.
 - Frontend mutation calls still use opaque draft/review/source identifiers
   plus skill and tool names; the copy choice is an additional
   draft-constrained selection, never an arbitrary filesystem path.

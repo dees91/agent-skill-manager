@@ -1110,27 +1110,35 @@ func printInstallMode(stdout io.Writer, off bool) {
 }
 
 // printResolvedDuplicates names the canonical copy used for every identical
-// group in the plan, so an automatic choice is never silent.
+// group in the plan, so an automatic choice is never silent. Names and paths
+// come from upstream directories and are sanitized before printing.
 func printResolvedDuplicates(stdout io.Writer, resolved []install.ResolvedDuplicate) {
 	for _, item := range resolved {
-		fmt.Fprintf(stdout, "resolved %q: %d identical copies, using %s\n", item.Name, item.Copies, item.RelativePath)
+		fmt.Fprintf(stdout, "resolved %q: %d identical copies, using %s\n", item.Name, item.Copies, printableText(item.RelativePath))
 	}
 }
 
 // printAmbiguousSkills lists every copy of each conflicting skill name with
-// the qualified --skill form that installs it.
+// the qualified --skill form that installs it. Each form is shell-quoted so
+// it pastes as one argument; names or paths with control characters show a
+// quoted form with the pasteable line omitted instead.
 func printAmbiguousSkills(stderr io.Writer, err install.AmbiguousSkillsError) {
 	for _, missing := range err.Missing {
-		fmt.Fprintf(stderr, "missing skill: %s\n", missing)
+		fmt.Fprintf(stderr, "missing skill: %s\n", printableText(missing))
 	}
 	for _, group := range err.Groups {
-		fmt.Fprintf(stderr, "ambiguous skill %q: %d copies with differing content; qualify with --skill %s=<path>:\n", group.Name, len(group.Paths), group.Name)
+		name := printableText(group.Name)
+		fmt.Fprintf(stderr, "ambiguous skill %q: %d copies with differing content; qualify with --skill %s=<path>:\n", group.Name, len(group.Paths), name)
 		for i, path := range group.Paths {
+			if name != group.Name || printableText(path) != path {
+				fmt.Fprintf(stderr, "  %s (pasteable --skill form omitted: contains control characters)\n", printableText(group.Name+"="+path))
+				continue
+			}
 			hash := ""
 			if i < len(group.Hashes) && group.Hashes[i] != "" && group.Hashes[i] != "-" {
 				hash = "  # " + group.Hashes[i]
 			}
-			fmt.Fprintf(stderr, "  --skill %s=%s%s\n", group.Name, path, hash)
+			fmt.Fprintf(stderr, "  --skill %s%s\n", shellQuote(group.Name+"="+path), hash)
 		}
 	}
 }

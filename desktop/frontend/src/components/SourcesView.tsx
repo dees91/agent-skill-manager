@@ -304,7 +304,7 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
     setSelections((current) => {
       const next = new Set(current)
       draft.candidates.forEach((candidate) => {
-        if (candidate[tool].status === 'conflict' || candidate[tool].status === 'needs-choice') return
+        if (candidate[tool].status === 'conflict') return
         if (candidate.needsChoice && !choices[candidate.name]) return
         const cell = key(candidate.name, tool)
         selected ? next.add(cell) : next.delete(cell)
@@ -316,6 +316,15 @@ function InstallDialog({ backend, busy, progress, includeReadOnly, error, onBusy
   const chooseCopy = (skill: string, path: string) => {
     setReview(null)
     setChoices((current) => ({ ...current, [skill]: path }))
+    if (path === '') {
+      // Reverting the picker would strand checked-but-disabled cells that the
+      // column toggle skips, so drop the row's selections with the choice.
+      setSelections((current) => {
+        const next = new Set(current)
+        MANAGED_TOOLS.forEach((tool) => next.delete(key(skill, tool)))
+        return next
+      })
+    }
   }
 
   const missingChoice = draft?.candidates.some((candidate) => candidate.needsChoice && !choices[candidate.name] && selectedSkillNames(selections).has(candidate.name)) ?? false

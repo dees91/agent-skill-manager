@@ -220,6 +220,14 @@ func TestLocalInstallDuplicateDraftNeedsChoiceForConflictingCopies(t *testing.T)
 		t.Fatalf("ReviewInstall() error = %q, want no-copy error", err.Error())
 	}
 
+	// The draft offers no picker for identical groups, so a non-canonical
+	// copy is rejected even though the copy exists on disk.
+	if _, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "beta", Tool: "claude", Path: ".agent/skills/beta"}}, false); err == nil {
+		t.Fatal("ReviewInstall() with an unoffered copy succeeded, want error")
+	} else if !strings.Contains(err.Error(), "is not offered by the draft") {
+		t.Fatalf("ReviewInstall() error = %q, want not-offered error", err.Error())
+	}
+
 	if _, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{
 		{SkillName: "gamma", Tool: "claude", Path: "packs/one/gamma"},
 		{SkillName: "gamma", Tool: "codex", Path: "packs/two/gamma"},
@@ -259,6 +267,39 @@ func TestLocalInstallDuplicateDraftNeedsChoiceForConflictingCopies(t *testing.T)
 		if resolvedTarget != resolvedWant {
 			t.Fatalf("readlink %s = %q, want %q", skill, target, want)
 		}
+	}
+}
+
+func TestLocalInstallApplyRevalidatesVanishedCopyChoice(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	sourcePath := filepath.Join(p.Home, "workspace", "local-pack")
+	writeSkill(t, filepath.Join(sourcePath, "packs", "one", "gamma"), "Gamma one")
+	writeSkill(t, filepath.Join(sourcePath, "packs", "two", "gamma"), "Gamma two")
+	service := New(p)
+
+	draft, err := service.PrepareLocalInstall(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{
+		{SkillName: "gamma", Tool: "claude", Path: "packs/two/gamma"},
+	}, false)
+	if err != nil || !review.Ready {
+		t.Fatalf("review = %#v err=%v", review, err)
+	}
+	// The chosen copy vanishes but the name stays conflicting, so the stored
+	// choice reaches the resolver instead of the draft-options check.
+	if err := os.RemoveAll(filepath.Join(sourcePath, "packs", "two", "gamma")); err != nil {
+		t.Fatalf("remove chosen copy: %v", err)
+	}
+	writeSkill(t, filepath.Join(sourcePath, "packs", "three", "gamma"), "Gamma three")
+
+	result := service.ApplyInstall(review.ReviewID, false)
+	if result.Failure == nil || result.Failure.Stage != "preflight" || !strings.Contains(result.Failure.Message, "has no copy at") {
+		t.Fatalf("result = %#v, want preflight failure with no-copy message", result)
+	}
+	if _, err := os.Lstat(filepath.Join(p.ClaudeUserSkills, "gamma")); !os.IsNotExist(err) {
+		t.Fatalf("gamma link exists after failed apply: %v", err)
 	}
 }
 

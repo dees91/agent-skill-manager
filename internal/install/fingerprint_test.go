@@ -84,6 +84,34 @@ func TestFingerprintSkillDirCoversSymlinksByTargetText(t *testing.T) {
 	}
 }
 
+func TestFingerprintSkillDirDetectsPermissionDifferences(t *testing.T) {
+	root := t.TempDir()
+	first := filepath.Join(root, "one", "demo")
+	second := filepath.Join(root, "two", "demo")
+	writeSkill(t, first)
+	writeSkill(t, second)
+	for _, dir := range []string{first, second} {
+		if err := os.WriteFile(filepath.Join(dir, "helper.sh"), []byte("#!/bin/sh\n"), 0o644); err != nil {
+			t.Fatalf("write helper: %v", err)
+		}
+	}
+	if err := os.Chmod(filepath.Join(second, "helper.sh"), 0o755); err != nil {
+		t.Fatalf("chmod helper: %v", err)
+	}
+
+	left, err := fingerprintSkillDir(first)
+	if err != nil {
+		t.Fatalf("fingerprintSkillDir() error = %v", err)
+	}
+	right, err := fingerprintSkillDir(second)
+	if err != nil {
+		t.Fatalf("fingerprintSkillDir() error = %v", err)
+	}
+	if left.hash == right.hash {
+		t.Fatalf("hashes match for copies differing only in permission bits")
+	}
+}
+
 func TestFingerprintSkillDirSkipsComparisonBeyondFileCap(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "demo")
 	writeSkill(t, dir)

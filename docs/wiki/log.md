@@ -897,3 +897,19 @@ planning file, and the install/local/GUI wiki topics. Verification: full
 `go test ./...`, `go vet ./...`, desktop typecheck/tests/build, and a
 synthetic fan-out repro under an isolated home covering resolve, ambiguity,
 qualified retry, idempotent reinstall, and the local flow.
+
+## [2026-09-21] review | Iteration 25 review findings addressed
+
+Addressed three P1 and eight P2 findings on the duplicate-resolution branch.
+CLI ambiguity output is now shell-quoted with control-character-safe omission
+mirroring the new-skills report; the Iteration 25 contract follows the code
+for Install-new preselection (ambiguous rows stay unselected) and the command
+synopsis bracket is fixed. The desktop bulk toggle excludes rows waiting for
+a copy choice (with a test that caught a real post-choice exclusion bug), the
+picker revert clears the row's selections, and the bridge rejects copy
+choices outside the draft's own options ahead of the resolver. The resolver
+gives uninstall-plus-reinstall guidance for single-copy drift, matches whole
+literal `=` names before splitting, and fingerprints permission bits. Demo
+candidates now carry the duplicate shapes so the committed screenshot is
+reproducible. Verification: full `go test ./...`, `go vet ./...`, desktop
+module tests, frontend typecheck/tests/build, and the synthetic fan-out repro.
