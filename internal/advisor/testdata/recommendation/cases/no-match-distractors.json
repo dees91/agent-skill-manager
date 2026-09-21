@@ -1,0 +1,29 @@
+{
+  "id": "no-match-distractors",
+  "split": "dev",
+  "language": "en",
+  "tool": "codex",
+  "query": "what is a monad",
+  "task": "Explain what a monad is in one paragraph.",
+  "catalog": [
+    {
+      "name": "haskell-refactor",
+      "description": "Refactors Haskell modules.",
+      "state": "on"
+    },
+    {
+      "name": "blog-outline",
+      "description": "Outlines blog posts.",
+      "state": "off"
+    }
+  ],
+  "expected": {
+    "required": [],
+    "acceptable": [],
+    "excluded": [
+      "haskell-refactor",
+      "blog-outline"
+    ],
+    "noMatch": true
+  }
+}

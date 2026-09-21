@@ -1,0 +1,36 @@
+{
+  "id": "multi-video",
+  "split": "dev",
+  "language": "en",
+  "tool": "codex",
+  "query": "video remotion ffmpeg",
+  "task": "Build a Remotion composition and encode the result with ffmpeg.",
+  "catalog": [
+    {
+      "name": "remotion-compose",
+      "description": "Creates Remotion video compositions.",
+      "state": "off"
+    },
+    {
+      "name": "ffmpeg-encode",
+      "description": "Encodes rendered frames with ffmpeg.",
+      "state": "on"
+    },
+    {
+      "name": "csv-join",
+      "description": "Joins CSV files.",
+      "state": "on"
+    }
+  ],
+  "expected": {
+    "required": [
+      "remotion-compose",
+      "ffmpeg-encode"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "csv-join"
+    ],
+    "noMatch": false
+  }
+}

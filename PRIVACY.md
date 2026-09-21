@@ -54,9 +54,13 @@ Network access occurs in this user-visible flow:
 
 - Git install and update invoke the local `git` executable for a repository URL
   selected by the user.
+- Optional TypeSafe recommendations, after explicit provider opt-in, POST a
+  task brief and bounded skill names/descriptions to
+  `https://api.typesafe.ai/v1/systemone` using the user's API key.
 
 Skill Manager does not send the local skill inventory, home path, state
 manifest, or provider configuration to a Skill Manager-operated service.
+A stored or environment TypeSafe key is not itself permission to send data.
 
 ## Local Provider Diagnostics
 
@@ -84,4 +88,6 @@ the same skill name is installed again.
 To remove all remaining Skill Manager metadata after restoring or uninstalling
 managed entries, the user may manually archive and delete `~/.skill-manager`.
 Deleting `~/.skill-manager/cache/skills-sh/` removes only dormant catalog cache
-data and does not uninstall skills.
+data and does not uninstall skills. `advisor provider remove` deletes the
+stored TypeSafe key and sets the provider back to local. An environment
+`TYPESAFE_API_KEY` is process-owned and cannot be deleted by the application.

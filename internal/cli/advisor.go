@@ -55,9 +55,13 @@ type advisorErrorDetail struct {
 
 func (a App) runAdvisor(stdout, stderr io.Writer, args []string) int {
 	if len(args) == 0 {
-		return usageError(stderr, "expected advisor <search|activate|cleanup|status>")
+		return usageError(stderr, "expected advisor <search|recommend|activate|cleanup|status|provider>")
 	}
 	switch args[0] {
+	case "recommend":
+		return a.runAdvisorRecommend(stdout, stderr, args[1:])
+	case "provider":
+		return a.runAdvisorProvider(stdout, stderr, args[1:])
 	case "search":
 		options, err := parseAdvisorSearchArgs(args[1:])
 		if err != nil {

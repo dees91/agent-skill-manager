@@ -350,6 +350,12 @@ The skill uses a versioned, path-free inventory and receipt API:
 skill-manager advisor status --tool codex --json
 skill-manager advisor search --tool codex \
   --query "video remotion ffmpeg animation rendering" --limit 20 --json
+skill-manager advisor recommend --tool codex \
+  --query "video remotion ffmpeg animation rendering" \
+  --task-stdin --json <<'BRIEF'
+Build a Remotion composition and encode the rendered frames with ffmpeg.
+BRIEF
+skill-manager advisor provider status --json
 skill-manager advisor activate --tool codex --skill example-skill --json
 skill-manager advisor cleanup --receipt <receipt-id> --json
 ```
@@ -361,6 +367,28 @@ The default result limit is 20 and the accepted range is 1-50. Search does not
 use a model, embeddings, an API, a cache, or a persistent index. The query stays
 in process memory; JSON results omit it along with filesystem paths, matching
 reasons, and numeric scores.
+
+`advisor recommend` is optional. Local mode returns BM25F candidates without a
+model selection. TypeSafe mode requires an explicit `advisor provider use
+typesafe` setting or `--provider typesafe`, plus a user-owned API key from
+`TYPESAFE_API_KEY` or the macOS keychain item `Skill Manager` /
+`typesafe-api-key`. It sends the task brief and bounded names/descriptions of
+every toggleable skill for that host in token-budgeted parallel chunks, then
+re-judges at most five skills. Failures return `local_candidates` with a
+`fallbackReason`. A successful no-match returns `none`. Recommended names are
+suggestions; activation and cleanup stay unchanged. Configure the provider from
+the desktop **Advisor** screen or:
+
+```bash
+skill-manager advisor provider use typesafe
+printf 'key' | skill-manager advisor provider set-key --key-stdin
+skill-manager advisor provider check --json
+skill-manager advisor provider remove
+```
+
+A stored or environment key alone does not enable cloud use. Development builds
+are ad-hoc signed, so macOS may prompt for keychain access after each rebuild.
+If a hidden key prompt is interrupted, run `stty sane`.
 
 `activate` accepts one tool and 1-5 unique skill names. The advisor reports the
 selected names as already active or needing activation before it calls the API.
@@ -381,8 +409,10 @@ general inventory surface, not the advisor's ranking mechanism.
 
 The skill source and CLI API can change at different times on `main`. Before it
 selects or mutates anything, it checks for `apiVersion: 1` and the
-`ranked_search_v1` capability. A missing capability fails with an upgrade
-message; the skill does not fall back to substring lookup.
+`ranked_search_v1` capability. Cloud recommendation also requires
+`semantic_recommendation_v1` and `provider.mode` `typesafe`. A missing
+capability fails with an upgrade message; the skill does not fall back to
+substring lookup.
 
 ## Paths Skill Manager uses
 
@@ -414,6 +444,7 @@ Skill Manager keeps its state under `~/.skill-manager/`:
   state.json
   advisor-activations.json
   advisor.lock
+  advisor-settings.json
   skill-sets.json
   favorites.json
   backups/
@@ -508,7 +539,11 @@ release.
 
 Skill Manager has no telemetry, account system, analytics SDK, or background
 polling. Explicit Git source operations use the local `git` executable to clone,
-fetch, and fast-forward a repository you selected.
+fetch, and fast-forward a repository you selected. Optional TypeSafe
+recommendations call `https://api.typesafe.ai/v1/systemone` with a user-owned
+key after explicit opt-in. The request contains the task brief and bounded
+skill names/descriptions; it does not include transcripts, project files, full
+skill bodies, home paths, or the API key in logs.
 
 Dashboard estimates context use from the filesystem by default. Its explicit
 **Run provider diagnostics** action may invoke installed `claude` and `codex`

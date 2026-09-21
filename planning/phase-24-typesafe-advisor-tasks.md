@@ -2,13 +2,13 @@
 
 # Phase 24: Optional TypeSafe advisor with BYOK
 
-**Status:** planned, implementation not started.
+**Status:** implemented.
 **Source:** user-requested implementation plan, corrected to one complete agent run on 2026-09-19.
-**Planned against:** `main` at `4ebcfbb5a9901c8862780d78f8855731e702fee0`.
-**Local state:** unrelated wiki edits present. Inspected the existing log and
-project-overview diffs; they concern a separate usage/session-search product,
-not advisor behavior. Preserve them. The implementation baseline is committed
-code, not those edits.
+**Planned against:** `main` at `7afd675`.
+**Local state:** committed baseline at `7afd675` with a clean worktree.
+Implementation started 2026-09-21. Cloud recommendation sends the full eligible
+host catalog in token-budgeted parallel chunks; BM25F remains the
+`local_candidates` fallback list only.
 
 This is one end-to-end implementation assignment for one agent run. Phase 24 is
 only the repository's planning identifier, not a sequence of separately assigned
@@ -39,10 +39,13 @@ activation, and cleanup through the existing receipt/lease API.
   remain local. Existing JSON shapes and `ranked_search_v1` remain compatible.
 - A present API key alone is not permission to send anything. Default mode is
   `local`; cloud mode requires an explicit user setting or per-call opt-in.
-- Send only the caller-supplied task brief and selected skill names/descriptions.
-  Do not read transcripts, project files, or full skill bodies for this release.
-  Omit home paths, Git origins, group/source labels, provider settings, and
-  inventory outside the shortlist. Metadata can still be private; disclose this.
+- Send only the caller-supplied task brief plus names and bounded descriptions
+  of every toggleable skill of the selected host, in as many parallel chunk
+  requests as the token budget requires (never dropping skills; at most 16
+  chunks). Request bound 256 KiB; request count is chunks + 1. Do not read
+  transcripts, project files, or full skill bodies for this release. Omit home
+  paths, Git origins, group/source labels, and provider settings. Metadata can
+  still be private; disclose this.
 - No persistent task/request/response cache, prompt logging, telemetry, polling,
   automatic source installation, or automatic changes to skill state.
 - Return only validated eligible local skill identifiers. Provider text is
@@ -88,10 +91,13 @@ skill-manager advisor recommend --tool <tool> --query <short-query>
   `--provider typesafe` is explicit consent for that invocation; the official
   advisor skill must not add it without a user's instruction. A saved cloud
   preference represents standing consent within the disclosed input boundary.
-- Retrieve at most 20 candidates locally. Send none if the shortlist is empty.
-  Candidate descriptions are capped at 2,048 UTF-8 bytes each with truncation
-  recorded internally. Bound serialized provider requests to 64 KiB and enforce
-  the current provider token budgets separately; bytes are not token counts.
+- Retrieve at most 20 local BM25F candidates for the fallback list only. Cloud
+  stage 1 sends every eligible toggleable skill of the host (name plus a
+  512-byte description) in token-budgeted chunks. Stage 2 re-judges at most
+  five skills with 2,048-byte descriptions. Bound serialized provider requests
+  to 256 KiB and enforce the current provider token budgets separately; bytes
+  are not token counts. Exceeding 16 chunks returns `local_candidates` with
+  `catalog_too_large` before any request.
 - Return `apiVersion`, `tool`, `requestedProvider`, `usedProvider`, `outcome`,
   `fallbackReason`, path-free `candidates`, and `recommendedSkills`.
   Outcomes are `recommended`, `none`, and `local_candidates`.
@@ -124,9 +130,11 @@ five candidates for necessity and distinct contribution with an explicit
 no-match outcome. Independent questions cannot read each other's answers; build
 new state for the second request. Tune thresholds on development fixtures only.
 
-Use at most two provider requests per recommendation and a 10-second total
-initial timeout budget, measured during any authorized live check. Do not automatically
-retry a paid evaluation after an unknown timeout; return local candidates.
+Use one provider request per catalog chunk plus one stage-2 request, a 10-second
+total initial timeout budget, and no automatic retry. Any chunk failure falls
+back the whole run; do not return a partial catalog. Measure latency during any
+authorized live check. Do not automatically retry a paid evaluation after an
+unknown timeout; return local candidates.
 Reject redirects, cap response size, validate finite/ranged numeric fields and
 known IDs, and sanitize provider errors. Production uses the fixed HTTPS
 TypeSafe origin; tests inject a transport, not an end-user arbitrary endpoint.
@@ -173,7 +181,7 @@ cleanup protocol. Older binaries retain the existing local search path.
 
 | ID | Task | Status |
 | --- | --- | --- |
-| P24-T01 | Implement and verify optional TypeSafe BYOK recommendations across Go, CLI, desktop, and the first-party advisor | pending |
+| P24-T01 | Implement and verify optional TypeSafe BYOK recommendations across Go, CLI, desktop, and the first-party advisor | implemented |
 
 ## Execution in one run
 
@@ -306,6 +314,13 @@ Private file/helper names, test layout, equivalent credential-store implementati
 and internal work order may change if behavior, secrecy, local defaults, compatibility,
 and acceptance coverage remain intact. Keep one provider and one shared Go
 service. Record deviations in this plan and the wiki.
+
+Recorded during implementation:
+
+- Serialized request bound is 256 KiB (full-catalog chunks) instead of 64 KiB.
+- Noul `criteria` is the live API object `{true,false}` rather than a string.
+- Cloud input is the full eligible host catalog in parallel chunks, not a
+  BM25F shortlist. Request count is chunks + 1.
 
 ## Re-plan triggers
 

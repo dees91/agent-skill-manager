@@ -139,7 +139,9 @@ See [commands and keyboard controls](https://github.com/dees91/agent-skill-manag
 for source management and advanced use. The optional
 [Skill Advisor](https://github.com/dees91/agent-skill-manager/blob/main/docs/usage.md#first-party-skill-advisor)
 lets an agent select and temporarily activate relevant installed skills for a
-task, then clean up its activation receipt.
+task, then clean up its activation receipt. Optional TypeSafe recommendations
+use a user-owned API key and an explicit Advisor setting; local search stays
+the default.
 
 ## Documentation & support
 
@@ -170,8 +172,11 @@ distributions include [third-party license notices](THIRD_PARTY_NOTICES.txt).
 
 The app stores its state locally and has no account system, telemetry,
 analytics, crash reporting, or background polling. Explicit Git source
-operations use the network. Optional provider diagnostics invoke installed
-Claude/Codex tools, whose own behavior and privacy terms also apply. Read the
+operations use the network. Optional TypeSafe recommendations send a task brief
+and bounded skill names/descriptions to `api.typesafe.ai` only after the user
+opts in and supplies their own key. Optional provider diagnostics invoke
+installed Claude/Codex tools, whose own behavior and privacy terms also apply.
+Read the
 [privacy policy](https://github.com/dees91/agent-skill-manager/blob/main/PRIVACY.md)
 for data access, storage, and removal.
 

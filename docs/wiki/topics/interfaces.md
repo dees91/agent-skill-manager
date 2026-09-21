@@ -40,11 +40,18 @@
   ranks that host's toggleable ON/OFF cells with deterministic local weighted
   BM25F, phrase bonuses, and bounded fuzzy matching. Its path-free result omits
   the query, reasons, and scores; the default limit is 20.
+- `advisor recommend --tool claude|codex|muse|grok --query <text> --task-stdin
+  [--provider local|typesafe] [--json]` returns local BM25F candidates or
+  optional TypeSafe suggestions. Cloud mode needs explicit opt-in plus a
+  user-owned key and advertises `semantic_recommendation_v1`.
+- `advisor provider <status|use|set-key|remove|check> [--json]` configures the
+  recommendation provider and key without putting the secret on the command
+  line.
 - `advisor cleanup --receipt <id> [--dry-run] [--json]` releases one exact
   receipt and restores cells whose final lease claim is removed.
 - `advisor status [--tool claude|codex|muse|grok] [--json]` lists outstanding receipts
   without exposing filesystem paths. JSON status advertises
-  `ranked_search_v1` under API version 1.
+  `ranked_search_v1` and `semantic_recommendation_v1` under API version 1.
 
 The first-party skill invokes exact-receipt cleanup itself before each normal
 final response. The CLI remains receipt-specific; it does not infer stale

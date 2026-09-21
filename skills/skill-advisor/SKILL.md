@@ -11,7 +11,23 @@ Identify only specialized local skills that materially improve the current task.
 
 1. Identify the current host as `claude` for Claude Code, `codex` for Codex, `muse` for Muse, or `grok` for Grok. Do not infer the host from repository files or a tool name mentioned by the user. Stop without mutation if the host is ambiguous.
 2. Run `skill-manager advisor status --tool <host> --json`.
-3. Require `apiVersion` to equal `1` and `capabilities` to contain `ranked_search_v1`. If the command is unavailable, invalid, or incompatible, ask the user to install or update Skill Manager and continue without activating skills. Do not fall back to `list --json --query`.
+3. Require `apiVersion` to equal `1` and `capabilities` to contain `ranked_search_v1`. If the command is unavailable, invalid, or incompatible, ask the user to install or update Skill Manager and continue without activating skills. Do not fall back to `list --json --query`. Read `provider.mode`. Cloud recommendation applies only when `capabilities` contains `semantic_recommendation_v1` and `provider.mode` is `typesafe`; otherwise use `advisor search` exactly as before.
+
+## Recommend with the configured provider
+
+When `provider.mode` is `typesafe` and `semantic_recommendation_v1` is present, send a concise task brief through stdin instead of relying on search alone:
+
+```bash
+skill-manager advisor recommend \
+  --tool <claude|codex|muse|grok> \
+  --query 'video remotion ffmpeg animation rendering' \
+  --task-stdin \
+  --json <<'BRIEF'
+Build a Remotion composition and encode the rendered frames with ffmpeg.
+BRIEF
+```
+
+Write one to five sentences, with no secrets or filesystem paths, under 8192 bytes. Never add `--provider typesafe` unless the user asked for that provider in this conversation. Treat `recommendedSkills` as suggestions the agent may reject. If `outcome` is `none`, select nothing unless clearly needed. If `outcome` is `local_candidates`, the provider was not used (`fallbackReason`); treat `candidates` like search results and do not retry.
 
 ## Select skills
 

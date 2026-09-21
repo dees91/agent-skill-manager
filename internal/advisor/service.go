@@ -3,6 +3,7 @@ package advisor
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -332,7 +333,20 @@ func (s *Service) planCleanup(contents file, currentReceipt receipt) ([]Action, 
 
 // Status lists outstanding receipts without exposing filesystem paths.
 func (s *Service) Status(tool *model.Tool) (result StatusResult, err error) {
-	result = StatusResult{APIVersion: APIVersion, Capabilities: Capabilities(), Receipts: []ReceiptStatus{}}
+	result = StatusResult{
+		APIVersion:   APIVersion,
+		Capabilities: Capabilities(),
+		Receipts:     []ReceiptStatus{},
+		Provider:     ProviderStatus{Mode: ProviderLocal},
+	}
+	settings, settingsErr := NewSettingsStore(s.paths).Load()
+	if errors.Is(settingsErr, ErrSettingsCorrupt) {
+		result.Provider = ProviderStatus{Mode: ProviderLocal, Warning: settingsErr.Error()}
+	} else if settingsErr != nil {
+		return result, settingsErr
+	} else {
+		result.Provider.Mode = settings.Provider
+	}
 	if tool != nil {
 		if _, ok := model.ParseTool(tool.String()); !ok {
 			return result, fmt.Errorf("unsupported tool %q", *tool)

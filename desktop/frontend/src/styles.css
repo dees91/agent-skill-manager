@@ -265,6 +265,17 @@ kbd { padding: 2px 4px; border-radius: 4px; border: 1px solid #3b3b3f; backgroun
 @keyframes slide-in { from { transform: translateX(18px); opacity: 0; } }
 @keyframes toast-in { from { transform: translateY(-6px); opacity: 0; } }
 
+.advisor-page { padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 22px; }
+.advisor-panel { padding: 18px 20px; border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--surface); display: flex; flex-direction: column; gap: 12px; }
+.advisor-panel h2 { margin: 0; font-size: 14px; }
+.advisor-choice-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.advisor-choice { min-height: 64px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-deep); color: var(--text); text-align: left; display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+.advisor-choice.active { border-color: var(--cyan); }
+.advisor-choice small { color: var(--muted); font-size: 10px; }
+.advisor-key-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.advisor-status { color: var(--text-soft); font-size: 11px; }
+.advisor-error { color: var(--red); font-size: 11px; }
+
 @media (max-width: 1120px) {
   :root { --sidebar: 72px; }
   .sidebar { padding-inline: 11px; }

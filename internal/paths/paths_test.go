@@ -13,29 +13,30 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	got := ForHome(home)
 
 	want := map[string]string{
-		"ClaudeUserSkills":  filepath.Join(home, ".claude", "skills"),
-		"CodexUserSkills":   filepath.Join(home, ".agents", "skills"),
-		"MuseUserSkills":    filepath.Join(home, ".config", "muse", "skills"),
-		"GrokUserSkills":    filepath.Join(home, ".grok", "skills"),
-		"CodexSystemSkills": filepath.Join(home, ".codex", "skills", ".system"),
-		"ClaudePluginCache": filepath.Join(home, ".claude", "plugins", "cache"),
-		"AgentsSkillLock":   filepath.Join(home, ".agents", ".skill-lock.json"),
-		"StateDir":          filepath.Join(home, ".skill-manager"),
-		"StateFile":         filepath.Join(home, ".skill-manager", "state.json"),
-		"AdvisorFile":       filepath.Join(home, ".skill-manager", "advisor-activations.json"),
-		"AdvisorLockFile":   filepath.Join(home, ".skill-manager", "advisor.lock"),
-		"SkillSetsFile":     filepath.Join(home, ".skill-manager", "skill-sets.json"),
-		"FavoritesFile":     filepath.Join(home, ".skill-manager", "favorites.json"),
-		"CacheDir":          filepath.Join(home, ".skill-manager", "cache"),
-		"SkillsSHCacheFile": filepath.Join(home, ".skill-manager", "cache", "skills-sh", "catalog-v1.json"),
-		"BackupDir":         filepath.Join(home, ".skill-manager", "backups"),
-		"DisabledDir":       filepath.Join(home, ".skill-manager", "disabled"),
-		"ClaudeDisabledDir": filepath.Join(home, ".skill-manager", "disabled", "claude"),
-		"CodexDisabledDir":  filepath.Join(home, ".skill-manager", "disabled", "codex"),
-		"MuseDisabledDir":   filepath.Join(home, ".skill-manager", "disabled", "muse"),
-		"GrokDisabledDir":   filepath.Join(home, ".skill-manager", "disabled", "grok"),
-		"ReposDir":          filepath.Join(home, ".skill-manager", "repos"),
-		"TrashDir":          filepath.Join(home, ".skill-manager", "trash"),
+		"ClaudeUserSkills":    filepath.Join(home, ".claude", "skills"),
+		"CodexUserSkills":     filepath.Join(home, ".agents", "skills"),
+		"MuseUserSkills":      filepath.Join(home, ".config", "muse", "skills"),
+		"GrokUserSkills":      filepath.Join(home, ".grok", "skills"),
+		"CodexSystemSkills":   filepath.Join(home, ".codex", "skills", ".system"),
+		"ClaudePluginCache":   filepath.Join(home, ".claude", "plugins", "cache"),
+		"AgentsSkillLock":     filepath.Join(home, ".agents", ".skill-lock.json"),
+		"StateDir":            filepath.Join(home, ".skill-manager"),
+		"StateFile":           filepath.Join(home, ".skill-manager", "state.json"),
+		"AdvisorFile":         filepath.Join(home, ".skill-manager", "advisor-activations.json"),
+		"AdvisorLockFile":     filepath.Join(home, ".skill-manager", "advisor.lock"),
+		"AdvisorSettingsFile": filepath.Join(home, ".skill-manager", "advisor-settings.json"),
+		"SkillSetsFile":       filepath.Join(home, ".skill-manager", "skill-sets.json"),
+		"FavoritesFile":       filepath.Join(home, ".skill-manager", "favorites.json"),
+		"CacheDir":            filepath.Join(home, ".skill-manager", "cache"),
+		"SkillsSHCacheFile":   filepath.Join(home, ".skill-manager", "cache", "skills-sh", "catalog-v1.json"),
+		"BackupDir":           filepath.Join(home, ".skill-manager", "backups"),
+		"DisabledDir":         filepath.Join(home, ".skill-manager", "disabled"),
+		"ClaudeDisabledDir":   filepath.Join(home, ".skill-manager", "disabled", "claude"),
+		"CodexDisabledDir":    filepath.Join(home, ".skill-manager", "disabled", "codex"),
+		"MuseDisabledDir":     filepath.Join(home, ".skill-manager", "disabled", "muse"),
+		"GrokDisabledDir":     filepath.Join(home, ".skill-manager", "disabled", "grok"),
+		"ReposDir":            filepath.Join(home, ".skill-manager", "repos"),
+		"TrashDir":            filepath.Join(home, ".skill-manager", "trash"),
 	}
 
 	if got.Home != home {
@@ -73,6 +74,9 @@ func TestForHomeDerivesMVPPaths(t *testing.T) {
 	}
 	if got.AdvisorLockFile != want["AdvisorLockFile"] {
 		t.Fatalf("AdvisorLockFile = %q, want %q", got.AdvisorLockFile, want["AdvisorLockFile"])
+	}
+	if got.AdvisorSettingsFile != want["AdvisorSettingsFile"] {
+		t.Fatalf("AdvisorSettingsFile = %q, want %q", got.AdvisorSettingsFile, want["AdvisorSettingsFile"])
 	}
 	if got.SkillSetsFile != want["SkillSetsFile"] {
 		t.Fatalf("SkillSetsFile = %q, want %q", got.SkillSetsFile, want["SkillSetsFile"])

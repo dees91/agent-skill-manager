@@ -1,0 +1,30 @@
+{
+  "id": "polish-brief",
+  "split": "dev",
+  "language": "pl",
+  "tool": "codex",
+  "query": "ffmpeg video encode",
+  "task": "Zakoduj lokalny plik wideo do H.264 przy u\u017cyciu ffmpeg.",
+  "catalog": [
+    {
+      "name": "ffmpeg-encode",
+      "description": "Encodes video files with ffmpeg and reports codec settings.",
+      "state": "on"
+    },
+    {
+      "name": "invoice-pdf",
+      "description": "Fills PDF invoice templates.",
+      "state": "off"
+    }
+  ],
+  "expected": {
+    "required": [
+      "ffmpeg-encode"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "invoice-pdf"
+    ],
+    "noMatch": false
+  }
+}

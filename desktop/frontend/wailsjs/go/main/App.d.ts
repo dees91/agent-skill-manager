@@ -6,6 +6,8 @@ export function ApplyInstall(arg1:string,arg2:boolean):Promise<gui.SourceMutatio
 
 export function ApplyPending(arg1:boolean):Promise<gui.ApplyResult>;
 
+export function CheckAdvisorConnection():Promise<gui.AdvisorConnectionCheck>;
+
 export function ChooseLocalInstall():Promise<gui.InstallDraft>;
 
 export function ClearPending():Promise<gui.ActionResult>;
@@ -15,6 +17,8 @@ export function CreateSkillSet(arg1:string,arg2:string,arg3:Array<string>):Promi
 export function DeleteSkillSet(arg1:string):Promise<gui.SkillSetMutationResult>;
 
 export function ExtendSources(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;
+
+export function GetAdvisorSettings():Promise<gui.AdvisorSettingsView>;
 
 export function GetSnapshot(arg1:boolean):Promise<gui.Snapshot>;
 
@@ -32,9 +36,15 @@ export function PreviewSkillSetToggle(arg1:string,arg2:Array<string>):Promise<gu
 
 export function PreviewUninstall(arg1:string):Promise<gui.UninstallPreview>;
 
+export function RemoveAdvisorKey():Promise<gui.AdvisorSettingsView>;
+
 export function RepairSource(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;
 
 export function ReviewInstall(arg1:string,arg2:Array<gui.InstallCellRequest>,arg3:boolean):Promise<gui.InstallReview>;
+
+export function SaveAdvisorProvider(arg1:string):Promise<gui.AdvisorSettingsView>;
+
+export function SetAdvisorKey(arg1:string):Promise<gui.AdvisorSettingsView>;
 
 export function SetSkillFavorite(arg1:string,arg2:boolean):Promise<gui.FavoriteMutationResult>;
 

@@ -1,0 +1,30 @@
+{
+  "id": "clear-ffmpeg",
+  "split": "dev",
+  "language": "en",
+  "tool": "codex",
+  "query": "ffmpeg video encode",
+  "task": "Encode a local video file to H.264 with ffmpeg.",
+  "catalog": [
+    {
+      "name": "ffmpeg-encode",
+      "description": "Encodes video files with ffmpeg and reports codec settings.",
+      "state": "on"
+    },
+    {
+      "name": "calendar-notes",
+      "description": "Formats meeting notes.",
+      "state": "off"
+    }
+  ],
+  "expected": {
+    "required": [
+      "ffmpeg-encode"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "calendar-notes"
+    ],
+    "noMatch": false
+  }
+}

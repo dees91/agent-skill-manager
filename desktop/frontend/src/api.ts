@@ -1,11 +1,13 @@
 import {
   ApplyInstall,
   ApplyPending,
+  CheckAdvisorConnection,
   ChooseLocalInstall,
   ClearPending,
   CreateSkillSet,
   DeleteSkillSet,
   ExtendSources,
+  GetAdvisorSettings,
   GetSnapshot,
   InspectSources,
   MeasureContextBudgets,
@@ -14,8 +16,11 @@ import {
   PreviewRepair,
   PreviewSkillSetToggle,
   PreviewUninstall,
+  RemoveAdvisorKey,
   RepairSource,
   ReviewInstall,
+  SaveAdvisorProvider,
+  SetAdvisorKey,
   SetSkillFavorite,
   ToggleBoth,
   ToggleCell,
@@ -56,6 +61,8 @@ export type SourceHealth = gui.SourceHealth
 export type SourceMutationFailure = gui.SourceMutationFailure
 export type RepairPreview = gui.RepairPreview
 export type RepairEntry = gui.RepairEntry
+export type AdvisorSettingsView = gui.AdvisorSettingsView
+export type AdvisorConnectionCheck = gui.AdvisorConnectionCheck
 export const MANAGED_TOOLS = ['claude', 'codex', 'muse', 'grok'] as const
 export type ManagedTool = (typeof MANAGED_TOOLS)[number]
 const TOOL_DISPLAY_NAMES: Record<ManagedTool, string> = { claude: 'Claude', codex: 'Codex', muse: 'Muse', grok: 'Grok' }
@@ -110,6 +117,11 @@ export interface Backend {
   inspectSources(): Promise<SourceHealth[]>
   previewRepair(sourceID: string): Promise<RepairPreview>
   repairSource(sourceID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
+  getAdvisorSettings(): Promise<AdvisorSettingsView>
+  saveAdvisorProvider(mode: string): Promise<AdvisorSettingsView>
+  setAdvisorKey(key: string): Promise<AdvisorSettingsView>
+  removeAdvisorKey(): Promise<AdvisorSettingsView>
+  checkAdvisorConnection(): Promise<AdvisorConnectionCheck>
 }
 
 const generatedBackend: Backend = {
@@ -143,6 +155,11 @@ const generatedBackend: Backend = {
   inspectSources: InspectSources,
   previewRepair: PreviewRepair,
   repairSource: RepairSource,
+  getAdvisorSettings: GetAdvisorSettings,
+  saveAdvisorProvider: SaveAdvisorProvider,
+  setAdvisorKey: SetAdvisorKey,
+  removeAdvisorKey: RemoveAdvisorKey,
+  checkAdvisorConnection: CheckAdvisorConnection,
 }
 
 async function activeBackend(): Promise<Backend> {
@@ -183,6 +200,11 @@ export const wailsBackend: Backend = {
   inspectSources: async (...args) => (await activeBackend()).inspectSources(...args),
   previewRepair: async (...args) => (await activeBackend()).previewRepair(...args),
   repairSource: async (...args) => (await activeBackend()).repairSource(...args),
+  getAdvisorSettings: async (...args) => (await activeBackend()).getAdvisorSettings(...args),
+  saveAdvisorProvider: async (...args) => (await activeBackend()).saveAdvisorProvider(...args),
+  setAdvisorKey: async (...args) => (await activeBackend()).setAdvisorKey(...args),
+  removeAdvisorKey: async (...args) => (await activeBackend()).removeAdvisorKey(...args),
+  checkAdvisorConnection: async (...args) => (await activeBackend()).checkAdvisorConnection(...args),
 }
 
 export function projectPending(snapshot: Snapshot, pending: PendingChange[], contextBudgets: ContextBudgetReports, skillSets = snapshot.skillSets, skillSetsWarning = snapshot.skillSetsWarning): Snapshot {

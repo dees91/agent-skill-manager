@@ -81,19 +81,27 @@ See [interfaces.md](interfaces.md) for commands and
 [state-safety-and-recovery.md](state-safety-and-recovery.md) for recovery
 boundaries.
 
-## Planned optional TypeSafe recommendations
+## Optional TypeSafe recommendations
 
-`planned` (2026-09-19): [Phase 24](../../../planning/phase-24-typesafe-advisor-tasks.md)
-adds one end-to-end implementation assignment for optional BYOK recommendations.
-Existing local search, activation, receipts, and cleanup remain implemented
-behavior. No cloud recommendation command or credential setting exists yet.
+`implemented` (2026-09-21): [Phase 24](../../../planning/phase-24-typesafe-advisor-tasks.md)
+adds `advisor recommend` and `advisor provider` plus a desktop Advisor screen.
+Local search, activation, receipts, and cleanup remain unchanged.
 
-The plan keeps local mode as default and puts cloud recommendations behind a
-separate operation and explicit opt-in. Go would call TypeSafe directly using
-the user's key, with a bounded task brief and shortlisted metadata. Stored or
-environment credentials alone do not authorize a request. Failure returns
-explicitly labeled local candidates; a successful no-match remains no-match.
+Local mode is the default. Cloud recommendations require explicit opt-in
+(`advisor provider use typesafe` or `--provider typesafe`) plus a user-owned
+key from `TYPESAFE_API_KEY` or the macOS keychain. Go calls TypeSafe directly
+with a bounded task brief plus names and bounded descriptions of every
+toggleable skill of the selected host, sent in token-budgeted parallel chunks
+(never dropping skills; at most 16 chunks; request bound 256 KiB; request count
+is chunks + 1). BM25F remains the `local_candidates` fallback list only. Stored
+or environment credentials alone do not authorize a request. Failure returns
+explicitly labeled local candidates; a successful no-match remains `none`.
 The agent keeps final selection and mutation ownership.
+`advisor-settings.json` has no lock; CLI/GUI races resolve by atomic rename.
+
+`user-confirmed` (2026-09-21): Jev sees the full eligible catalog, not a BM25F
+shortlist. Chunk requests run in parallel; any chunk failure falls back the
+whole run.
 
 `user-confirmed` (2026-09-19): execute the full feature in one agent run with
 one task and one completion report. Internal work items are not separate stages

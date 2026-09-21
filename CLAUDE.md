@@ -17,7 +17,7 @@ Before making code or documentation changes:
 11. If working on managed checkout diagnosis or repair, read [planning/phase-21-checkout-repair-tasks.md](./planning/phase-21-checkout-repair-tasks.md).
 12. If working on reporting or installing skills added to a managed repository after install, read [planning/phase-22-new-skill-discovery-tasks.md](./planning/phase-22-new-skill-discovery-tasks.md).
 13. If working on installing skills directly as OFF, read [planning/phase-23-install-as-off-tasks.md](./planning/phase-23-install-as-off-tasks.md).
-14. If working on optional TypeSafe recommendations or BYOK settings, read [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md). This is planned behavior, not implemented support.
+14. If working on optional TypeSafe recommendations or BYOK settings, read [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md).
 15. Follow the task status rules in the relevant planning file before starting and after finishing work.
 
 After non-trivial work that creates reusable knowledge, update the relevant wiki topic/source pages and append to [docs/wiki/log.md](./docs/wiki/log.md). The wiki is a synthesis layer; verify current behavior against code and tests and keep accepted product decisions in `AGENTS.md` and the relevant planning file.

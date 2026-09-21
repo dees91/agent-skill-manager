@@ -94,7 +94,7 @@ func TestRunHelpListsCommands(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run(help) code = %d, want 0", code)
 	}
-	for _, command := range []string{"tui", "version", "list", "status", "groups", "repos", "install", "update", "uninstall", "enable", "disable", "advisor"} {
+	for _, command := range []string{"tui", "version", "list", "status", "groups", "repos", "install", "update", "uninstall", "enable", "disable", "advisor", "advisor recommend", "advisor provider"} {
 		if !strings.Contains(stdout.String(), command) {
 			t.Fatalf("stdout = %q, want command %q", stdout.String(), command)
 		}

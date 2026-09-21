@@ -23,6 +23,15 @@ func TestFirstPartySkillContract(t *testing.T) {
 		"--query",
 		"--limit 20",
 		"ranked_search_v1",
+		"semantic_recommendation_v1",
+		"skill-manager advisor recommend",
+		"--task-stdin",
+		"provider.mode",
+		"recommendedSkills",
+		"local_candidates",
+		"fallbackReason",
+		"suggestions",
+		"unless the user",
 		"Do not fall back",
 		"Already active",
 		"Needs activation",
@@ -52,6 +61,11 @@ func TestFirstPartySkillContract(t *testing.T) {
 	for _, superseded := range []string{"skill-manager list --json \\", "Repeat `--query`", "Omitting `--available-for`"} {
 		if strings.Contains(text, superseded) {
 			t.Fatalf("SKILL.md retains superseded search guidance %q", superseded)
+		}
+	}
+	for _, forbidden := range []string{"--key ", "TYPESAFE_API_KEY=", "--provider typesafe \\"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("SKILL.md contains forbidden %q", forbidden)
 		}
 	}
 

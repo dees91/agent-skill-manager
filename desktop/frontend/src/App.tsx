@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
+import AdvisorSettings from './components/AdvisorSettings'
 import Dashboard from './components/Dashboard'
 import PendingBar from './components/PendingBar'
 import SkillsView from './components/SkillsView'
@@ -19,7 +20,7 @@ import type { ActionResult, Backend, FavoriteMutationResult, SkillRow, SkillSetM
 import { MANAGED_TOOLS, favoriteEligible, joinList, projectPending, toolDisplayName, wailsBackend } from './api'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 
-type View = 'dashboard' | 'skills' | 'skillsets' | 'sources'
+type View = 'dashboard' | 'skills' | 'skillsets' | 'sources' | 'advisor'
 
 interface AppProps {
   backend?: Backend
@@ -237,12 +238,15 @@ export default function App({ backend = wailsBackend }: AppProps) {
             <GitFork size={17} /><span>Sources</span>
             {snapshot && <span className="nav-count">{snapshot.managedSources.length}</span>}
           </button>
+          <button aria-label="Advisor" className={view === 'advisor' ? 'nav-item active' : 'nav-item'} onClick={() => setView('advisor')}>
+            <Sparkles size={17} /><span>Advisor</span>
+          </button>
         </nav>
 
         <div className="sidebar-spacer" />
         <div className="local-note">
           <span className="status-dot" />
-          <div><strong>Local state</strong><small>Git actions use network</small></div>
+          <div><strong>Local state</strong><small>{view === 'advisor' ? 'TypeSafe uses your key' : 'Git actions use network'}</small></div>
         </div>
         <div className="scan-meta">
           <span>Last scan</span>
@@ -252,7 +256,7 @@ export default function App({ backend = wailsBackend }: AppProps) {
 
       <main className="main-region">
         <header className="utility-bar">
-          <div className="breadcrumbs"><span>Skill Manager</span><b>/</b><strong>{view === 'dashboard' ? 'Dashboard' : view === 'skills' ? 'Skills' : view === 'skillsets' ? 'Skill Sets' : 'Sources'}</strong></div>
+          <div className="breadcrumbs"><span>Skill Manager</span><b>/</b><strong>{view === 'dashboard' ? 'Dashboard' : view === 'skills' ? 'Skills' : view === 'skillsets' ? 'Skill Sets' : view === 'advisor' ? 'Advisor' : 'Sources'}</strong></div>
           <div className="utility-actions">
             {snapshot && snapshot.stats.conflictCells > 0 && (
               <button className="conflict-chip" onClick={() => setView('skills')}>
@@ -301,6 +305,9 @@ export default function App({ backend = wailsBackend }: AppProps) {
               onAction={acceptActionResult}
               onAnnounce={announce}
             />
+          )}
+          {snapshot && view === 'advisor' && (
+            <AdvisorSettings backend={backend} />
           )}
           {snapshot && view === 'sources' && (
             <SourcesView

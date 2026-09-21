@@ -78,6 +78,16 @@ Use `make gui-dev` for the Wails development loop.
 Backend tests use temporary home directories and local or fake Git repositories.
 Frontend tests use an in-memory backend with synthetic data.
 
+The CLI and desktop app use cgo on macOS for the Keychain-backed TypeSafe key
+store. A `CGO_ENABLED=0` build compiles, but `advisor provider status --json`
+reports `credentialStore: "unavailable"` and only `TYPESAFE_API_KEY` can supply
+a key. Release packaging asserts that the Darwin binary reports `keychain`.
+
+Live Keychain round-trip tests stay skipped unless you set
+`SKILL_MANAGER_KEYCHAIN_TEST=1`. They write a synthetic item named
+`typesafe-api-key-test-<pid>` under the `Skill Manager` service and delete it
+in cleanup. Do not use a real TypeSafe key in those tests.
+
 ## Project Contract
 
 Before non-trivial changes:

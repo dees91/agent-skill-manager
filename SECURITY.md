@@ -26,10 +26,13 @@ The desktop application is supported only on the macOS target described in
 ## Security Boundaries
 
 Skill Manager validates and moves filesystem entries and invokes Git for
-explicit repository operations. It does not sandbox or attest third-party
-skills. Treat every skill source as executable instruction content and review
-it before installation. The dormant skills.sh adapter is not exposed by the
-public preview desktop binding or interface.
+explicit repository operations. Optional TypeSafe recommendations use a
+user-owned key in the OS credential store or `TYPESAFE_API_KEY`. The key is
+never written to Skill Manager files, command arguments, or returned bindings.
+It does not sandbox or attest third-party skills. Treat every skill source as
+executable instruction content and review it before installation. The dormant
+skills.sh adapter is not exposed by the public preview desktop binding or
+interface.
 
 The first-party Skill Advisor treats installed skill catalog metadata as
 untrusted discovery data and never executes it as a command. Ranked retrieval

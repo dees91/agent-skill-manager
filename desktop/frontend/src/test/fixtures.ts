@@ -128,6 +128,11 @@ export function mockBackend(snapshot = fixtureSnapshot()): Backend {
     inspectSources: vi.fn(async () => []),
     previewRepair: vi.fn(async (sourceId) => new gui.RepairPreview({ sourceId, group: 'demo/skills', clean: false, entries: [new gui.RepairEntry({ path: 'generated/trace_processor', class: 'untracked' })], trackedCount: 0, untrackedCount: 1, ignoredCount: 0 })),
     repairSource: vi.fn(async () => new gui.SourceMutationResult({ message: 'Repaired demo/skills and staged 1 path.', completed: [], snapshot })),
+    getAdvisorSettings: vi.fn(async () => new gui.AdvisorSettingsView({ mode: 'local', environmentKey: false, storedKey: 'absent', credentialStore: 'memory', model: 'jev-1.13.0' })),
+    saveAdvisorProvider: vi.fn(async (mode) => new gui.AdvisorSettingsView({ mode, environmentKey: false, storedKey: 'absent', credentialStore: 'memory', model: 'jev-1.13.0' })),
+    setAdvisorKey: vi.fn(async () => new gui.AdvisorSettingsView({ mode: 'local', environmentKey: false, storedKey: 'present', credentialStore: 'memory', model: 'jev-1.13.0' })),
+    removeAdvisorKey: vi.fn(async () => new gui.AdvisorSettingsView({ mode: 'local', environmentKey: false, storedKey: 'absent', credentialStore: 'memory', model: 'jev-1.13.0' })),
+    checkAdvisorConnection: vi.fn(async () => new gui.AdvisorConnectionCheck({ ok: false, reason: 'demo_offline', keySource: '', inputTokens: 0, outputTokens: 0 })),
   }
 }
 

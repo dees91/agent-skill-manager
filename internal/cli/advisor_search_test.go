@@ -180,11 +180,14 @@ func TestRunAdvisorStatusAdvertisesRankedSearchCapability(t *testing.T) {
 	var output struct {
 		APIVersion   int      `json:"apiVersion"`
 		Capabilities []string `json:"capabilities"`
+		Provider     struct {
+			Mode string `json:"mode"`
+		} `json:"provider"`
 	}
 	if err := json.Unmarshal([]byte(stdout.String()), &output); err != nil {
 		t.Fatal(err)
 	}
-	if output.APIVersion != 1 || len(output.Capabilities) != 1 || output.Capabilities[0] != advisor.CapabilityRankedSearch {
+	if output.APIVersion != 1 || len(output.Capabilities) != 2 || output.Capabilities[0] != advisor.CapabilityRankedSearch || output.Capabilities[1] != advisor.CapabilitySemanticRecommendation || output.Provider.Mode != "local" {
 		t.Fatalf("advisor status = %#v", output)
 	}
 }

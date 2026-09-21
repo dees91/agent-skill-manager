@@ -1,0 +1,30 @@
+{
+  "id": "clear-test",
+  "split": "dev",
+  "language": "en",
+  "tool": "grok",
+  "query": "go test table driven",
+  "task": "Add table-driven Go tests for a new package.",
+  "catalog": [
+    {
+      "name": "go-testing",
+      "description": "Writes table-driven Go tests and fixtures.",
+      "state": "on"
+    },
+    {
+      "name": "css-theme",
+      "description": "Tunes CSS color tokens.",
+      "state": "off"
+    }
+  ],
+  "expected": {
+    "required": [
+      "go-testing"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "css-theme"
+    ],
+    "noMatch": false
+  }
+}

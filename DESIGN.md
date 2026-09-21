@@ -18,6 +18,14 @@ sources:
     path: "docs/images/sources-extend.png"
     platform: desktop
     dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/advisor.png"
+    platform: desktop
+    dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/advisor-typesafe.png"
+    platform: desktop
+    dimensions: "1440x960"
 confidence:
   overall: high
   colors: high
@@ -87,7 +95,11 @@ in public documentation.
 ## Components
 
 - **Navigation rail:** persistent product navigation with compact icon/label
-  rows, a deep selected state, connection status, and last-scan metadata.
+  rows, a deep selected state, connection status, and last-scan metadata. The
+  fifth item is **Advisor**.
+- **Advisor settings:** Local/TypeSafe choice cards, a disclosure of what is
+  sent, a masked key field, Save key / Cancel / Check connection / Remove key,
+  and `role="alert"` errors. The panel never displays the stored secret.
 - **Native About:** the standard macOS application menu exposes the app icon,
   product name, current build version, and short description without repeating
   release metadata inside the workspace.
