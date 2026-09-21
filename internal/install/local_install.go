@@ -391,6 +391,9 @@ func localSourceEntryForPlan(plan LocalInstallPlan, manifest state.Manifest, now
 	for _, skill := range skills {
 		entry.InstalledSkills = append(entry.InstalledSkills, skill)
 	}
+	if err := validateUniqueInstalledNames(entry.InstalledSkills); err != nil {
+		return state.LocalSourceEntry{}, err
+	}
 	return entry, nil
 }
 

@@ -1207,8 +1207,10 @@ source does not change.
 - `skill-manager install <git-url|local-path> … [--as <name>=<install-name>]…`
   is repeatable, splits on the first `=`, and rejects empty sides, invalid
   install names, and one skill with two install names. An install name must
-  differ from every skill name in the same source and from every other
-  install name in the request.
+  differ from every skill name in the same source, from every other install
+  name in the request, and from every install name the source already
+  records for its other skills, selected or not. Apply rechecks that no two
+  skills of the source share an install name before saving.
 - One install name per (source, skill) across all tools; no per-tool
   aliases. The manifest records it as `installedAs` on the installed skill
   entry (manifest version 3); a value equal to the skill name is stored as
@@ -1233,7 +1235,9 @@ source does not change.
   invalid, excludes the row from column bulk toggles, and blocks Review
   until every selected needs-name row is valid. Review and apply revalidate
   the name: it must be the recorded install name, or the plain name must be
-  owned by another source in the fresh manifest. Conflict messages name the
+  owned by another source in the fresh manifest. A skill whose copies differ
+  and whose name another source owns asks for both the copy and the install
+  name in the same row. Conflict messages name the
   owning source by group, never by filesystem path. The Skills view shows a
   differing `SKILL.md` name as a secondary label and includes it in search.
 - Host caveats: Claude Code takes the command from the directory name, so an

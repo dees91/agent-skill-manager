@@ -76,6 +76,8 @@ func TestResolveInstalledNames(t *testing.T) {
 		{name: "other discovered name", selected: []string{"alpha"}, explicit: map[string]string{"alpha": "beta"}, err: "another skill in the same source"},
 		{name: "two aliases collide", selected: []string{"alpha", "beta"}, explicit: map[string]string{"alpha": "shared", "beta": "shared"}, err: "both use install name"},
 		{name: "unselected key", selected: []string{"alpha"}, explicit: map[string]string{"beta": "beta-acme"}, err: "not selected"},
+		{name: "recorded name of an unselected skill", selected: []string{"beta"}, explicit: map[string]string{"beta": "shared"}, recorded: map[string]string{"alpha": "shared"}, err: "both use install name"},
+		{name: "recorded plain name of an unselected skill", selected: []string{"beta"}, explicit: map[string]string{"beta": "gamma"}, recorded: map[string]string{"gamma": "gamma"}, err: "both use install name"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -285,5 +287,30 @@ func TestAuditRejectsTwoSkillsSharingInstalledName(t *testing.T) {
 	manifest := loadInstallManifest(t, p)
 	if _, err := AuditLocalSourceReferences(p, manifest, entry, true); err == nil || !strings.Contains(err.Error(), "share install name alpha") {
 		t.Fatalf("audit error = %v, want shared install name conflict", err)
+	}
+}
+
+func TestInstallRejectsAliasRecordedForAnotherSkillOfTheSameSource(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	source, discovered := aliasLocalSource(t, p, "sample-pack", "alpha", "beta")
+	applyLocal(t, p, source, discovered, PlanOptions{Tools: []model.Tool{model.ToolClaude}, SkillNames: []string{"alpha"}, InstalledAs: map[string]string{"alpha": "shared"}})
+
+	options := PlanOptions{Tools: []model.Tool{model.ToolCodex}, SkillNames: []string{"beta"}, InstalledAs: map[string]string{"beta": "shared"}}
+	if _, err := PlanLocalInstall(p, loadInstallManifest(t, p), source, discovered, options); err == nil || !strings.Contains(err.Error(), `skills "alpha" and "beta" both use install name "shared"`) {
+		t.Fatalf("PlanLocalInstall() error = %v, want shared install name rejection", err)
+	}
+}
+
+func TestRecordInstalledNamesRejectsSharedNameBeforeSaving(t *testing.T) {
+	entries := []state.InstalledSkillEntry{
+		{Name: "alpha", InstalledAs: "shared", RelativePath: "skills/alpha"},
+		{Name: "beta", InstalledAs: "shared", RelativePath: "skills/beta"},
+	}
+	if err := validateUniqueInstalledNames(entries); err == nil || !strings.Contains(err.Error(), "share install name shared") {
+		t.Fatalf("validateUniqueInstalledNames() error = %v, want shared name error", err)
+	}
+	entries[1].InstalledAs = ""
+	if err := validateUniqueInstalledNames(entries); err != nil {
+		t.Fatalf("validateUniqueInstalledNames() error = %v, want nil", err)
 	}
 }

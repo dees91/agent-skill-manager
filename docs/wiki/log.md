@@ -988,3 +988,29 @@ Updated `AGENTS.md` (Iteration 3/5/state/extend lines plus the new Iteration 26
 contract), `CLAUDE.md` routing, the Phase 26 planning file, `docs/usage.md`,
 `DESIGN.md`, and the state, install, local, discovery, desktop, favorites, and
 Skill Set wiki topics.
+
+## [2026-09-21] analysis | PR 23 alias review
+
+Reviewed cross-source aliases for P1/P2 defects. Temporary-home Go tests
+reproduced two P2 issues: sequential installs can reuse another recorded
+skill's alias within one source and persist an unauditable installation;
+differing-copy candidates omit the alias input needed to resolve ownership
+conflicts in the desktop dialog. Recorded both as open findings in the
+repository-install and desktop topics. Removed the temporary tests after
+verification. Existing root and desktop Go tests, both modules' vet checks,
+frontend typecheck, and production build passed. All 49 frontend tests passed
+with Node's experimental Web Storage disabled; the default invocation failed
+in the unchanged AdvisorSettings localStorage assertion.
+
+## [2026-09-21] review | Iteration 26 review findings addressed
+
+Addressed two P2 findings on the cross-source alias branch. Install-name
+resolution now reserves the names a source already records for its other
+skills, including skills outside the current selection, and apply rejects a
+source record in which two skills share an install name before saving, so a
+second partial install can no longer write a record that the audits refuse.
+The desktop draft now marks a differing-copies group as `needsName` with a
+suggestion when another source owns its name, so the matrix row collects the
+copy choice and the install name together. Verification: new resolver,
+planner, pre-save, GUI draft/review/apply, and frontend matrix tests, plus the
+full Go and frontend suites.

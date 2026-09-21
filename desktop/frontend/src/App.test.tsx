@@ -609,6 +609,45 @@ describe('Skill Manager desktop app', () => {
     ]), false))
   })
 
+  it('collects both a copy choice and an install name for an owned duplicate', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.prepareGitInstall = vi.fn(async () => new gui.InstallDraft({
+      draftId: 'draft:both',
+      kind: 'git',
+      group: 'acme/tools',
+      location: 'https://github.com/acme/tools',
+      candidates: [{
+        ...installCandidate('alpha', 'needs-choice', 'needs-choice', 'needs-choice', 'needs-choice'),
+        relativePath: '',
+        needsChoice: true,
+        options: ['first/alpha', 'second/alpha'],
+        needsName: true,
+        suggestedAs: 'alpha-acme',
+      }],
+      cloned: false,
+      reused: true,
+      retainedClone: false,
+      cancelled: false,
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: /^Install source$/ }))
+    await user.type(screen.getByRole('textbox', { name: 'HTTPS or SSH Git URL' }), 'https://github.com/acme/tools')
+    await user.click(screen.getByRole('button', { name: 'Clone & inspect' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install source' })
+    expect(await within(dialog).findByRole('textbox', { name: 'Install name for alpha' })).toHaveValue('alpha-acme')
+    expect(within(dialog).getByRole('checkbox', { name: 'alpha claude' })).toBeDisabled()
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Choose a copy of alpha to install' }), 'second/alpha')
+    await user.click(within(dialog).getByRole('checkbox', { name: 'alpha claude' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Review 1 target' }))
+    await waitFor(() => expect(backend.reviewInstall).toHaveBeenCalledWith('draft:both', [
+      { tool: 'claude', skillName: 'alpha', path: 'second/alpha', installedAs: 'alpha-acme' },
+    ], false))
+  })
+
   it('reviews and applies an install as OFF from the switch', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

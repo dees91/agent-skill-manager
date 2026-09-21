@@ -321,6 +321,9 @@ func (s *ApplyService) repositoryEntryForPlan(plan InstallPlan, manifest state.M
 	for _, skill := range skills {
 		entry.InstalledSkills = append(entry.InstalledSkills, skill)
 	}
+	if err := validateUniqueInstalledNames(entry.InstalledSkills); err != nil {
+		return state.RepositoryEntry{}, err
+	}
 	return entry, nil
 }
 

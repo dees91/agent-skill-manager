@@ -470,7 +470,7 @@ func (s *Service) projectInstallCandidates(draft installDraftState, manifest sta
 		for i, candidate := range group.Candidates {
 			options[i] = candidate.RelativePath
 		}
-		candidates = append(candidates, InstallCandidate{
+		candidate := InstallCandidate{
 			Name:        group.Name,
 			Options:     options,
 			NeedsChoice: true,
@@ -478,7 +478,17 @@ func (s *Service) projectInstallCandidates(draft installDraftState, manifest sta
 			Codex:       needsChoiceCandidateCell(model.ToolCodex),
 			Muse:        needsChoiceCandidateCell(model.ToolMuse),
 			Grok:        needsChoiceCandidateCell(model.ToolGrok),
-		})
+		}
+		if installed := draftRecordedInstalledNames(draft, manifest)[group.Name]; installed != "" && installed != group.Name {
+			candidate.InstalledAs = installed
+		}
+		// Ownership does not depend on the copy, so probe it with any copy and
+		// ask for the install name together with the copy choice.
+		if suggestion := s.ownershipSuggestion(draft, manifest, group.Candidates[0], group.Candidates[0].RelativePath); suggestion.SuggestedAs != "" {
+			candidate.NeedsName = true
+			candidate.SuggestedAs = suggestion.SuggestedAs
+		}
+		candidates = append(candidates, candidate)
 	}
 	sort.SliceStable(candidates, func(i, j int) bool { return candidates[i].Name < candidates[j].Name })
 	return candidates
@@ -491,7 +501,7 @@ func (s *Service) projectResolvedCandidate(draft installDraftState, manifest sta
 	}
 	var suggestion InstallConflict
 	project := func(tool model.Tool) InstallCandidateCell {
-		cell, conflict := s.projectCandidateCell(draft, manifest, skill, tool)
+		cell, conflict := s.projectCandidateCell(draft, manifest, skill, "", tool)
 		if conflict.SuggestedAs != "" && suggestion.SuggestedAs == "" {
 			suggestion = conflict
 		}
@@ -514,6 +524,17 @@ func (s *Service) projectResolvedCandidate(draft installDraftState, manifest sta
 	return candidate
 }
 
+// ownershipSuggestion returns the first tool conflict that carries a
+// suggested install name for skill at path, or an empty conflict.
+func (s *Service) ownershipSuggestion(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill, path string) InstallConflict {
+	for _, tool := range model.Tools() {
+		if _, conflict := s.projectCandidateCell(draft, manifest, skill, path, tool); conflict.SuggestedAs != "" {
+			return conflict
+		}
+	}
+	return InstallConflict{}
+}
+
 func needsNameCandidateCell(tool model.Tool, message string) InstallCandidateCell {
 	return InstallCandidateCell{Tool: tool.String(), Status: "needs-name", Message: message}
 }
@@ -529,8 +550,8 @@ func needsChoiceCandidateCell(tool model.Tool) InstallCandidateCell {
 	return InstallCandidateCell{Tool: tool.String(), Status: "needs-choice", Message: "choose which copy to install"}
 }
 
-func (s *Service) projectCandidateCell(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill, tool model.Tool) (InstallCandidateCell, InstallConflict) {
-	options := install.PlanOptions{Cells: []install.InstallCell{{SkillName: skill.Name, Tool: tool}}}
+func (s *Service) projectCandidateCell(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill, path string, tool model.Tool) (InstallCandidateCell, InstallConflict) {
+	options := install.PlanOptions{Cells: []install.InstallCell{{SkillName: skill.Name, Tool: tool, Path: path}}}
 	plan, localPlan, conflicts, err := s.planKnownDraftWithManifest(draft, manifest, options)
 	cell := InstallCandidateCell{Tool: tool.String(), Status: "available"}
 	if err != nil {

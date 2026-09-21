@@ -150,8 +150,9 @@ func recordedInstalledNames(installed []state.InstalledSkillEntry) map[string]st
 // resolveInstalledNames decides the installed name of every selected skill.
 // A recorded name wins; an explicit name that differs from the recorded one
 // is drift. Explicit names must be valid, unique, and must not reuse a name
-// discovered in the same source. The result maps source name to InstalledAs
-// and omits skills installed under their plain name.
+// discovered in the same source or recorded for another of its skills, even
+// one outside the selection. The result maps source name to InstalledAs and
+// omits skills installed under their plain name.
 func resolveInstalledNames(discovered Discovery, selected []string, explicit, recorded map[string]string) (map[string]string, error) {
 	selectedSet := make(map[string]bool, len(selected))
 	for _, name := range selected {
@@ -170,6 +171,16 @@ func resolveInstalledNames(discovered Discovery, selected []string, explicit, re
 
 	result := map[string]string{}
 	usedBy := map[string]string{}
+	recordedNames := make([]string, 0, len(recorded))
+	for name := range recorded {
+		recordedNames = append(recordedNames, name)
+	}
+	sort.Strings(recordedNames)
+	for _, name := range recordedNames {
+		if !selectedSet[name] {
+			usedBy[recorded[name]] = name
+		}
+	}
 	names := append([]string(nil), selected...)
 	sort.Strings(names)
 	for _, name := range names {
@@ -195,7 +206,11 @@ func resolveInstalledNames(discovered Discovery, selected []string, explicit, re
 			result[name] = installed
 		}
 		if previous, ok := usedBy[installed]; ok {
-			return nil, fmt.Errorf("skills %q and %q both use install name %q", previous, name, installed)
+			first, second := previous, name
+			if second < first {
+				first, second = second, first
+			}
+			return nil, fmt.Errorf("skills %q and %q both use install name %q", first, second, installed)
 		}
 		usedBy[installed] = name
 	}
@@ -293,4 +308,19 @@ func LocalNameOwnedElsewhere(manifest state.Manifest, canonicalPath, name string
 		}
 	}
 	return false
+}
+
+// validateUniqueInstalledNames rejects a source record in which two skills
+// resolve to one install name; apply checks it on the fresh manifest before
+// saving so a stale plan can never write a record the audits refuse.
+func validateUniqueInstalledNames(skills []state.InstalledSkillEntry) error {
+	usedBy := map[string]string{}
+	for _, skill := range skills {
+		installed := skill.InstalledName()
+		if previous, ok := usedBy[installed]; ok && previous != skill.Name {
+			return fmt.Errorf("skills %s and %s share install name %s", previous, skill.Name, installed)
+		}
+		usedBy[installed] = skill.Name
+	}
+	return nil
 }

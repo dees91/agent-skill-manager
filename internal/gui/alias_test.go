@@ -116,3 +116,34 @@ func TestLocalInstallApplyRevalidatesAliasPath(t *testing.T) {
 		t.Fatalf("result = %#v, want revalidation failure", result.Failure)
 	}
 }
+
+func TestLocalInstallDuplicateCopiesOwnedElsewhereNeedChoiceAndName(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	service := New(p)
+	installFirstAlpha(t, service, p)
+	second := filepath.Join(p.Home, "workspace", "second-pack")
+	writeSkill(t, filepath.Join(second, "first", "alpha"), "Alpha one")
+	writeSkill(t, filepath.Join(second, "second", "alpha"), "Alpha two")
+
+	draft, err := service.PrepareLocalInstall(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	alpha := draft.Candidates[0]
+	if !alpha.NeedsChoice || !alpha.NeedsName || alpha.SuggestedAs != "alpha-second-pack" {
+		t.Fatalf("alpha = %#v, want both a copy choice and an install name", alpha)
+	}
+	if alpha.Claude.Status != "needs-choice" {
+		t.Fatalf("alpha claude = %#v, want needs-choice until a copy is chosen", alpha.Claude)
+	}
+	review, err := service.ReviewInstall(draft.DraftID, []InstallCellRequest{{SkillName: "alpha", Tool: "claude", Path: "second/alpha", InstalledAs: "alpha-second-pack"}}, false)
+	if err != nil || !review.Ready {
+		t.Fatalf("review = %#v err=%v", review, err)
+	}
+	if result := service.ApplyInstall(review.ReviewID, false); result.Failure != nil {
+		t.Fatalf("apply = %#v", result.Failure)
+	}
+	if _, err := os.Readlink(filepath.Join(p.ClaudeUserSkills, "alpha-second-pack")); err != nil {
+		t.Fatalf("alias link missing: %v", err)
+	}
+}
