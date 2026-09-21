@@ -929,6 +929,9 @@ export namespace gui {
 	export class InstallCandidate {
 	    name: string;
 	    relativePath: string;
+	    options?: string[];
+	    needsChoice?: boolean;
+	    identicalCopies?: number;
 	    claude: InstallCandidateCell;
 	    codex: InstallCandidateCell;
 	    muse: InstallCandidateCell;
@@ -942,6 +945,9 @@ export namespace gui {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.relativePath = source["relativePath"];
+	        this.options = source["options"];
+	        this.needsChoice = source["needsChoice"];
+	        this.identicalCopies = source["identicalCopies"];
 	        this.claude = this.convertValues(source["claude"], InstallCandidateCell);
 	        this.codex = this.convertValues(source["codex"], InstallCandidateCell);
 	        this.muse = this.convertValues(source["muse"], InstallCandidateCell);
@@ -970,6 +976,7 @@ export namespace gui {
 	export class InstallCellRequest {
 	    skillName: string;
 	    tool: string;
+	    path?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstallCellRequest(source);
@@ -979,6 +986,7 @@ export namespace gui {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.skillName = source["skillName"];
 	        this.tool = source["tool"];
+	        this.path = source["path"];
 	    }
 	}
 	

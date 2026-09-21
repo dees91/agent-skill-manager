@@ -5,8 +5,9 @@
 - HTTPS Git URLs, with or without `.git`.
 - SCP-style SSH Git URLs such as `git@github.com:owner/repo.git`.
 - Tool target `claude`, `codex`, or `both`; default is `both`.
-- Repeated `--skill <name>` selection; without it, all discovered skills are
-  selected.
+- Repeated `--skill <name>[=<path>]` selection; without it, all discovered
+  skills are selected. The optional `=<path>` qualifies one source-relative
+  copy when a name has differing copies.
 - The GUI can instead select exact skill/tool cells after inspection; the CLI
   Cartesian `--tool`/`--skill` behavior is unchanged.
 
@@ -30,8 +31,12 @@ the separate [local path workflow](local-path-install-workflow.md).
 - Discovery is recursive and ignores `.git`, `node_modules`, `.venv`, `vendor`,
   `build`, and `dist` directories.
 - The install name is the directory basename.
-- Duplicate basenames fail before planning because both would target the same
-  user-skill name.
+- Since Iteration 25, duplicate basenames are grouped instead of failing:
+  identical copies resolve to one canonical copy (test/example copies last,
+  then hidden after visible, deeper after shallower, lexicographic ties),
+  while differing copies need an explicit `--skill <name>=<path>` choice
+  (`documented`, `implemented`, `internal/install/discovery.go`,
+  `internal/install/resolver.go`).
 - Discovered skills are sorted deterministically.
 
 ## Preflight And Idempotency
@@ -43,7 +48,12 @@ Every selected skill/tool cell is checked before creating links:
 - Matching disabled symlink record: already installed `OFF`; do not enable it.
 - Any other active entry or disabled target: conflict.
 - Any missing requested skill: preflight failure.
+- A requested name with differing copies and no qualified choice: ambiguity
+  failure listing every pasteable `--skill <name>=<path>` form.
 - A cell recorded as owned by another Git or local source: ownership conflict.
+- Resolution reuses the same source's recorded copy when it still holds the
+  skill; a recorded path that no longer does is drift (uninstall plus
+  reinstall), never a silent switch.
 
 A conflict fails the entire plan before apply. Nothing is overwritten, merged,
 renamed, or deleted to make room.
@@ -76,7 +86,11 @@ The Sources screen accepts a Git URL and performs checkout plus discovery
 before showing an exact Claude/Codex/Muse/Grok matrix. A missing checkout may therefore
 be cloned before final Apply; cancelling retains that clean unrecorded checkout
 for retry. Review and Apply use opaque session IDs and re-run discovery and
-preflight in Go. Per-repository Update and deterministic Update all call the
+preflight in Go. Since Iteration 25, duplicate names collapse to one matrix
+row: identical copies show the canonical path with a copies note, while
+differing copies show a copy picker with `needs-choice` cells that stay
+unselectable until a copy is chosen; review and apply revalidate the choice
+against fresh discovery. Per-repository Update and deterministic Update all call the
 same fast-forward service as the CLI, and typed-confirmed Uninstall calls the
 same ownership audit and transactional removal service.
 
@@ -107,8 +121,10 @@ same ownership audit and transactional removal service.
   prints the exact `install --skill` command, adding `--tool` per recorded tool
   unless the repository uses every tool. Skill names are untrusted upstream
   directory names, so every argument is shell-quoted and a name with control
-  characters suppresses the command. A discovery failure (such as a
-  duplicate name) is a warning, not an update failure. Dry-run reports the
+  characters suppresses the command. Since Iteration 25, unrecorded names
+  with differing copies are reported as ambiguous new skills with a qualified
+  `--skill <name>=<path>` template instead of a command; only checkout
+  inspection failures are warnings, not update failures. Dry-run reports the
   local checkout only, since it never fetches (`implemented`,
   `internal/install/new_skills.go`).
 - Successful updates persist the target commit as `lastSeenCommit`. Update-all

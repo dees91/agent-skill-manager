@@ -18,6 +18,10 @@ sources:
     path: "docs/images/sources-extend.png"
     platform: desktop
     dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/install-duplicates.png"
+    platform: desktop
+    dimensions: "1440x960"
 confidence:
   overall: high
   colors: high
@@ -114,6 +118,9 @@ in public documentation.
   update modes, counts, locations, and separately confirmed lifecycle actions.
 - **Install workflow:** inspect, matrix selection, review, and apply. Tool-column
   bulk selectors cover all discovered candidates, including filtered-out rows.
+  A skill shipped from several identical directories installs from one named
+  canonical copy; differing copies collapse to one row with a copy picker whose
+  cells stay unselectable until a copy is chosen.
 - **Extend workflow:** one tool radio, a per-source link preview that
   surfaces blocked sources, and a stop-at-first-failure apply. Confirm stays
   disabled while any source is blocked or no new links are planned.

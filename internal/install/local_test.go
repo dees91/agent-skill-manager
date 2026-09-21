@@ -117,7 +117,7 @@ func TestDiscoverLocalSkillsTreatsRootSkillAsOneAndCollectionsRecursively(t *tes
 		if err != nil {
 			t.Fatalf("DiscoverLocalSkills() error = %v", err)
 		}
-		if len(got) != 1 || got[0].Path != root || got[0].RelativePath != "." {
+		if len(got.Skills) != 1 || got.Skills[0].Path != root || got.Skills[0].RelativePath != "." {
 			t.Fatalf("DiscoverLocalSkills() = %#v, want root only", got)
 		}
 	})
@@ -130,7 +130,7 @@ func TestDiscoverLocalSkillsTreatsRootSkillAsOneAndCollectionsRecursively(t *tes
 		if err != nil {
 			t.Fatalf("DiscoverLocalSkills() error = %v", err)
 		}
-		if len(got) != 2 || got[0].Name != "alpha" || got[1].Name != "beta" {
+		if len(got.Skills) != 2 || got.Skills[0].Name != "alpha" || got.Skills[1].Name != "beta" {
 			t.Fatalf("DiscoverLocalSkills() = %#v, want alpha/beta", got)
 		}
 	})

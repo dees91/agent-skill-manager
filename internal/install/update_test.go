@@ -127,7 +127,7 @@ func TestUpdateServiceDoesNotAutoInstallNewSkills(t *testing.T) {
 	}
 }
 
-func TestUpdateServiceReportsNewSkillDiscoveryFailureWithoutFailing(t *testing.T) {
+func TestUpdateServiceIgnoresRecordedNameDuplicatesInNewSkills(t *testing.T) {
 	fixture := newUpdateGitFixture(t)
 	fixture.commitRemoteChange("add duplicate", map[string]string{"other/alpha/SKILL.md": "# alpha copy\n"}, nil)
 
@@ -135,8 +135,30 @@ func TestUpdateServiceReportsNewSkillDiscoveryFailureWithoutFailing(t *testing.T
 	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
 	}
-	if !result.Updated || !strings.Contains(result.NewSkillsError, "duplicate skill names") || len(result.NewSkills) != 0 {
-		t.Fatalf("result = %#v, want updated with duplicate-name warning", result)
+	if !result.Updated || result.NewSkillsError != "" || len(result.NewSkills) != 0 || len(result.AmbiguousNewSkills) != 0 {
+		t.Fatalf("result = %#v, want updated with no new skills", result)
+	}
+}
+
+func TestUpdateServiceReportsAmbiguousNewSkills(t *testing.T) {
+	fixture := newUpdateGitFixture(t)
+	fixture.commitRemoteChange("add conflicting copies", map[string]string{
+		"packs/one/gamma/SKILL.md": "# gamma one\n",
+		"packs/two/gamma/SKILL.md": "# gamma two\n",
+	}, nil)
+
+	result, err := NewUpdateService(fixture.paths, nil).Apply(fixture.repository)
+	if err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+	if !result.Updated || result.NewSkillsError != "" || len(result.NewSkills) != 0 {
+		t.Fatalf("result = %#v, want updated with no plain new skills", result)
+	}
+	if len(result.AmbiguousNewSkills) != 1 || result.AmbiguousNewSkills[0].Name != "gamma" {
+		t.Fatalf("AmbiguousNewSkills = %#v, want gamma", result.AmbiguousNewSkills)
+	}
+	if len(result.AmbiguousNewSkills[0].Paths) != 2 {
+		t.Fatalf("Ambiguous paths = %#v, want both copies", result.AmbiguousNewSkills[0].Paths)
 	}
 }
 

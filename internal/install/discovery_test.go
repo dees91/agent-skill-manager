@@ -16,17 +16,20 @@ func TestDiscoverSkillsFindsRootSkill(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DiscoverSkills() error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("DiscoverSkills() len = %d, want 1: %#v", len(got), got)
+	if len(got.Skills) != 1 {
+		t.Fatalf("DiscoverSkills() skills len = %d, want 1: %#v", len(got.Skills), got)
 	}
-	if got[0].Name != filepath.Base(checkout) {
-		t.Fatalf("Name = %q, want %q", got[0].Name, filepath.Base(checkout))
+	if len(got.Groups) != 0 {
+		t.Fatalf("DiscoverSkills() groups = %#v, want none", got.Groups)
 	}
-	if got[0].Path != filepath.Clean(checkout) {
-		t.Fatalf("Path = %q, want %q", got[0].Path, filepath.Clean(checkout))
+	if got.Skills[0].Name != filepath.Base(checkout) {
+		t.Fatalf("Name = %q, want %q", got.Skills[0].Name, filepath.Base(checkout))
 	}
-	if got[0].RelativePath != "." {
-		t.Fatalf("RelativePath = %q, want .", got[0].RelativePath)
+	if got.Skills[0].Path != filepath.Clean(checkout) {
+		t.Fatalf("Path = %q, want %q", got.Skills[0].Path, filepath.Clean(checkout))
+	}
+	if got.Skills[0].RelativePath != "." {
+		t.Fatalf("RelativePath = %q, want .", got.Skills[0].RelativePath)
 	}
 }
 
@@ -53,7 +56,10 @@ func TestDiscoverSkillsFindsNestedSkillsAndSkipsInvalidDirs(t *testing.T) {
 			RelativePath: "skills/zeta",
 		},
 	}
-	assertDiscoveredSkills(t, got, want)
+	assertDiscoveredSkills(t, got.Skills, want)
+	if len(got.Groups) != 0 {
+		t.Fatalf("DiscoverSkills() groups = %#v, want none", got.Groups)
+	}
 }
 
 func TestDiscoverSkillsIgnoresHeavyGeneratedDirectories(t *testing.T) {
@@ -75,7 +81,7 @@ func TestDiscoverSkillsIgnoresHeavyGeneratedDirectories(t *testing.T) {
 			RelativePath: "skills/visible",
 		},
 	}
-	assertDiscoveredSkills(t, got, want)
+	assertDiscoveredSkills(t, got.Skills, want)
 }
 
 func TestDiscoverSkillsDoesNotTraverseSymlinkedDirectories(t *testing.T) {
@@ -90,30 +96,125 @@ func TestDiscoverSkillsDoesNotTraverseSymlinkedDirectories(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DiscoverSkills() error = %v", err)
 	}
-	if len(got) != 0 {
+	if !got.Empty() {
 		t.Fatalf("DiscoverSkills() = %#v, want no symlinked directory skills", got)
 	}
 }
 
-func TestDiscoverSkillsRejectsDuplicateSkillBasenames(t *testing.T) {
+func TestDiscoverSkillsGroupsIdenticalDuplicateBasenames(t *testing.T) {
 	checkout := t.TempDir()
-	writeSkill(t, filepath.Join(checkout, "packs", "one", "duplicate"))
-	writeSkill(t, filepath.Join(checkout, "packs", "two", "duplicate"))
+	writeSkill(t, filepath.Join(checkout, ".agent", "skills", "demo"))
+	writeSkill(t, filepath.Join(checkout, "plugin", "skills", "demo"))
+	writeSkill(t, filepath.Join(checkout, "tests", "fixtures", "demo"))
 
-	_, err := DiscoverSkills(checkout)
-	if err == nil {
-		t.Fatal("DiscoverSkills() error = nil, want duplicate error")
+	got, err := DiscoverSkills(checkout)
+	if err != nil {
+		t.Fatalf("DiscoverSkills() error = %v", err)
 	}
-	message := err.Error()
-	for _, want := range []string{
-		"duplicate skill names discovered",
-		"duplicate",
-		"packs/one/duplicate",
-		"packs/two/duplicate",
-	} {
-		if !strings.Contains(message, want) {
-			t.Fatalf("DiscoverSkills() error = %q, want substring %q", message, want)
+	if len(got.Skills) != 0 {
+		t.Fatalf("DiscoverSkills() skills = %#v, want none", got.Skills)
+	}
+	if len(got.Groups) != 1 {
+		t.Fatalf("DiscoverSkills() groups len = %d, want 1: %#v", len(got.Groups), got.Groups)
+	}
+	group := got.Groups[0]
+	if group.Name != "demo" {
+		t.Fatalf("Group Name = %q, want demo", group.Name)
+	}
+	if !group.Identical {
+		t.Fatalf("Group Identical = false, want true for same-content copies")
+	}
+	// Canonical ranking prefers the visible distribution path over the hidden
+	// harness copy and the test fixture.
+	wantOrder := []string{"plugin/skills/demo", ".agent/skills/demo", "tests/fixtures/demo"}
+	if len(group.Candidates) != len(wantOrder) {
+		t.Fatalf("Candidates = %#v, want %d copies", group.Candidates, len(wantOrder))
+	}
+	for i, want := range wantOrder {
+		if group.Candidates[i].RelativePath != want {
+			t.Fatalf("Candidates[%d] = %q, want %q (full order %#v)", i, group.Candidates[i].RelativePath, want, group.Candidates)
 		}
+	}
+	if len(group.Hashes) != len(wantOrder) {
+		t.Fatalf("Hashes len = %d, want %d", len(group.Hashes), len(wantOrder))
+	}
+	for i, hash := range group.Hashes {
+		if hash == "" || hash == "-" {
+			t.Fatalf("Hashes[%d] = %q, want a comparable hash", i, hash)
+		}
+		if hash != group.Hashes[0] {
+			t.Fatalf("Hashes[%d] = %q, want %q for identical copies", i, hash, group.Hashes[0])
+		}
+	}
+}
+
+func TestDiscoverSkillsMarksDifferingDuplicatesConflicting(t *testing.T) {
+	checkout := t.TempDir()
+	writeSkillContent(t, filepath.Join(checkout, "packs", "one", "duplicate"), "# One\n")
+	writeSkillContent(t, filepath.Join(checkout, "packs", "two", "duplicate"), "# Two\n")
+
+	got, err := DiscoverSkills(checkout)
+	if err != nil {
+		t.Fatalf("DiscoverSkills() error = %v", err)
+	}
+	if len(got.Groups) != 1 {
+		t.Fatalf("DiscoverSkills() groups len = %d, want 1", len(got.Groups))
+	}
+	group := got.Groups[0]
+	if group.Identical {
+		t.Fatalf("Group Identical = true, want false for differing copies")
+	}
+	if group.Hashes[0] == group.Hashes[1] {
+		t.Fatalf("Hashes = %q, want differing hashes", group.Hashes)
+	}
+}
+
+func TestDiscoverSkillsTreatsSameSkillFileWithDifferentResourcesAsConflicting(t *testing.T) {
+	checkout := t.TempDir()
+	first := filepath.Join(checkout, "packs", "one", "duplicate")
+	second := filepath.Join(checkout, "packs", "two", "duplicate")
+	writeSkill(t, first)
+	writeSkill(t, second)
+	if err := os.WriteFile(filepath.Join(second, "helper.sh"), []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatalf("write helper: %v", err)
+	}
+
+	got, err := DiscoverSkills(checkout)
+	if err != nil {
+		t.Fatalf("DiscoverSkills() error = %v", err)
+	}
+	if len(got.Groups) != 1 || got.Groups[0].Identical {
+		t.Fatalf("DiscoverSkills() groups = %#v, want one conflicting group", got.Groups)
+	}
+}
+
+func TestDiscoverSkillsRanksDuplicateCopiesDeterministically(t *testing.T) {
+	checkout := t.TempDir()
+	// Same content everywhere; only the ranking order is under test.
+	for _, dir := range []string{
+		"b/deep/nested/demo",
+		"a/demo",
+		".hidden/demo",
+		"tests/demo",
+	} {
+		writeSkill(t, filepath.Join(checkout, dir))
+	}
+
+	got, err := DiscoverSkills(checkout)
+	if err != nil {
+		t.Fatalf("DiscoverSkills() error = %v", err)
+	}
+	if len(got.Groups) != 1 {
+		t.Fatalf("DiscoverSkills() groups len = %d, want 1", len(got.Groups))
+	}
+	var order []string
+	for _, candidate := range got.Groups[0].Candidates {
+		order = append(order, candidate.RelativePath)
+	}
+	// Visible beats hidden and fixtures; shallower beats deeper; lexical wins ties.
+	want := []string{"a/demo", "b/deep/nested/demo", ".hidden/demo", "tests/demo"}
+	if strings.Join(order, ",") != strings.Join(want, ",") {
+		t.Fatalf("Candidate order = %v, want %v", order, want)
 	}
 }
 
@@ -161,8 +262,13 @@ func TestDiscoverSkillsReportsUnreadableDirectories(t *testing.T) {
 
 func writeSkill(t *testing.T, dir string) {
 	t.Helper()
+	writeSkillContent(t, dir, "# Skill\n")
+}
+
+func writeSkillContent(t *testing.T, dir, content string) {
+	t.Helper()
 	mkdir(t, dir)
-	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# Skill\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 		t.Fatalf("write SKILL.md in %s: %v", dir, err)
 	}
 }
