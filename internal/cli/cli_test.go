@@ -99,7 +99,7 @@ func TestRunHelpListsCommands(t *testing.T) {
 			t.Fatalf("stdout = %q, want command %q", stdout.String(), command)
 		}
 	}
-	for _, want := range []string{"--dry-run", "--skill", "both"} {
+	for _, want := range []string{"--dry-run", "--skill", "--as <name>=<installed-name>", "both"} {
 		if !strings.Contains(stdout.String(), want) {
 			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 		}
@@ -210,7 +210,7 @@ func TestRunInstallLocalPathAndListClassification(t *testing.T) {
 		}
 	}
 	manifest := loadState(t, p)
-	if manifest.Version != 2 || len(manifest.LocalSources) != 1 || manifest.LocalSources[0].Group != model.GroupLabel("sample-pack") {
+	if manifest.Version != 3 || len(manifest.LocalSources) != 1 || manifest.LocalSources[0].Group != model.GroupLabel("sample-pack") {
 		t.Fatalf("manifest = %#v, want one sample-pack local source", manifest)
 	}
 	var listOut, listErr strings.Builder
@@ -595,7 +595,7 @@ func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
 		},
 	}
 	var stdout, stderr strings.Builder
-	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "delta"}}}, "")
+	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "delta"}}}, "", nil)
 	want := "new skills in owner/all (not installed): delta\n  install: skill-manager install https://github.com/owner/all --skill delta\n"
 	if stdout.String() != want || stderr.Len() != 0 {
 		t.Fatalf("stdout = %q stderr = %q, want %q", stdout.String(), stderr.String(), want)
@@ -603,7 +603,7 @@ func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
 
 	stdout.Reset()
 	unsafe := install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "my skill"}, {Name: "x;touch pwned"}, {Name: "it's"}}}
-	reportNewSkills(&stdout, &stderr, repository, unsafe, "")
+	reportNewSkills(&stdout, &stderr, repository, unsafe, "", nil)
 	want = "new skills in owner/all (not installed): my skill, x;touch pwned, it's\n" +
 		"  install: skill-manager install https://github.com/owner/all --skill 'my skill' --skill 'x;touch pwned' --skill 'it'\\''s'\n"
 	if stdout.String() != want {
@@ -611,14 +611,14 @@ func TestReportNewSkillsOmitsToolWhenRepositoryUsesAllTools(t *testing.T) {
 	}
 
 	stdout.Reset()
-	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "alpha"}, {Name: "evil\x1b[2J"}}}, "")
+	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "alpha"}, {Name: "evil\x1b[2J"}}}, "", nil)
 	want = "new skills in owner/all (not installed): alpha, \"evil\\x1b[2J\"\n  install command omitted: a skill name contains control characters\n"
 	if stdout.String() != want {
 		t.Fatalf("stdout = %q, want omitted command %q", stdout.String(), want)
 	}
 
 	stdout.Reset()
-	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{}, "inspect checkout path: permission denied")
+	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{}, "inspect checkout path: permission denied", nil)
 	if stdout.Len() != 0 || stderr.String() != "warning: could not check for new skills in owner/all: inspect checkout path: permission denied\n" {
 		t.Fatalf("stdout = %q stderr = %q, want warning", stdout.String(), stderr.String())
 	}
@@ -641,7 +641,7 @@ func TestReportNewSkillsPrintsQualifiedTemplateForAmbiguousNames(t *testing.T) {
 		}},
 	}
 	var stdout, stderr strings.Builder
-	reportNewSkills(&stdout, &stderr, repository, report, "")
+	reportNewSkills(&stdout, &stderr, repository, report, "", nil)
 	want := "new skills in owner/all (not installed): delta\n" +
 		"  install: skill-manager install https://github.com/owner/all --skill delta --tool claude\n" +
 		"ambiguous new skill in owner/all (not installed): gamma\n" +
@@ -2558,5 +2558,124 @@ func TestRunRepairParserAndSelectionErrors(t *testing.T) {
 				t.Fatalf("%v code=0 stdout=%q, want a usage error", args, stdout.String())
 			}
 		})
+	}
+}
+
+func TestParseInstallArgsInstalledAs(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want map[string]string
+		err  string
+	}{
+		{name: "single", args: []string{"src", "--as", "alpha=alpha-acme"}, want: map[string]string{"alpha": "alpha-acme"}},
+		{name: "repeated", args: []string{"src", "--as", "alpha=alpha-acme", "--as", "beta=beta-acme", "--as", "alpha=alpha-acme"}, want: map[string]string{"alpha": "alpha-acme", "beta": "beta-acme"}},
+		{name: "first equals splits", args: []string{"src", "--as", "a=b=c"}, err: "invalid install name"},
+		{name: "missing value", args: []string{"src", "--as"}, err: "--as requires"},
+		{name: "flag as value", args: []string{"src", "--as", "--off"}, err: "--as requires"},
+		{name: "no equals", args: []string{"src", "--as", "alpha"}, err: "--as requires"},
+		{name: "empty name", args: []string{"src", "--as", "=alpha-acme"}, err: "--as requires"},
+		{name: "empty install name", args: []string{"src", "--as", "alpha="}, err: "--as requires"},
+		{name: "invalid install name", args: []string{"src", "--as", "alpha=Alpha_Acme"}, err: "invalid install name"},
+		{name: "two values", args: []string{"src", "--as", "alpha=alpha-acme", "--as", "alpha=alpha-other"}, err: "two install names"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			options, err := parseInstallArgs(tc.args)
+			if tc.err != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("error = %v, want %q", err, tc.err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("error = %v", err)
+			}
+			if len(options.InstalledAs) != len(tc.want) {
+				t.Fatalf("InstalledAs = %#v, want %#v", options.InstalledAs, tc.want)
+			}
+			for key, value := range tc.want {
+				if options.InstalledAs[key] != value {
+					t.Fatalf("InstalledAs = %#v, want %#v", options.InstalledAs, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestRunInstallCrossSourceCollisionSuggestsAndInstallsAlias(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	first := filepath.Join(p.Home, "workspace", "first-pack")
+	second := filepath.Join(p.Home, "workspace", "second-pack")
+	mkdirSkill(t, filepath.Join(first, "skills", "alpha"))
+	mkdirSkill(t, filepath.Join(second, "skills", "alpha"))
+	run := func(args ...string) (int, string, string) {
+		var stdout, stderr strings.Builder
+		code := RunWithPaths(args, &stdout, &stderr, p)
+		return code, stdout.String(), stderr.String()
+	}
+	if code, stdout, stderr := run("install", first, "--tool", "claude"); code != 0 {
+		t.Fatalf("first install code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+
+	code, _, stderr := run("install", second, "--tool", "claude")
+	if code != 1 {
+		t.Fatalf("colliding install code=%d, want 1", code)
+	}
+	for _, want := range []string{
+		"conflict claude/alpha: cell is already owned by local source ",
+		"/first-pack for claude; install it under another name:",
+		"  --as 'alpha=alpha-second-pack'\n",
+	} {
+		if !strings.Contains(stderr, want) {
+			t.Fatalf("stderr = %q, want %q", stderr, want)
+		}
+	}
+
+	code, stdout, stderr := run("install", second, "--tool", "claude", "--as", "alpha=alpha-second-pack", "--dry-run")
+	if code != 0 || !strings.Contains(stdout, "would link claude/alpha-second-pack (alpha): "+filepath.Join(p.ClaudeUserSkills, "alpha-second-pack")) {
+		t.Fatalf("dry-run code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	assertMissing(t, filepath.Join(p.ClaudeUserSkills, "alpha-second-pack"))
+
+	code, stdout, stderr = run("install", second, "--tool", "claude", "--as", "alpha=alpha-second-pack")
+	if code != 0 || !strings.Contains(stdout, `installed "alpha" as "alpha-second-pack"`) {
+		t.Fatalf("alias install code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	assertSymlink(t, filepath.Join(p.ClaudeUserSkills, "alpha-second-pack"))
+	assertSymlink(t, filepath.Join(p.ClaudeUserSkills, "alpha"))
+
+	code, stdout, stderr = run("uninstall", second, "--dry-run")
+	if code != 0 || !strings.Contains(stdout, "would remove on claude/alpha-second-pack (alpha): ") {
+		t.Fatalf("uninstall dry-run code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	if code, stdout, stderr = run("uninstall", second); code != 0 {
+		t.Fatalf("uninstall code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	assertMissing(t, filepath.Join(p.ClaudeUserSkills, "alpha-second-pack"))
+	assertSymlink(t, filepath.Join(p.ClaudeUserSkills, "alpha"))
+}
+
+func TestPrintInstalledAsSuggestionsOmitsUnprintableForm(t *testing.T) {
+	var stderr strings.Builder
+	printInstalledAsSuggestions(&stderr, []install.PreflightConflict{{SkillName: "evil\x1b[2J", Tool: model.ToolClaude, Reason: "cell is already owned by repository github.com/acme/tools", SuggestedAs: "evil-2j-acme"}})
+	if strings.Contains(stderr.String(), "\x1b") || !strings.Contains(stderr.String(), "pasteable --as form omitted") {
+		t.Fatalf("stderr = %q, want sanitized output without pasteable form", stderr.String())
+	}
+}
+
+func TestReportNewSkillsAppendsSuggestedInstalledName(t *testing.T) {
+	repository := state.RepositoryEntry{OriginalURL: "https://github.com/acme/tools.git", Host: "github.com", RepoPath: "acme/tools", Group: model.GroupLabel("acme/tools")}
+	var stdout, stderr strings.Builder
+	suggest := func(name string) string {
+		if name == "delta" {
+			return "delta-acme"
+		}
+		return ""
+	}
+	reportNewSkills(&stdout, &stderr, repository, install.NewSkillsReport{Skills: []install.DiscoveredSkill{{Name: "delta"}, {Name: "gamma"}}}, "", suggest)
+	want := "install: skill-manager install https://github.com/acme/tools.git --skill delta --skill gamma --as 'delta=delta-acme'"
+	if !strings.Contains(stdout.String(), want) || !strings.Contains(stdout.String(), "delta is owned by another source; the command below installs it as delta-acme") {
+		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
 }
