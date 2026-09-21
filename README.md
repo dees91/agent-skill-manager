@@ -12,6 +12,8 @@ deleting them.
   ·
   <a href="#how-it-works">How it works</a>
   ·
+  <a href="#skill-advisor">Skill Advisor</a>
+  ·
   <a href="#cli--tui">CLI &amp; TUI</a>
   ·
   <a href="#documentation--support">Documentation</a>
@@ -27,6 +29,10 @@ described in a `SKILL.md` file.
   changes, and apply them together. Restore a disabled skill when you need it.
 - **Keep combinations for each task:** save Skill Sets for recurring work and
   star favorite skills to find them again.
+- **Ask an agent which skills to use:** Skill Advisor inspects installed
+  skills, temporarily enables a small relevant set, and turns those skills
+  back off. Optional TypeSafe Jev recommendations use your API key after you
+  opt in.
 
 ## Quick start
 
@@ -110,14 +116,40 @@ Each tool has its own ON/OFF state.
 **Sources** installs skills from Git repositories or links to local folders.
 **Skill Sets** saves combinations you can stage for a chosen tool.
 **Dashboard** shows an overview and approximate skill-catalog context use.
+**Advisor** opts in to TypeSafe Jev recommendations.
+
 See the [desktop guide](https://github.com/dees91/agent-skill-manager/blob/main/docs/usage.md#desktop-interface)
-for these workflows and favorites.
+for these workflows and favorites. The [Skill Advisor](#skill-advisor) section
+covers the first-party skill and TypeSafe opt-in.
 
 Management covers user skills in the
 [supported global folders](https://github.com/dees91/agent-skill-manager/blob/main/docs/usage.md#paths-skill-manager-uses).
 Codex system skills and Claude plugin-cache skills can be shown read-only;
 plugin toggles and project-level skill folders are outside the current scope.
 The experimental skills.sh Discover screen is not included in this preview.
+
+## Skill Advisor
+
+Install the optional first-party
+[`skill-advisor`](https://github.com/dees91/agent-skill-manager/blob/main/skills/skill-advisor/SKILL.md)
+so a coding agent can inspect locally installed skills for the current Claude
+Code, Codex, Muse, or Grok host, temporarily enable at most five that match
+the task, and clean up that activation when it finishes. It needs no plugin
+or provider hook.
+
+Local ranked search is the default and stays offline. Open **Advisor** in the
+app, or run `skill-manager advisor provider use typesafe`, to opt in to
+[TypeSafe](https://typesafe.ai) Jev recommendations with a key you own.
+A stored or environment key does not enable cloud use by itself. Jev then
+sees names and short descriptions of every toggleable skill for that host,
+not only a local shortlist.
+
+<p align="center">
+  <a href="docs/images/advisor-typesafe.png"><img src="docs/images/advisor-typesafe.png" width="960" alt="Advisor settings: TypeSafe selected as the recommendation provider, with a hidden API key field"></a>
+</p>
+
+The [Skill Advisor guide](https://github.com/dees91/agent-skill-manager/blob/main/docs/usage.md#first-party-skill-advisor)
+covers install, CLI commands, and what is sent on a recommendation request.
 
 ## CLI & TUI
 
@@ -136,12 +168,8 @@ In the TUI, use **Tab** to choose a tool, **Space** to stage a toggle, and
 **Enter** to apply it. Mutating CLI commands offer `--dry-run` previews.
 
 See [commands and keyboard controls](https://github.com/dees91/agent-skill-manager/blob/main/docs/usage.md#terminal-interface)
-for source management and advanced use. The optional
-[Skill Advisor](https://github.com/dees91/agent-skill-manager/blob/main/docs/usage.md#first-party-skill-advisor)
-lets an agent select and temporarily activate relevant installed skills for a
-task, then clean up its activation receipt. Optional TypeSafe recommendations
-use a user-owned API key and an explicit Advisor setting; local search stays
-the default.
+for source management and advanced use, including
+[Skill Advisor](#skill-advisor) CLI commands.
 
 ## Documentation & support
 

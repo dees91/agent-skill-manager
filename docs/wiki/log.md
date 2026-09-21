@@ -913,3 +913,10 @@ to public fixtures.
 Added synthetic 1440×960 captures of the Advisor settings screen in Local and
 TypeSafe selection states under `docs/images/`. Demo data only; no stored key
 or environment key is shown.
+
+## [2026-09-21] documentation | Surface Skill Advisor and TypeSafe Jev in README
+
+Moved Skill Advisor out of a CLI footnote into the product bullets, How it
+works, and a dedicated section with the TypeSafe settings screenshot. Local
+search remains the default; TypeSafe Jev stays optional BYOK. Detailed
+commands remain in the user guide.
