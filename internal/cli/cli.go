@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,8 @@ import (
 	"text/tabwriter"
 	"unicode"
 
+	"github.com/dees91/agent-skill-manager/internal/advisor"
+	"github.com/dees91/agent-skill-manager/internal/credentials"
 	"github.com/dees91/agent-skill-manager/internal/install"
 	"github.com/dees91/agent-skill-manager/internal/model"
 	"github.com/dees91/agent-skill-manager/internal/ops"
@@ -19,23 +22,41 @@ import (
 	"github.com/dees91/agent-skill-manager/internal/scan"
 	"github.com/dees91/agent-skill-manager/internal/state"
 	"github.com/dees91/agent-skill-manager/internal/tui"
+	"github.com/dees91/agent-skill-manager/internal/typesafe"
 )
+
+type providerVerifier interface {
+	Verify(ctx context.Context) (typesafe.VerifyResult, error)
+}
 
 // App contains CLI dependencies.
 type App struct {
-	paths      paths.Paths
-	runTUI     func(paths.Paths) error
-	currentDir func() (string, error)
+	paths       paths.Paths
+	runTUI      func(paths.Paths) error
+	currentDir  func() (string, error)
+	stdin       io.Reader
+	lookupEnv   func(string) (string, bool)
+	credentials credentials.Store
+	newProvider func(typesafe.Key) advisor.Provider
+	newVerifier func(typesafe.Key) providerVerifier
+	readSecret  func(stdin io.Reader, stderr io.Writer, keyStdin bool) (string, error)
 }
 
 // Run executes the command-line interface using default user paths.
 func Run(args []string, stdout, stderr io.Writer) int {
+	return RunWithIO(args, os.Stdin, stdout, stderr)
+}
+
+// RunWithIO executes the CLI with an injected stdin, used for task briefs and key input.
+func RunWithIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	p, err := paths.Default()
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
-	return RunWithPaths(args, stdout, stderr, p)
+	app := newApp(p)
+	app.stdin = stdin
+	return app.Run(args, stdout, stderr)
 }
 
 // RunWithPaths executes the CLI using injected paths, primarily for tests.
@@ -51,7 +72,16 @@ func RunWithPathsAndTUI(args []string, stdout, stderr io.Writer, p paths.Paths, 
 }
 
 func newApp(p paths.Paths) App {
-	return App{paths: p, runTUI: tui.Run, currentDir: os.Getwd}
+	return App{
+		paths:       p,
+		runTUI:      tui.Run,
+		currentDir:  os.Getwd,
+		lookupEnv:   os.LookupEnv,
+		credentials: credentials.System(),
+		newProvider: func(key typesafe.Key) advisor.Provider { return typesafe.New(key) },
+		newVerifier: func(key typesafe.Key) providerVerifier { return typesafe.New(key) },
+		readSecret:  readHiddenSecret,
+	}
 }
 
 // Run executes the command-line interface and returns a process exit code.
@@ -1235,10 +1265,14 @@ Commands:
                                Activate a receipt-scoped skill set
   advisor search --tool <tool> --query <text> [--limit <n>] [--json]
                                Rank tool-specific ON/OFF skill metadata
+  advisor recommend --tool <tool> --query <text> --task-stdin [--provider local|typesafe] [--json]
+                               Recommend skills from local search or TypeSafe
   advisor cleanup --receipt <id> [--dry-run] [--json]
                                Release one exact advisor receipt
   advisor status [--tool <tool>] [--json]
                                List outstanding advisor receipts
+  advisor provider <status|use|set-key|remove|check> [--json]
+                               Configure the optional TypeSafe recommendation provider
   help                         Show this help text
 
 Tools:

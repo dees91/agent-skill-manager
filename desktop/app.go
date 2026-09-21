@@ -191,6 +191,31 @@ func (a *App) UninstallSource(sourceID, confirmation string, includeReadOnly boo
 	return a.service.UninstallSource(sourceID, confirmation, includeReadOnly)
 }
 
+// GetAdvisorSettings returns the secret-free recommendation provider view.
+func (a *App) GetAdvisorSettings() (gui.AdvisorSettingsView, error) {
+	return a.service.GetAdvisorSettings()
+}
+
+// SaveAdvisorProvider records local or TypeSafe recommendation consent.
+func (a *App) SaveAdvisorProvider(mode string) (gui.AdvisorSettingsView, error) {
+	return a.service.SaveAdvisorProvider(mode)
+}
+
+// SetAdvisorKey stores a TypeSafe API key in the OS credential store.
+func (a *App) SetAdvisorKey(key string) (gui.AdvisorSettingsView, error) {
+	return a.service.SetAdvisorKey(key)
+}
+
+// RemoveAdvisorKey deletes the stored key and returns the provider to local.
+func (a *App) RemoveAdvisorKey() (gui.AdvisorSettingsView, error) {
+	return a.service.RemoveAdvisorKey()
+}
+
+// CheckAdvisorConnection verifies the resolved TypeSafe key with a cheap ping.
+func (a *App) CheckAdvisorConnection() (gui.AdvisorConnectionCheck, error) {
+	return a.service.CheckAdvisorConnection()
+}
+
 func (a *App) beforeClose(ctx context.Context) bool {
 	if a.service.SourceBusy() {
 		_, _ = runtime.MessageDialog(ctx, runtime.MessageDialogOptions{

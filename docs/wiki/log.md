@@ -878,6 +878,57 @@ inside the assignment; live evaluation is opt-in and absence of a key does not
 block implementation or offline checks. Quality claims still require measured
 evidence. Earlier log entries describe the superseded plan structure.
 
+## [2026-09-21] decision | Full-catalog TypeSafe recommendation chunks
+
+Accepted a scope change for Phase 24 cloud input. Jev evaluates every
+toggleable ON/OFF skill of the selected host, not a BM25F shortlist. Stage 1
+splits the catalog into token-budgeted parallel chunk requests (at most 16,
+never dropping skills). Stage 2 re-judges at most five skills. Request bound
+is 256 KiB; request count is chunks + 1. BM25F remains the `local_candidates`
+fallback list. Any chunk failure falls back the whole run.
+
+Updated `AGENTS.md`, `planning/phase-24-typesafe-advisor-tasks.md` (P24-T01
+in-progress), and `topics/runtime-skill-advisor.md`. Implementation of the
+optional TypeSafe path has started against `main` at `7afd675`.
+
+## [2026-09-21] implementation | Optional TypeSafe BYOK recommendations
+
+Added `advisor recommend` and `advisor provider`, a desktop Advisor screen,
+macOS keychain storage, and first-party skill negotiation for
+`semantic_recommendation_v1`. Local BM25F remains the default. Cloud mode
+sends the task brief plus bounded names/descriptions of every toggleable host
+skill in parallel chunks. Failures return `local_candidates`; a successful
+no-match returns `none`. P24-T01 is implemented. Live quality measurement
+stays opt-in and was not run.
+
+## [2026-09-21] lint | TypeSafe implementation wiki routes
+
+Indexed Advisor settings and `advisor recommend`/`provider` on the runtime
+advisor, interfaces, desktop GUI, and source-digest pages. Relative links from
+the changed wiki pages resolve. No secrets or workstation inventory were added
+to public fixtures.
+
+## [2026-09-21] documentation | Advisor desktop screenshots
+
+Added synthetic 1440×960 captures of the Advisor settings screen in Local and
+TypeSafe selection states under `docs/images/`. Demo data only; no stored key
+or environment key is shown.
+
+## [2026-09-21] documentation | Surface Skill Advisor and TypeSafe Jev in README
+
+Moved Skill Advisor out of a CLI footnote into the product bullets, How it
+works, and a dedicated section with the TypeSafe settings screenshot. Local
+search remains the default; TypeSafe Jev stays optional BYOK. Detailed
+commands remain in the user guide.
+
+## [2026-09-21] fix | Address TypeSafe advisor review findings
+
+Questions reference skills only by index (`catalog[k]`, `shortlist[k]`); names
+stay in state. Saving a key keeps an unsaved TypeSafe selection. The last-chunk
+fixture injects a token budget and asserts two or more chunks. Fallback reports
+every billed response, chunking is linear, Ctrl-C at the key prompt restores
+echo and re-raises SIGINT, remove always resets the provider to local, and
+keychain `Set` updates in place.
 ## [2026-09-21] implementation | Iteration 25 duplicate skill-name resolution
 
 Implemented grouped duplicate discovery on branch

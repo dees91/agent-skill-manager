@@ -11,7 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dees91/agent-skill-manager/internal/advisor"
 	"github.com/dees91/agent-skill-manager/internal/contextbudget"
+	"github.com/dees91/agent-skill-manager/internal/credentials"
 	"github.com/dees91/agent-skill-manager/internal/favorites"
 	"github.com/dees91/agent-skill-manager/internal/install"
 	"github.com/dees91/agent-skill-manager/internal/model"
@@ -22,6 +24,7 @@ import (
 	"github.com/dees91/agent-skill-manager/internal/skillssh"
 	"github.com/dees91/agent-skill-manager/internal/staging"
 	"github.com/dees91/agent-skill-manager/internal/state"
+	"github.com/dees91/agent-skill-manager/internal/typesafe"
 )
 
 type catalogClient interface {
@@ -61,6 +64,11 @@ type Service struct {
 	progressMu       sync.Mutex
 	progress         func(SourceProgress)
 	privacyReady     bool
+	advisorSettings  advisor.SettingsStore
+	credentials      credentials.Store
+	lookupEnv        func(string) (string, bool)
+	newVerifier      func(typesafe.Key) advisorVerifier
+	advisorMu        sync.Mutex
 }
 
 // New creates a desktop session for the provided filesystem paths.
@@ -79,6 +87,8 @@ func New(p paths.Paths) *Service {
 		catalogSkills:   map[string]skillssh.Skill{},
 		drafts:          map[string]installDraftState{},
 		reviews:         map[string]installReviewState{},
+		advisorSettings: advisor.NewSettingsStore(p),
+		credentials:     credentials.System(),
 	}
 }
 

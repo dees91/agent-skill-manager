@@ -306,6 +306,7 @@ Use a global state directory:
   state.json
   skill-sets.json
   favorites.json
+  advisor-settings.json
   backups/
   disabled/
     claude/
@@ -1099,18 +1100,20 @@ tool until the user turns them ON.
   extend, the TUI, toggle, update, uninstall, and repair semantics do not
   change.
 
-### Optional TypeSafe Advisor (Iteration 24, planned)
+### Optional TypeSafe Advisor (Iteration 24)
 
 The implementation plan is
 [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md).
-This is future work; existing runtime and privacy behavior remain authoritative
-until the relevant tasks are implemented and verified.
 
 - Keep local BM25F search as the default and preserve `advisor search` as offline.
-- Plan a separate recommendation operation with optional user-owned TypeSafe
-  credentials, explicit cloud opt-in, direct Go-to-provider HTTPS, and visible
-  local fallback. A stored/environment key alone never enables cloud use.
-- Limit cloud inputs to the supplied task brief and shortlisted skill metadata.
+- `advisor recommend` is a separate recommendation operation with optional
+  user-owned TypeSafe credentials, explicit cloud opt-in, direct Go-to-provider
+  HTTPS, and visible local fallback. A stored/environment key alone never
+  enables cloud use.
+- Limit cloud inputs to the supplied task brief plus names and bounded
+  descriptions of every toggleable skill of the selected host, sent in as many
+  parallel chunk requests as the token budget requires (never dropping skills;
+  at most 16 chunks). Request bound 256 KiB; request count is chunks + 1.
   No transcript/project-code/full-instruction upload is in this iteration.
 - Store keys in the OS credential store, with an environment-only CLI option;
   never bundle a maintainer key or add a Skill Manager-operated backend.

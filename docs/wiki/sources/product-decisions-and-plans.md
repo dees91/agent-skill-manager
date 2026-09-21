@@ -119,8 +119,9 @@ to seed the wiki. It summarizes their roles; it does not replace them.
     save; existing cells keep their state; failed Git install saves now roll
     back created links.
 - [`planning/phase-24-typesafe-advisor-tasks.md`](../../../planning/phase-24-typesafe-advisor-tasks.md)
-  - `planned`: optional TypeSafe BYOK recommendation, local default and fallback,
-    credential ownership, bounded cloud inputs, and one complete agent assignment.
+  - `documented`: optional TypeSafe BYOK recommendation, local default and
+    fallback, credential ownership, full-catalog chunked cloud inputs, CLI and
+    desktop Advisor settings, and one complete agent assignment.
 - [`planning/phase-25-duplicate-skill-discovery-tasks.md`](../../../planning/phase-25-duplicate-skill-discovery-tasks.md)
   - `documented`, `implemented`: grouped duplicate discovery with content
     fingerprints and canonical ranking, identical auto-resolution, qualified

@@ -56,5 +56,9 @@ jobs:
         working-directory: desktop
       - run: go vet ./...
         working-directory: desktop
+      - run: go test ./...
+        env:
+          SKILL_MANAGER_KEYCHAIN_TEST: "1"
+      - run: go vet ./...
       - run: make notices-check
       - run: make vulncheck

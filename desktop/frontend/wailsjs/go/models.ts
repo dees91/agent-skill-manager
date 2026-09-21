@@ -356,6 +356,48 @@ export namespace gui {
 		    return a;
 		}
 	}
+	export class AdvisorConnectionCheck {
+	    ok: boolean;
+	    reason?: string;
+	    keySource: string;
+	    inputTokens: number;
+	    outputTokens: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AdvisorConnectionCheck(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.reason = source["reason"];
+	        this.keySource = source["keySource"];
+	        this.inputTokens = source["inputTokens"];
+	        this.outputTokens = source["outputTokens"];
+	    }
+	}
+	export class AdvisorSettingsView {
+	    mode: string;
+	    settingsWarning?: string;
+	    environmentKey: boolean;
+	    storedKey: string;
+	    credentialStore: string;
+	    model: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AdvisorSettingsView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.settingsWarning = source["settingsWarning"];
+	        this.environmentKey = source["environmentKey"];
+	        this.storedKey = source["storedKey"];
+	        this.credentialStore = source["credentialStore"];
+	        this.model = source["model"];
+	    }
+	}
 	export class AppliedChange {
 	    tool: string;
 	    skillName: string;

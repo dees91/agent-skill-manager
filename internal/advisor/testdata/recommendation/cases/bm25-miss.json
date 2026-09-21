@@ -1,0 +1,128 @@
+{
+  "id": "bm25-miss",
+  "split": "dev",
+  "language": "en",
+  "tool": "codex",
+  "query": "video encoder helper",
+  "task": "Compress a zip archive without re-encoding video.",
+  "catalog": [
+    {
+      "name": "video-00",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-01",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-02",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-03",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-04",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-05",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-06",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-07",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-08",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-09",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-10",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-11",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-12",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-13",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-14",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-15",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-16",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-17",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-18",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-19",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "video-20",
+      "description": "video encoder helper for clip {i}",
+      "state": "on"
+    },
+    {
+      "name": "hidden-zip",
+      "description": "archive compression format specialist",
+      "state": "off"
+    }
+  ],
+  "expected": {
+    "required": [
+      "hidden-zip"
+    ],
+    "acceptable": [],
+    "excluded": [],
+    "noMatch": false
+  }
+}

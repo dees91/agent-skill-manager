@@ -10,6 +10,10 @@ export function ApplyPending(arg1) {
   return window['go']['main']['App']['ApplyPending'](arg1);
 }
 
+export function CheckAdvisorConnection() {
+  return window['go']['main']['App']['CheckAdvisorConnection']();
+}
+
 export function ChooseLocalInstall() {
   return window['go']['main']['App']['ChooseLocalInstall']();
 }
@@ -28,6 +32,10 @@ export function DeleteSkillSet(arg1) {
 
 export function ExtendSources(arg1, arg2) {
   return window['go']['main']['App']['ExtendSources'](arg1, arg2);
+}
+
+export function GetAdvisorSettings() {
+  return window['go']['main']['App']['GetAdvisorSettings']();
 }
 
 export function GetSnapshot(arg1) {
@@ -62,12 +70,24 @@ export function PreviewUninstall(arg1) {
   return window['go']['main']['App']['PreviewUninstall'](arg1);
 }
 
+export function RemoveAdvisorKey() {
+  return window['go']['main']['App']['RemoveAdvisorKey']();
+}
+
 export function RepairSource(arg1, arg2) {
   return window['go']['main']['App']['RepairSource'](arg1, arg2);
 }
 
 export function ReviewInstall(arg1, arg2, arg3) {
   return window['go']['main']['App']['ReviewInstall'](arg1, arg2, arg3);
+}
+
+export function SaveAdvisorProvider(arg1) {
+  return window['go']['main']['App']['SaveAdvisorProvider'](arg1);
+}
+
+export function SetAdvisorKey(arg1) {
+  return window['go']['main']['App']['SetAdvisorKey'](arg1);
 }
 
 export function SetSkillFavorite(arg1, arg2) {

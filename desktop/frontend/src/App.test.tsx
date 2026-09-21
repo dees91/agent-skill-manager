@@ -868,6 +868,20 @@ describe('Skill Manager desktop app', () => {
     expect(screen.getByText('Favorites are remembered; removed skills may become unavailable until reinstalled.')).toBeInTheDocument()
   })
 
+  it('opens Advisor without loading settings on launch or refresh', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    expect(backend.getAdvisorSettings).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Refresh filesystem scan' }))
+    await waitFor(() => expect(backend.getSnapshot).toHaveBeenCalledTimes(2))
+    expect(backend.getAdvisorSettings).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Advisor' }))
+    expect(await screen.findByRole('heading', { name: 'Advisor' })).toBeInTheDocument()
+    expect(backend.getAdvisorSettings).toHaveBeenCalledTimes(1)
+  })
+
   /* Discover UI regression scenarios remain as implementation notes while the
      experimental catalog is excluded from the public preview build.
 

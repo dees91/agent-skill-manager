@@ -1,0 +1,30 @@
+{
+  "id": "clear-docs",
+  "split": "dev",
+  "language": "en",
+  "tool": "claude",
+  "query": "markdown documentation writer",
+  "task": "Write a user-facing markdown guide for a CLI command.",
+  "catalog": [
+    {
+      "name": "docs-writer",
+      "description": "Drafts markdown documentation for command-line tools.",
+      "state": "off"
+    },
+    {
+      "name": "sql-migrator",
+      "description": "Plans SQL schema migrations.",
+      "state": "on"
+    }
+  ],
+  "expected": {
+    "required": [
+      "docs-writer"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "sql-migrator"
+    ],
+    "noMatch": false
+  }
+}

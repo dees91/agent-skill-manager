@@ -80,6 +80,11 @@ assert_cli() {
   [[ "$($binary --version)" == "skill-manager $RELEASE_VERSION" ]] ||
     fail "CLI reports an unexpected version"
   "$binary" help >/dev/null
+  local provider_status
+  mkdir -p "$WORK_DIR/cli-home"
+  provider_status="$(HOME="$WORK_DIR/cli-home" "$binary" advisor provider status --json)"
+  [[ "$provider_status" == *'"credentialStore": "keychain"'* ]] ||
+    fail "CLI credential store is not keychain (CGO_ENABLED=0 build?)"
 }
 
 assert_app() {

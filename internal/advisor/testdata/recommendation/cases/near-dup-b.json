@@ -1,0 +1,30 @@
+{
+  "id": "near-dup-b",
+  "split": "heldout",
+  "language": "en",
+  "tool": "codex",
+  "query": "yaml format",
+  "task": "Format a YAML manifest in place.",
+  "catalog": [
+    {
+      "name": "yaml-fmt",
+      "description": "Formats YAML manifests in place.",
+      "state": "on"
+    },
+    {
+      "name": "yaml-fmt-safe",
+      "description": "Formats YAML manifests in place without reordering keys.",
+      "state": "off"
+    }
+  ],
+  "expected": {
+    "required": [
+      "yaml-fmt"
+    ],
+    "acceptable": [
+      "yaml-fmt-safe"
+    ],
+    "excluded": [],
+    "noMatch": false
+  }
+}

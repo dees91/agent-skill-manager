@@ -15,11 +15,13 @@ const (
 	fileVersion = 1
 	// MaxSkillsPerActivation bounds model-selected mutations.
 	MaxSkillsPerActivation = 5
+	// CapabilitySemanticRecommendation identifies optional TypeSafe recommendations.
+	CapabilitySemanticRecommendation = "semantic_recommendation_v1"
 )
 
 // Capabilities returns the stable additive features supported by this CLI.
 func Capabilities() []string {
-	return []string{CapabilityRankedSearch}
+	return []string{CapabilityRankedSearch, CapabilitySemanticRecommendation}
 }
 
 // Action describes one activation or cleanup decision.
@@ -54,11 +56,18 @@ type ReceiptStatus struct {
 	Skills    []string   `json:"skills"`
 }
 
+// ProviderStatus is the path-free configured recommendation provider.
+type ProviderStatus struct {
+	Mode    ProviderMode `json:"mode"`
+	Warning string       `json:"warning,omitempty"`
+}
+
 // StatusResult is returned by advisor status.
 type StatusResult struct {
 	APIVersion   int             `json:"apiVersion"`
 	Capabilities []string        `json:"capabilities"`
 	Receipts     []ReceiptStatus `json:"receipts"`
+	Provider     ProviderStatus  `json:"provider"`
 }
 
 type file struct {

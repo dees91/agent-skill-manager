@@ -1,0 +1,30 @@
+{
+  "id": "polish-brief-2",
+  "split": "heldout",
+  "language": "pl",
+  "tool": "claude",
+  "query": "documentation markdown",
+  "task": "Napisz kr\u00f3tk\u0105 dokumentacj\u0119 markdown dla nowej komendy CLI.",
+  "catalog": [
+    {
+      "name": "docs-writer",
+      "description": "Drafts markdown documentation for command-line tools.",
+      "state": "off"
+    },
+    {
+      "name": "kube-apply",
+      "description": "Applies Kubernetes manifests.",
+      "state": "on"
+    }
+  ],
+  "expected": {
+    "required": [
+      "docs-writer"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "kube-apply"
+    ],
+    "noMatch": false
+  }
+}

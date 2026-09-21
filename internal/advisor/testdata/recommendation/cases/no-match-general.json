@@ -1,0 +1,23 @@
+{
+  "id": "no-match-general",
+  "split": "heldout",
+  "language": "en",
+  "tool": "muse",
+  "query": "hello greeting",
+  "task": "Say hello to the user.",
+  "catalog": [
+    {
+      "name": "release-checklist",
+      "description": "Runs a release checklist.",
+      "state": "on"
+    }
+  ],
+  "expected": {
+    "required": [],
+    "acceptable": [],
+    "excluded": [
+      "release-checklist"
+    ],
+    "noMatch": true
+  }
+}

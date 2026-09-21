@@ -1,0 +1,30 @@
+{
+  "id": "near-dup-a",
+  "split": "dev",
+  "language": "en",
+  "tool": "codex",
+  "query": "json pretty print",
+  "task": "Pretty-print a JSON file from the command line.",
+  "catalog": [
+    {
+      "name": "json-pretty",
+      "description": "Pretty-prints JSON files in the terminal.",
+      "state": "off"
+    },
+    {
+      "name": "json-pretty-lite",
+      "description": "Pretty-prints JSON files in the terminal with fewer options.",
+      "state": "on"
+    }
+  ],
+  "expected": {
+    "required": [
+      "json-pretty"
+    ],
+    "acceptable": [
+      "json-pretty-lite"
+    ],
+    "excluded": [],
+    "noMatch": false
+  }
+}

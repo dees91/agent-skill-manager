@@ -17,7 +17,7 @@ Before making code or documentation changes:
 11. If working on managed checkout diagnosis or repair, read [planning/phase-21-checkout-repair-tasks.md](./planning/phase-21-checkout-repair-tasks.md).
 12. If working on reporting or installing skills added to a managed repository after install, read [planning/phase-22-new-skill-discovery-tasks.md](./planning/phase-22-new-skill-discovery-tasks.md).
 13. If working on installing skills directly as OFF, read [planning/phase-23-install-as-off-tasks.md](./planning/phase-23-install-as-off-tasks.md).
-14. If working on optional TypeSafe recommendations or BYOK settings, read [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md). This is planned behavior, not implemented support.
+14. If working on optional TypeSafe recommendations or BYOK settings, read [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md).
 15. If working on duplicate skill names inside one install source, read [planning/phase-25-duplicate-skill-discovery-tasks.md](./planning/phase-25-duplicate-skill-discovery-tasks.md).
 16. Follow the task status rules in the relevant planning file before starting and after finishing work.
 

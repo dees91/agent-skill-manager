@@ -1,0 +1,30 @@
+{
+  "id": "misleading-generic",
+  "split": "dev",
+  "language": "en",
+  "tool": "codex",
+  "query": "kubernetes apply",
+  "task": "Apply a Kubernetes deployment manifest.",
+  "catalog": [
+    {
+      "name": "kube-apply",
+      "description": "Applies Kubernetes manifests safely.",
+      "state": "on"
+    },
+    {
+      "name": "universal-helper",
+      "description": "A generic helper for any software task you can imagine.",
+      "state": "off"
+    }
+  ],
+  "expected": {
+    "required": [
+      "kube-apply"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "universal-helper"
+    ],
+    "noMatch": false
+  }
+}

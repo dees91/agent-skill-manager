@@ -343,6 +343,38 @@ func TestConcurrentActivationsShareOneLease(t *testing.T) {
 	}
 }
 
+func TestStatusReportsCapabilitiesAndProvider(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	service := New(p)
+	status, err := service.Status(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.APIVersion != APIVersion || status.Provider.Mode != ProviderLocal || status.Provider.Warning != "" {
+		t.Fatalf("status = %#v", status)
+	}
+	if len(status.Capabilities) != 2 || status.Capabilities[0] != CapabilityRankedSearch || status.Capabilities[1] != CapabilitySemanticRecommendation {
+		t.Fatalf("capabilities = %#v", status.Capabilities)
+	}
+
+	if err := os.MkdirAll(p.StateDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p.AdvisorSettingsFile, []byte(`{"version":1,`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	corrupt, err := service.Status(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if corrupt.Provider.Mode != ProviderLocal || corrupt.Provider.Warning == "" {
+		t.Fatalf("corrupt status = %#v", corrupt)
+	}
+	if strings.Contains(corrupt.Provider.Warning, p.Home) {
+		t.Fatalf("warning leaked home: %q", corrupt.Provider.Warning)
+	}
+}
+
 func fixedService(p paths.Paths, id string) *Service {
 	service := New(p)
 	service.now = func() time.Time { return time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC) }

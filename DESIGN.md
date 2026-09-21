@@ -19,6 +19,14 @@ sources:
     platform: desktop
     dimensions: "1440x960"
   - type: screenshot
+    path: "docs/images/advisor.png"
+    platform: desktop
+    dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/advisor-typesafe.png"
+    platform: desktop
+    dimensions: "1440x960"
+  - type: screenshot
     path: "docs/images/install-duplicates.png"
     platform: desktop
     dimensions: "1440x960"
@@ -91,7 +99,16 @@ in public documentation.
 ## Components
 
 - **Navigation rail:** persistent product navigation with compact icon/label
-  rows, a deep selected state, connection status, and last-scan metadata.
+  rows, a deep selected state, connection status, and last-scan metadata. The
+  fifth item is **Advisor**.
+- **Advisor settings:** Local/TypeSafe choice cards with `aria-pressed`, a
+  disclosure of what is sent, a masked key field, Save key / Cancel / Check
+  connection / Remove key, and `role="alert"` errors. The key panel appears
+  only while TypeSafe is selected; under Local, an existing stored or
+  environment key is summarized in one status line beneath the cards with a
+  Remove key action, without the input. Saving a key keeps an unsaved TypeSafe
+  selection; saving the provider or removing the key follows the saved mode.
+  The screen never displays the stored secret.
 - **Native About:** the standard macOS application menu exposes the app icon,
   product name, current build version, and short description without repeating
   release metadata inside the workspace.

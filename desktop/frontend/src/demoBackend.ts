@@ -1,4 +1,4 @@
-import { MANAGED_TOOLS, favoriteEligible, type ActionResult, type ApplyResult, type Backend, type ManagedTool, type PendingChange, type SkillCell, type SkillRow, type Snapshot } from './api'
+import { MANAGED_TOOLS, favoriteEligible, type ActionResult, type AdvisorConnectionCheck, type AdvisorSettingsView, type ApplyResult, type Backend, type ManagedTool, type PendingChange, type SkillCell, type SkillRow, type Snapshot } from './api'
 
 interface DemoSource extends Record<`${ManagedTool}Count`, number> {
   sourceId: string
@@ -44,6 +44,8 @@ class DemoBackend implements Backend {
     { sourceId: 'local:demo', kind: 'local', group: 'personal-skills', location: '/Users/example/Developer/personal-skills', skillCount: 2, claudeCount: 2, codexCount: 1, museCount: 1, grokCount: 0, installedAt: new Date().toISOString(), canUpdate: false, updateMode: 'Linked folder', updateHint: 'Changes are read directly; no update needed.' },
   ]
   private repairNeeded = new Set(['git:demo'])
+  private advisorMode = 'local'
+  private advisorKeyStored = false
 
   async getSnapshot(includeReadOnly: boolean) { return this.snapshot(includeReadOnly) }
 
@@ -287,6 +289,29 @@ class DemoBackend implements Backend {
     const source = this.sources.find((item) => item.sourceId === sourceID)!
     if (!this.repairNeeded.delete(sourceID)) return this.sourceResult(`${source.group} was already clean.`)
     return this.sourceResult(`Repaired ${source.group} and staged 2 paths.`)
+  }
+
+  async getAdvisorSettings(): Promise<AdvisorSettingsView> {
+    return this.advisorView()
+  }
+  async saveAdvisorProvider(mode: string): Promise<AdvisorSettingsView> {
+    this.advisorMode = mode
+    return this.advisorView()
+  }
+  async setAdvisorKey(): Promise<AdvisorSettingsView> {
+    this.advisorKeyStored = true
+    return this.advisorView()
+  }
+  async removeAdvisorKey(): Promise<AdvisorSettingsView> {
+    this.advisorKeyStored = false
+    this.advisorMode = 'local'
+    return this.advisorView()
+  }
+  async checkAdvisorConnection(): Promise<AdvisorConnectionCheck> {
+    return { ok: false, reason: 'demo_offline', keySource: '', inputTokens: 0, outputTokens: 0 }
+  }
+  private advisorView(): AdvisorSettingsView {
+    return { mode: this.advisorMode, environmentKey: false, storedKey: this.advisorKeyStored ? 'present' : 'absent', credentialStore: 'memory', model: 'jev-1.13.0' }
   }
 
   private sourceResult(message: string) {

@@ -1,0 +1,36 @@
+{
+  "id": "multi-review",
+  "split": "heldout",
+  "language": "en",
+  "tool": "codex",
+  "query": "code review security",
+  "task": "Review a pull request for security issues and test gaps.",
+  "catalog": [
+    {
+      "name": "security-review",
+      "description": "Reviews code for security issues.",
+      "state": "off"
+    },
+    {
+      "name": "test-gap-finder",
+      "description": "Finds missing tests in a change set.",
+      "state": "off"
+    },
+    {
+      "name": "emoji-picker",
+      "description": "Suggests emoji for commit messages.",
+      "state": "on"
+    }
+  ],
+  "expected": {
+    "required": [
+      "security-review",
+      "test-gap-finder"
+    ],
+    "acceptable": [],
+    "excluded": [
+      "emoji-picker"
+    ],
+    "noMatch": false
+  }
+}

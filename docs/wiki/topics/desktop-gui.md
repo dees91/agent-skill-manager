@@ -13,9 +13,10 @@
   store, Tailwind, or chart library. Frontend development requires Node.js
   22.12 or newer and npm 10 or newer.
 - The dark-only desktop source build contains Dashboard, Skills, saved Skill
-  Sets, and a managed-only Sources screen. Iteration 9's experimental skills.sh
-  Go adapter and domain tests remain in the repository, but Discover has no
-  public Wails binding or React navigation in the `v0.5.0` preview.
+  Sets, a managed-only Sources screen, and Advisor settings. Iteration 9's
+  experimental skills.sh Go adapter and domain tests remain in the repository,
+  but Discover has no public Wails binding or React navigation in the current
+  public preview.
 - `implemented`: Iteration 7 adds a read-only global skill-catalog context
   panel to Dashboard without expanding the source-management surface.
 - `implemented`: Iteration 10 replaces the flat Skills table with an
@@ -30,6 +31,9 @@
 - `implemented`: Iteration 17 adds a native `About Skill Manager` item that
   projects the app icon, product name, version, and description from embedded
   desktop build metadata without adding a frontend binding or state surface.
+- `implemented`: Iteration 24 adds an Advisor settings screen for Local versus
+  TypeSafe recommendation consent and a masked, non-retained API key. Ordinary
+  snapshot refresh does not read the secret or call TypeSafe.
 
 ## Security And State Boundary
 
