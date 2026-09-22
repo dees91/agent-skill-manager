@@ -35,7 +35,7 @@ func TestRunExtendDryRunLeavesHomeAndStateUnchanged(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	setupExtendLocalSource(t, p, "local-pack", "alpha", "beta")
 	disableExtendSkill(t, p, "claude", "beta")
-	digestBefore := treeDigest(t, p.Home)
+	homeBefore := treeSnapshot(t, p.Home)
 	stateBefore := readFile(t, p.StateFile)
 	var stdout, stderr strings.Builder
 
@@ -60,9 +60,7 @@ func TestRunExtendDryRunLeavesHomeAndStateUnchanged(t *testing.T) {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
 	assertMissing(t, filepath.Join(p.MuseUserSkills, "alpha"))
-	if digestAfter := treeDigest(t, p.Home); digestAfter != digestBefore {
-		t.Fatal("extend dry-run changed the home directory")
-	}
+	assertTreeUnchanged(t, "home directory during extend dry-run", homeBefore, treeSnapshot(t, p.Home))
 	if stateAfter := readFile(t, p.StateFile); string(stateAfter) != string(stateBefore) {
 		t.Fatal("extend dry-run changed state")
 	}
