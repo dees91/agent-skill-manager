@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"testing"
 
@@ -1002,7 +1003,7 @@ func TestRunInstallDryRunReportsConflictsWithoutMutation(t *testing.T) {
 
 func TestRunInstallDryRunReportsMissingSelectedSkillWithoutMutation(t *testing.T) {
 	p, checkout := setupInstallDryRunCheckout(t, "https://github.com/addyosmani/agent-skills.git", "alpha")
-	beforeCheckoutDigest := treeDigest(t, checkout)
+	beforeCheckout := treeSnapshot(t, checkout)
 	var stdout, stderr strings.Builder
 
 	code := RunWithPaths([]string{"install", "https://github.com/addyosmani/agent-skills.git", "--skill", "alpha", "--skill", "missing", "--dry-run"}, &stdout, &stderr, p)
@@ -1016,10 +1017,7 @@ func TestRunInstallDryRunReportsMissingSelectedSkillWithoutMutation(t *testing.T
 	if !strings.Contains(stderr.String(), "missing skill: missing") {
 		t.Fatalf("stderr = %q, want missing skill", stderr.String())
 	}
-	afterCheckoutDigest := treeDigest(t, checkout)
-	if afterCheckoutDigest != beforeCheckoutDigest {
-		t.Fatalf("checkout tree changed during strict dry-run\nafter=%s\nbefore=%s", afterCheckoutDigest, beforeCheckoutDigest)
-	}
+	assertTreeUnchanged(t, "checkout tree during strict dry-run", beforeCheckout, treeSnapshot(t, checkout))
 	assertMissing(t, filepath.Join(checkout, "skills", "missing"))
 	assertMissing(t, filepath.Join(p.ClaudeUserSkills, "alpha"))
 	assertMissing(t, filepath.Join(p.CodexUserSkills, "alpha"))
@@ -2339,9 +2337,11 @@ func readFile(t *testing.T, path string) []byte {
 	return data
 }
 
-func treeDigest(t *testing.T, root string) string {
+// treeSnapshot records every path under root with its mode and, for regular
+// files, a content digest, so a mismatch can name the paths that changed.
+func treeSnapshot(t *testing.T, root string) map[string]string {
 	t.Helper()
-	hash := sha256.New()
+	snapshot := map[string]string{}
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -2354,24 +2354,45 @@ func treeDigest(t *testing.T, root string) string {
 		if err != nil {
 			return err
 		}
-		hash.Write([]byte(relative))
-		hash.Write([]byte{0})
-		hash.Write([]byte(info.Mode().String()))
-		hash.Write([]byte{0})
+		value := info.Mode().String()
 		if entry.Type().IsRegular() {
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
-			hash.Write(data)
+			sum := sha256.Sum256(data)
+			value += " " + hex.EncodeToString(sum[:])
 		}
-		hash.Write([]byte{0})
+		snapshot[relative] = value
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("hash tree %s: %v", root, err)
+		t.Fatalf("snapshot tree %s: %v", root, err)
 	}
-	return hex.EncodeToString(hash.Sum(nil))
+	return snapshot
+}
+
+func assertTreeUnchanged(t *testing.T, what string, before, after map[string]string) {
+	t.Helper()
+	var changes []string
+	for path, value := range before {
+		afterValue, ok := after[path]
+		switch {
+		case !ok:
+			changes = append(changes, "removed "+path)
+		case afterValue != value:
+			changes = append(changes, "changed "+path)
+		}
+	}
+	for path := range after {
+		if _, ok := before[path]; !ok {
+			changes = append(changes, "added "+path)
+		}
+	}
+	if len(changes) > 0 {
+		sort.Strings(changes)
+		t.Fatalf("%s changed:\n%s", what, strings.Join(changes, "\n"))
+	}
 }
 
 func initGitSkill(t *testing.T, dir, remote string) {

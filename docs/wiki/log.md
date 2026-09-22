@@ -1054,3 +1054,17 @@ full Go and frontend suites.
   isolated-home desktop launch.
 - Published the draft as a non-latest GitHub prerelease and re-verified both
   archives from the unauthenticated public download URLs.
+
+## [2026-09-22] fix | Strict dry-run test flake traced to background git maintenance
+
+- The strict dry-run test failed again on CI after the `GIT_OPTIONAL_LOCKS`
+  change: that install dry-run never runs `git status`, so the earlier entry
+  misattributed the flake. The index-refresh safeguard stays as hardening.
+- Per-path tree assertions under a CI stress run named the real writer:
+  `.git/objects/maintenance.lock`, created by the detached
+  `git maintenance run --auto` that the fixture's own `git commit` starts.
+- Added `internal/gittest.DisableAutoMaintenance`, which sets
+  `maintenance.auto=false` through `GIT_CONFIG_COUNT` for every git child of a
+  test binary, and call it from `TestMain` in the cli, gui, install, ops, and
+  scan packages. `TestDisableAutoMaintenanceStopsCommitFromStartingMaintenance`
+  fails without it.
