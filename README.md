@@ -37,23 +37,23 @@ described in a `SKILL.md` file.
 ## Quick start
 
 **Requirements:** an Apple Silicon (M-series) Mac running macOS 13 or newer.
-The current source version is `0.9.0`. This is a **public preview**.
+The current source version is `0.10.0`. This is a **public preview**.
 
 ### 1. Download and verify
 
-Save both files from the [v0.9.0 release](https://github.com/dees91/agent-skill-manager/releases/tag/v0.9.0)
+Save both files from the [v0.10.0 release](https://github.com/dees91/agent-skill-manager/releases/tag/v0.10.0)
 to your Downloads folder:
 
-- [Download the macOS app](https://github.com/dees91/agent-skill-manager/releases/download/v0.9.0/skill-manager-desktop-0.9.0-macos-arm64.zip)
-  (`skill-manager-desktop-0.9.0-macos-arm64.zip`).
-- [Download SHA256SUMS.txt](https://github.com/dees91/agent-skill-manager/releases/download/v0.9.0/SHA256SUMS.txt)
+- [Download the macOS app](https://github.com/dees91/agent-skill-manager/releases/download/v0.10.0/skill-manager-desktop-0.10.0-macos-arm64.zip)
+  (`skill-manager-desktop-0.10.0-macos-arm64.zip`).
+- [Download SHA256SUMS.txt](https://github.com/dees91/agent-skill-manager/releases/download/v0.10.0/SHA256SUMS.txt)
   to verify the archive.
 
 Open Terminal and run:
 
 ```bash
 cd "$HOME/Downloads"
-grep 'skill-manager-desktop-0.9.0-macos-arm64.zip$' SHA256SUMS.txt \
+grep 'skill-manager-desktop-0.10.0-macos-arm64.zip$' SHA256SUMS.txt \
   | shasum -a 256 -c -
 ```
 

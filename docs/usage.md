@@ -16,13 +16,13 @@ binary are installed separately.
 
 ### 1. Download and verify
 
-Download the [Apple Silicon CLI archive](https://github.com/dees91/agent-skill-manager/releases/download/v0.9.0/skill-manager-cli-0.9.0-macos-arm64.tar.gz)
-and [SHA256SUMS.txt](https://github.com/dees91/agent-skill-manager/releases/download/v0.9.0/SHA256SUMS.txt)
-from the `v0.9.0` preview into your Downloads folder. In Terminal, run:
+Download the [Apple Silicon CLI archive](https://github.com/dees91/agent-skill-manager/releases/download/v0.10.0/skill-manager-cli-0.10.0-macos-arm64.tar.gz)
+and [SHA256SUMS.txt](https://github.com/dees91/agent-skill-manager/releases/download/v0.10.0/SHA256SUMS.txt)
+from the `v0.10.0` preview into your Downloads folder. In Terminal, run:
 
 ```bash
 cd "$HOME/Downloads"
-grep 'skill-manager-cli-0.9.0-macos-arm64.tar.gz$' SHA256SUMS.txt \
+grep 'skill-manager-cli-0.10.0-macos-arm64.tar.gz$' SHA256SUMS.txt \
   | shasum -a 256 -c -
 ```
 
@@ -35,16 +35,16 @@ or notarization ticket.
 From the same directory:
 
 ```bash
-tar -xzf skill-manager-cli-0.9.0-macos-arm64.tar.gz
+tar -xzf skill-manager-cli-0.10.0-macos-arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 0755 \
-  skill-manager-cli-0.9.0-macos-arm64/skill-manager \
+  skill-manager-cli-0.10.0-macos-arm64/skill-manager \
   "$HOME/.local/bin/skill-manager"
 export PATH="$HOME/.local/bin:$PATH"
 skill-manager --version
 ```
 
-The expected output is `skill-manager 0.9.0`. To keep the command available in
+The expected output is `skill-manager 0.10.0`. To keep the command available in
 new terminals, add this line once to `~/.zshrc` (or your shell's startup file):
 
 ```bash
@@ -82,7 +82,7 @@ see the app icon, current build version, and product description. The app reads
 these values from the same desktop build metadata as the application bundle.
 
 The experimental skills.sh Discover implementation is still under development
-and does not appear in the `v0.9.0` public preview.
+and does not appear in the `v0.10.0` public preview.
 
 Skill toggles stay pending until you choose **Apply changes**. Source operations
 have their own confirmations and cannot run while a toggle batch is pending.
@@ -588,7 +588,7 @@ synthetic examples instead of private inventories or credentials.
 
 ## Status and compatibility
 
-The current source version is `0.9.0`. It is a public preview, not a stable
+The current source version is `0.10.0`. It is a public preview, not a stable
 release.
 
 - The desktop app supports Apple Silicon Macs running macOS 13 or newer.

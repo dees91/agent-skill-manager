@@ -13,7 +13,7 @@
   "info": {
     "companyName": "dees91",
     "productName": "Skill Manager",
-    "productVersion": "0.9.0",
+    "productVersion": "0.10.0",
     "comments": "Local manager for Claude Code and Codex skills"
   }
 }

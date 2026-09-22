@@ -10,13 +10,14 @@
 - Its core promise is visibility plus reversible control: show what each tool
   can see, temporarily remove toggleable entries from discovery paths, and
   restore the exact original entry later.
-- The current public preview is `v0.9.0`, covering Phases 1 through 23:
+- The current public preview is `v0.10.0`, covering Phases 1 through 26:
   live discovery and reversible toggles, groups and bulk staging, managed Git
   and local sources, macOS GUI and context estimates, saved Skill Sets,
-  favorites, Skill Advisor with ranked retrieval, four-tool support, checkout
-  diagnosis and repair, reporting of skills added to managed repositories,
-  installing skills as OFF, and
-  managed checkout diagnosis/repair. See the
+  favorites, Skill Advisor with ranked retrieval and optional TypeSafe
+  recommendations, four-tool support, managed checkout diagnosis and repair,
+  reporting of skills added to managed repositories, installing skills as OFF,
+  resolving duplicate skill names inside one source, and installing a skill
+  under another name when another source owns it. See the
   [release history](../../releases/) and [iteration plans](../../../planning/).
 - `user-confirmed`: README leads with the macOS app, existing demo, and a
   numbered quick start. Detailed operator instructions live in
@@ -38,7 +39,7 @@
   managed-only Sources over the same scan, staging,
   install/update/uninstall, and state boundaries as the terminal interfaces.
   The experimental Discover domain is dormant and has no public
-  binding/navigation in `v0.9.0`. The Dashboard shows approximate Claude,
+  binding/navigation in `v0.10.0`. The Dashboard shows approximate Claude,
   Codex, Muse, and Grok startup catalog cost and runs provider diagnostics only after
   an explicit action. Skills keeps applied ON rows prominent and collapses the
   much larger OFF catalog by source while preserving pending Apply semantics.
