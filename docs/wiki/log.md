@@ -1014,3 +1014,17 @@ suggestion when another source owns its name, so the matrix row collects the
 copy choice and the install name together. Verification: new resolver,
 planner, pre-save, GUI draft/review/apply, and frontend matrix tests, plus the
 full Go and frontend suites.
+
+## [2026-09-22] fix | Read-only git inspection no longer rewrites the index
+
+- CI failed intermittently in
+  `TestRunInstallDryRunReportsMissingSelectedSkillWithoutMutation` on the
+  macOS runner: the checkout digest, which includes `.git/`, changed during a
+  strict dry-run.
+- Root cause: `git status` opportunistically refreshes and rewrites
+  `.git/index` when a tracked file's stat data no longer matches the index.
+  Right after a commit that happens only when timestamps collide, hence the
+  flake.
+- `ExecGitRunner` now runs git with `GIT_OPTIONAL_LOCKS=0`. A new
+  `TestExecGitRunnerStatusDoesNotRewriteIndex` makes the stat data stale and
+  deterministically fails without the fix.

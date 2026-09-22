@@ -115,6 +115,10 @@ same ownership audit and transactional removal service.
 - If the checkout already exists, perform read-only discovery and preflight and
   print planned links or conflicts.
 - Never create symlinks or write `state.json`.
+- Every git command runs with `GIT_OPTIONAL_LOCKS=0`, so inspection such as
+  `git status` never refreshes and rewrites `.git/index` when tracked files
+  have stale stat data. Without it, a strict dry-run could change repository
+  files, which made the checkout-digest dry-run tests intermittently fail on CI.
 
 ## Fast-Forward Update
 
