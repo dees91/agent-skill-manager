@@ -135,6 +135,17 @@ type EntryKey struct {
 	SkillName string
 }
 
+// UnsupportedVersionError reports a manifest whose version this binary cannot
+// read or write, typically because a newer Skill Manager already upgraded it.
+type UnsupportedVersionError struct {
+	Version   int
+	Supported int
+}
+
+func (e UnsupportedVersionError) Error() string {
+	return fmt.Sprintf("unsupported state manifest version %d; this binary supports up to version %d", e.Version, e.Supported)
+}
+
 // Load reads state.json. A missing file returns an empty manifest.
 func (s Store) Load() (Manifest, error) {
 	data, err := os.ReadFile(s.paths.StateFile)
@@ -150,7 +161,7 @@ func (s Store) Load() (Manifest, error) {
 		return Manifest{}, fmt.Errorf("decode state manifest %s: %w", s.paths.StateFile, err)
 	}
 	if manifest.Version < 0 || manifest.Version > manifestVersion {
-		return Manifest{}, fmt.Errorf("unsupported state manifest version %d; this binary supports up to version %d", manifest.Version, manifestVersion)
+		return Manifest{}, UnsupportedVersionError{Version: manifest.Version, Supported: manifestVersion}
 	}
 	return normalizeManifest(manifest), nil
 }
@@ -158,7 +169,7 @@ func (s Store) Load() (Manifest, error) {
 // Save writes state.json as valid JSON using a same-directory temp file rename.
 func (s Store) Save(manifest Manifest) error {
 	if manifest.Version < 0 || manifest.Version > manifestVersion {
-		return fmt.Errorf("unsupported state manifest version %d; this binary supports up to version %d", manifest.Version, manifestVersion)
+		return UnsupportedVersionError{Version: manifest.Version, Supported: manifestVersion}
 	}
 	manifest = normalizeManifest(manifest)
 	if err := s.Secure(); err != nil {

@@ -231,3 +231,46 @@ func searchJSONNames(skills []listJSONSkill) []string {
 	}
 	return names
 }
+
+func TestAdvisorJSONReportsStateWrittenByNewerVersion(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "search", args: []string{"advisor", "search", "--tool", "codex", "--query", "search", "--json"}},
+		{name: "recommend", args: []string{"advisor", "recommend", "--tool", "codex", "--query", "search", "--task-stdin", "--provider", "local", "--json"}},
+		{name: "activate", args: []string{"advisor", "activate", "--tool", "codex", "--skill", "quality-review", "--json"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := paths.ForHome(t.TempDir())
+			writeSearchSkill(t, filepath.Join(p.CodexUserSkills, "quality-review"), "Conducts code review.")
+			if err := os.MkdirAll(p.StateDir, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(p.StateFile, []byte(`{"version": 99}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			app := newApp(p)
+			app.stdin = strings.NewReader("Review a change.")
+			var stdout, stderr strings.Builder
+
+			code := app.Run(test.args, &stdout, &stderr)
+
+			if code == 0 || stdout.Len() != 0 {
+				t.Fatalf("code=%d stdout=%q", code, stdout.String())
+			}
+			var output advisorErrorOutput
+			if err := json.Unmarshal([]byte(stderr.String()), &output); err != nil {
+				t.Fatalf("decode error JSON: %v\n%s", err, stderr.String())
+			}
+			want := "local Skill Manager state uses manifest version 99, but this binary supports up to version 3; update Skill Manager"
+			if output.Error.Code != "STATE_VERSION_UNSUPPORTED" || output.Error.Message != want {
+				t.Fatalf("error output = %#v", output)
+			}
+			if strings.Contains(stderr.String(), p.Home) {
+				t.Fatalf("error leaked local path: %s", stderr.String())
+			}
+		})
+	}
+}

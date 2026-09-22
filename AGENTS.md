@@ -884,6 +884,9 @@ semantics.
 - Add `advisor activate --tool claude|codex|muse|grok --skill <name>...`, `advisor
   cleanup --receipt <id>`, and `advisor status`. Mutating advisor commands
   support strict dry-run and all advisor commands support structured JSON.
+- A `state.json` manifest newer than the binary supports yields advisor JSON
+  error code `STATE_VERSION_UNSUPPORTED` with a path-free update hint instead
+  of a generic command failure, so the skill can ask the user to update.
 - One activation accepts 1-5 unique skill names for exactly one tool and fully
   preflights the requested cells. The binary never selects skills itself; the
   first-party skill chooses the smallest clearly relevant set.
