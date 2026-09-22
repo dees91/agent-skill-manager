@@ -81,6 +81,13 @@ from the tracked PNG under repository settings.
 
 - Inject `paths.Paths` derived from a temporary home.
 - Use temporary filesystem trees and local/fake Git runners.
+- Packages whose tests start real git processes call
+  `gittest.DisableAutoMaintenance()` from `TestMain`. Otherwise commit, merge,
+  and pull spawn a detached `git maintenance run --auto` that briefly creates
+  `.git/objects/maintenance.lock` after the command returns, which made tree
+  snapshot assertions fail intermittently on CI.
+- Tree assertions (`treeSnapshot` plus `assertTreeUnchanged`) report the added,
+  removed, or changed paths, not only a digest mismatch.
 - Never point automated tests at the real `~/.claude`, `~/.agents`,
   `~/.codex`, or `~/.skill-manager` directories.
 - Backend suites cover scanning, metadata, paths, state, toggle planning/apply,
