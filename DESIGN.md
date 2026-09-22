@@ -30,6 +30,18 @@ sources:
     path: "docs/images/install-duplicates.png"
     platform: desktop
     dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/install-alias.png"
+    platform: desktop
+    dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/install-alias-invalid.png"
+    platform: desktop
+    dimensions: "1440x960"
+  - type: screenshot
+    path: "docs/images/skills-alias.png"
+    platform: desktop
+    dimensions: "1440x960"
 confidence:
   overall: high
   colors: high
@@ -137,7 +149,12 @@ in public documentation.
   bulk selectors cover all discovered candidates, including filtered-out rows.
   A skill shipped from several identical directories installs from one named
   canonical copy; differing copies collapse to one row with a copy picker whose
-  cells stay unselectable until a copy is chosen.
+  cells stay unselectable until a copy is chosen. A skill whose name another
+  source owns shows a `needs-name` row with an install-name input prefilled
+  with a suggestion, inline validation (`aria-invalid` plus a message), and a
+  one-line host note; the row is never preselected, column toggles skip it,
+  and Review stays disabled while a selected row's name is invalid. The Skills
+  view shows a differing `SKILL.md` name as a small secondary label.
 - **Extend workflow:** one tool radio, a per-source link preview that
   surfaces blocked sources, and a stop-at-first-failure apply. Confirm stays
   disabled while any source is blocked or no new links are planned.

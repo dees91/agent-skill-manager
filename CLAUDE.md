@@ -19,7 +19,8 @@ Before making code or documentation changes:
 13. If working on installing skills directly as OFF, read [planning/phase-23-install-as-off-tasks.md](./planning/phase-23-install-as-off-tasks.md).
 14. If working on optional TypeSafe recommendations or BYOK settings, read [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md).
 15. If working on duplicate skill names inside one install source, read [planning/phase-25-duplicate-skill-discovery-tasks.md](./planning/phase-25-duplicate-skill-discovery-tasks.md).
-16. Follow the task status rules in the relevant planning file before starting and after finishing work.
+16. If working on installing a skill under another name when another source owns its name (`--as`), read [planning/phase-26-cross-source-skill-alias-tasks.md](./planning/phase-26-cross-source-skill-alias-tasks.md).
+17. Follow the task status rules in the relevant planning file before starting and after finishing work.
 
 After non-trivial work that creates reusable knowledge, update the relevant wiki topic/source pages and append to [docs/wiki/log.md](./docs/wiki/log.md). The wiki is a synthesis layer; verify current behavior against code and tests and keep accepted product decisions in `AGENTS.md` and the relevant planning file.
 

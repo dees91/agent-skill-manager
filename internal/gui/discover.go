@@ -201,9 +201,19 @@ func projectDiscoverSkillWithState(skill skillssh.Skill, rows []model.SkillRow, 
 
 func discoverToolState(rows []model.SkillRow, manifest state.Manifest, skill skillssh.Skill, tool model.Tool) DiscoverToolState {
 	result := DiscoverToolState{Tool: tool.String(), Status: "available"}
+	repository, repositoryFound := manifestRepositoryForCatalog(manifest, skill.Source)
+	rowName := skill.SkillID
+	if repositoryFound {
+		for _, installed := range repository.InstalledSkills {
+			if installed.Name == skill.SkillID {
+				rowName = installed.InstalledName()
+				break
+			}
+		}
+	}
 	var cell *model.ToolSkill
 	for index := range rows {
-		if rows[index].Name != skill.SkillID {
+		if rows[index].Name != rowName {
 			continue
 		}
 		switch tool {
@@ -218,7 +228,6 @@ func discoverToolState(rows []model.SkillRow, manifest state.Manifest, skill ski
 		}
 		break
 	}
-	repository, repositoryFound := manifestRepositoryForCatalog(manifest, skill.Source)
 	owned := repositoryFound && repositoryOwnsCell(repository, skill.SkillID, tool)
 	if cell == nil {
 		if owned {

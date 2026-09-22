@@ -127,6 +127,11 @@ to seed the wiki. It summarizes their roles; it does not replace them.
     fingerprints and canonical ranking, identical auto-resolution, qualified
     `--skill <name>=<path>` selection, recorded-path stability, an install
     matrix copy picker, and ambiguous new-skill reporting.
+- [`planning/phase-26-cross-source-skill-alias-tasks.md`](../../../planning/phase-26-cross-source-skill-alias-tasks.md)
+  - `documented`, `implemented`: explicit cross-source install names with
+    `--as`, suggested `<name>-<owner>` names, manifest version 3
+    `installedAs`, recorded-name reuse and drift, a desktop `needs-name` row,
+    and host caveats for Codex, Grok, and Muse labels.
 - [`DESIGN.md`](../../../DESIGN.md)
   - `documented`: implementation-derived design system and repository-owned
     screenshots generated from synthetic demo data.

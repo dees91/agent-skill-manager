@@ -178,11 +178,14 @@ type ManagedSource struct {
 // InstallCellRequest is one exact skill/tool selection from an inspected draft.
 // Path optionally qualifies the skill with a source-relative copy chosen in
 // the install matrix. It is validated against the rediscovered draft; any
-// path outside the draft is rejected.
+// path outside the draft is rejected. InstalledAs optionally names the link
+// basename when another source owns the skill name; one skill uses one
+// installed name across all of its selected tools.
 type InstallCellRequest struct {
-	SkillName string `json:"skillName"`
-	Tool      string `json:"tool"`
-	Path      string `json:"path,omitempty"`
+	SkillName   string `json:"skillName"`
+	Tool        string `json:"tool"`
+	Path        string `json:"path,omitempty"`
+	InstalledAs string `json:"installedAs,omitempty"`
 }
 
 // InstallCandidateCell describes preflight state for one tool target.
@@ -196,13 +199,19 @@ type InstallCandidateCell struct {
 // A skill discovered at several paths with identical content resolves to its
 // canonical copy and reports IdenticalCopies; conflicting copies set
 // NeedsChoice with every source-relative Option, and the frontend must send
-// one of them back as the selection path.
+// one of them back as the selection path. A skill whose name another source
+// owns sets NeedsName with a SuggestedAs install name, and the frontend must
+// send the chosen name back as installedAs; InstalledAs reports a recorded
+// install name that differs from Name.
 type InstallCandidate struct {
 	Name            string               `json:"name"`
 	RelativePath    string               `json:"relativePath"`
 	Options         []string             `json:"options,omitempty"`
 	NeedsChoice     bool                 `json:"needsChoice,omitempty"`
 	IdenticalCopies int                  `json:"identicalCopies,omitempty"`
+	InstalledAs     string               `json:"installedAs,omitempty"`
+	NeedsName       bool                 `json:"needsName,omitempty"`
+	SuggestedAs     string               `json:"suggestedAs,omitempty"`
 	Claude          InstallCandidateCell `json:"claude"`
 	Codex           InstallCandidateCell `json:"codex"`
 	Muse            InstallCandidateCell `json:"muse"`
@@ -223,11 +232,15 @@ type InstallDraft struct {
 }
 
 // InstallConflict is one selected cell that failed review preflight.
+// SuggestedAs is a free install name when another source owns the skill name.
 type InstallConflict struct {
-	SkillName string `json:"skillName"`
-	Tool      string `json:"tool"`
-	Reason    string `json:"reason"`
-	Path      string `json:"path,omitempty"`
+	SkillName   string `json:"skillName"`
+	Tool        string `json:"tool"`
+	Reason      string `json:"reason"`
+	Path        string `json:"path,omitempty"`
+	SuggestedAs string `json:"suggestedAs,omitempty"`
+
+	ownerGroup string
 }
 
 // ExtendSkip explains why one recorded skill was not planned for the target.

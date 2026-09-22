@@ -199,7 +199,7 @@ Skill discovery:
 - A valid installable skill is any directory containing `SKILL.md`.
 - Discovery is recursive inside the checkout.
 - Ignore heavy or generated directories such as `.git`, `node_modules`, `.venv`, `vendor`, `build`, and `dist`.
-- Skill name is the basename of the directory containing `SKILL.md`.
+- Skill name is the basename of the directory containing `SKILL.md`. The install name (the link basename in each tool directory) equals the skill name unless the skill is installed under another name with `--as` (Iteration 26).
 - Skills sharing one basename are grouped instead of failing discovery (Iteration 25). Identical copies resolve to one canonical copy; differing copies need an explicit `--skill <name>=<path>` choice.
 - Invalid directories without `SKILL.md` are skipped.
 
@@ -209,7 +209,7 @@ Conflict and idempotency rules:
 - If the target path is free, it may be linked.
 - If the active target path already is a symlink to the same repo skill directory, treat it as already installed and OK.
 - If a disabled state entry exists for the same tool and skill and points to the same repo skill directory, treat it as already installed but currently OFF. Do not implicitly enable it.
-- If the tool/skill cell is recorded as owned by another Git or local source, fail preflight even when the active path is free or happens to match.
+- If the tool/install-name cell is recorded as owned by another Git or local source, fail preflight even when the active path is free or happens to match. When the blocked name is the plain skill name and this source has no record for it, the failure suggests a free install name (Iteration 26).
 - If the target path exists and is anything else, fail before creating new symlinks.
 - Do not overwrite, merge, delete, or rename blockers.
 
@@ -277,7 +277,7 @@ Iteration 5 adds CLI-first link-in-place installation from local folders. Do not
 
 Local install commands and discovery:
 
-- `skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--dry-run]`
+- `skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--as name=install-name...] [--dry-run]`
 - Accept absolute paths, explicit relative paths (`./` and `../`), `~/` paths resolved from `$HOME`, and bare relative paths only when they currently exist.
 - Resolve the source to a canonical absolute directory path. A root containing a regular, non-symlinked `SKILL.md` is exactly one skill; otherwise recursively discover skills with the existing ignored-directory rules and the shared duplicate-group resolution (Iteration 25).
 - Use link-in-place symlinks directly to skill directories. Never copy, move, edit, update, or delete the local source.
@@ -285,7 +285,7 @@ Local install commands and discovery:
 - Reject local roots that overlap in either direction with Skill Manager state, Claude/Codex/Muse/Grok user skill paths, disabled paths, Codex system skills, or Claude plugin cache paths.
 - Use source label `local path` and the canonical source root basename as Group.
 - Treat canonical source path as identity. Reinstalling the same source may add newly discovered skills, but existing recorded ownership drift blocks the operation.
-- A tool/skill cell may be owned by only one Skill Manager Git or local source. An exact matching unmanaged symlink may be adopted.
+- A tool/install-name cell may be owned by only one Skill Manager Git or local source. An exact matching unmanaged symlink may be adopted.
 
 Local uninstall and update behavior:
 
@@ -343,7 +343,7 @@ Use a global state directory:
 - normalized host and repo path
 - checkout path
 - group label
-- installed skills with name, relative path, and tools
+- installed skills with name, optional install name (`installedAs`, Iteration 26), relative path, and tools
 - install timestamp
 - last seen commit, if available
 
@@ -352,10 +352,10 @@ Manifest version 2 also stores local-source installation metadata:
 - original normalized absolute input path
 - canonical absolute source path
 - group label
-- installed skills with name, relative path, and tools
+- installed skills with name, optional install name (`installedAs`), relative path, and tools
 - install timestamp
 
-Version 1 manifests migrate in memory with no local sources and are written as version 2 on the next mutation. Reject unknown newer manifest versions.
+Version 1 manifests migrate in memory with no local sources and are written as version 2 on the next mutation. Manifest version 3 (Iteration 26) adds the optional `installedAs` field to installed skills; version 1 and 2 manifests migrate in memory and are written as version 3 on the next mutation. Reject unknown newer manifest versions, so binaries older than Iteration 26 refuse a version 3 manifest (state backups cover rollback).
 
 If `state.json` is missing, later versions may recover from `disabled/`, but MVP does not need full disaster recovery.
 
@@ -545,7 +545,7 @@ skill-manager disable --tool claude release-checklist --dry-run
 Iteration 3 repository install commands:
 
 ```bash
-skill-manager install <git-url> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--dry-run]
+skill-manager install <git-url> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--as name=install-name...] [--dry-run]
 skill-manager repos
 ```
 
@@ -565,7 +565,7 @@ skill-manager uninstall <git-url> [--dry-run]
 Iteration 5 local path commands:
 
 ```bash
-skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--dry-run]
+skill-manager install <local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--as name=install-name...] [--dry-run]
 skill-manager uninstall <local-path> [--dry-run]
 ```
 
@@ -580,7 +580,9 @@ skill-manager extend --tool <tool> [--dry-run]
 `extend` links every recorded Git and local source to one more tool without
 reinstalling each source. The tool is a parameter (`claude`, `codex`, `muse`, or
 `grok`); no step hardcodes a tool name. Selection reuses the install
-discovery and preflight rules per source with a cross-source claim map.
+discovery and preflight rules per source with a cross-source claim map keyed
+by tool and install name, so sources that install one skill name under
+different install names extend together.
 Apply walks sources in manifest order (Git, then local), mirrors OFF state
 for skills that are OFF for every other recorded tool, and stops at the
 first failure with an `extend --tool <tool> failed for source <group>`
@@ -1177,6 +1179,77 @@ alone no longer fails discovery, inspection, update checks, or extend.
   ownership, backup, rollback, and `.agents/.skill-lock.json` semantics do
   not change.
 
+### Cross-Source Skill Alias (Iteration 26)
+
+Iteration 26 lets two recorded sources (two Git repositories, or a
+repository and a local path) that ship skills with the same basename be
+installed side by side in the same tool. Iteration 25 behavior inside one
+source does not change.
+
+- Mechanism: an install name. The second source links its skill under a
+  different link basename. Links stay symlinks; `SKILL.md` is never edited
+  or copied.
+- Policy: explicit, with a suggestion. A cross-source collision still blocks.
+  The CLI prints a pasteable `--as '<name>=<install-name>'` form; the desktop
+  matrix shows a `needs-name` row with an install-name input prefilled with
+  the suggestion. Nothing installs under another name without a user
+  decision, and needs-name rows are never preselected.
+- Suggestion scheme: `<name>-<owner>`, where a Git source uses its
+  repository owner segment (`alpha-acme`) and a local source uses its root
+  basename (`alpha-sample-pack`). When that is taken, the suggestion falls
+  back to `<name>-<owner>-<repo>` (a local source uses its parent directory
+  basename as the second segment), then a numeric suffix. Segments are
+  sanitized to the Agent Skills name rule: 1-64 characters from `[a-z0-9-]`
+  with no leading, trailing, or double hyphen. Taken names include every
+  recorded install name, disabled entry, name discovered in the same source,
+  other install names in the same request, and existing active or disabled
+  paths.
+- `skill-manager install <git-url|local-path> … [--as <name>=<install-name>]…`
+  is repeatable, splits on the first `=`, and rejects empty sides, invalid
+  install names, and one skill with two install names. An install name must
+  differ from every skill name in the same source, from every other install
+  name in the request, and from every install name the source already
+  records for its other skills, selected or not. Apply rechecks that no two
+  skills of the source share an install name before saving.
+- One install name per (source, skill) across all tools; no per-tool
+  aliases. The manifest records it as `installedAs` on the installed skill
+  entry (manifest version 3); a value equal to the skill name is stored as
+  absent.
+- The recorded install name wins. Reinstall and extend reuse it without
+  `--as`; a different `--as` for a recorded skill is drift and needs
+  uninstall plus reinstall, mirroring the Iteration 25 recorded-path rule.
+  When a source records the plain name and a new tool's cell is owned
+  elsewhere, the failure names uninstall plus reinstall with `--as`, or
+  installing only the other tools.
+- Everything after install (scan, toggles, disabled entries, advisor,
+  favorites, Skill Sets, context budget, TUI and desktop rows) already keys
+  on the link basename per tool, so the aliased skill is an independent row.
+  Ownership checks, audits, uninstall, extend claims, and OFF records use the
+  install name; update, new-skill discovery, and repair stay on source names.
+- CLI lines show `tool/<install-name> (<name>)` when the names differ, and a
+  successful install prints `installed "<name>" as "<install-name>"`.
+  `update` appends a suggested `--as` to its new-skill install command when
+  another source owns a new skill's plain name.
+- The desktop matrix validates the install name locally with the same rule
+  and against other rows, keeps the row's cells unselectable while it is
+  invalid, excludes the row from column bulk toggles, and blocks Review
+  until every selected needs-name row is valid. Review and apply revalidate
+  the name: it must be the recorded install name, or the plain name must be
+  owned by another source in the fresh manifest. A skill whose copies differ
+  and whose name another source owns asks for both the copy and the install
+  name in the same row. Conflict messages name the
+  owning source by group, never by filesystem path. The Skills view shows a
+  differing `SKILL.md` name as a secondary label and includes it in search.
+- Host caveats: Claude Code takes the command from the directory name, so an
+  alias gives a distinct `/<install-name>` command. Codex and Grok identify
+  skills by the frontmatter `name`, so both installs load but can share one
+  label there. Muse behavior is unverified and is treated like Codex.
+  Claude `settings.json` skill overrides are keyed by directory name and do
+  not follow an alias. Advisor search indexes the install name, not the
+  frontmatter name.
+- Non-goals: an install-name offer in Discover, per-tool aliases, and
+  advisor indexing of frontmatter names.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1344,6 +1417,8 @@ Keep [planning/phase-22-new-skill-discovery-tasks.md](./planning/phase-22-new-sk
 Keep [planning/phase-23-install-as-off-tasks.md](./planning/phase-23-install-as-off-tasks.md) as the source of truth for Iteration 23 install as OFF task status.
 
 Keep [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md) as the source of truth for the single-run optional TypeSafe advisor assignment and its acceptance criteria.
+
+Keep [planning/phase-26-cross-source-skill-alias-tasks.md](./planning/phase-26-cross-source-skill-alias-tasks.md) as the source of truth for Iteration 26 cross-source skill alias task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

@@ -38,8 +38,9 @@ Read-only sources may be displayed but never produce enable/disable operations.
 For GitHub remotes, groups use `owner/repo`. Other remotes use a stable
 remote-derived label when possible, and repositories without a remote fall back
 to their root directory name. Manifest-owned local links use the canonical
-source root basename; direct unmanaged directories keep the generic `local`
-group.
+source root basename, matched by tool and install name so a link created
+with `--as` keeps its local group; direct unmanaged directories keep the
+generic `local` group.
 
 ## Row Assembly
 

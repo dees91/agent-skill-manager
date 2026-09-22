@@ -23,19 +23,22 @@ Configuration-file overrides are intentionally absent in the current scope.
 
 ## Manifest Responsibilities
 
-`state.json` version 2 stores three collections:
+`state.json` version 3 stores three collections:
 
 - Disabled entries: tool, skill name, original and disabled paths, entry type,
   optional symlink target, source, group, and disable timestamp.
 - Managed repositories: original/canonical URL, normalized host/path, checkout,
-  group, installed skill relative paths/tools, install timestamp, and optional
-  last seen commit.
+  group, installed skill relative paths/tools with an optional `installedAs`
+  install name, install timestamp, and optional last seen commit.
 - Local sources: original and canonical absolute paths, group, installed skill
-  relative paths/tools, and install timestamp.
+  relative paths/tools with an optional `installedAs`, and install timestamp.
 
-Version 1 manifests load in memory with an empty local-source collection and
-are written as version 2 on the next mutation. Unknown newer versions are
-rejected. Repository identities, local source paths, skills, and tool lists are
+Version 1 manifests load in memory with an empty local-source collection;
+version 1 and 2 manifests are written as version 3 on the next mutation
+(Iteration 26 added `installedAs`, stored only when it differs from the skill
+name). Unknown newer versions are rejected, so pre-Iteration 26 binaries
+refuse a version 3 file; state backups are the rollback path
+(`documented`, `implemented`, `internal/state/store.go`). Repository identities, local source paths, skills, and tool lists are
 normalized into deterministic order during load/save operations.
 
 `skill-sets.json` version 1 is an independent recipe store. Each set contains a

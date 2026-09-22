@@ -531,3 +531,46 @@ func fakeGitCallCount(t *testing.T, countPath string) int {
 	}
 	return strings.Count(string(data), "\n")
 }
+
+func TestAliasedLocalPathDisableEnableRoundTripKeepsGroup(t *testing.T) {
+	home := t.TempDir()
+	p := paths.ForHome(home)
+	sourceRoot := filepath.Join(home, "workspace", "sample-pack")
+	skillDir := filepath.Join(sourceRoot, "skills", "alpha")
+	mkdirSkill(t, skillDir)
+	mkdirAll(t, p.ClaudeUserSkills)
+	activePath := filepath.Join(p.ClaudeUserSkills, "alpha-sample-pack")
+	if err := os.Symlink(skillDir, activePath); err != nil {
+		t.Fatalf("create aliased link: %v", err)
+	}
+	if err := state.New(p).Save(state.Manifest{LocalSources: []state.LocalSourceEntry{{
+		OriginalPath: sourceRoot, CanonicalPath: sourceRoot, Group: model.GroupLabel("sample-pack"),
+		InstalledSkills: []state.InstalledSkillEntry{{Name: "alpha", InstalledAs: "alpha-sample-pack", RelativePath: "skills/alpha", Tools: []model.Tool{model.ToolClaude}}},
+	}}}); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	service := New(p)
+	service.now = fixedNow
+	disable, err := service.PlanDisable(model.ToolClaude, "alpha-sample-pack")
+	if err != nil {
+		t.Fatalf("PlanDisable() error = %v", err)
+	}
+	assertApplySuccess(t, service.Apply([]model.PlannedOperation{disable}), 1)
+	manifest, err := state.New(p).Load()
+	if err != nil {
+		t.Fatalf("load state: %v", err)
+	}
+	entry, ok := manifest.Get(model.ToolClaude, "alpha-sample-pack")
+	if !ok || entry.Group != model.GroupLabel("sample-pack") || entry.Source != model.SourceLocalPath {
+		t.Fatalf("disabled entry = %#v ok=%v, want sample-pack local path", entry, ok)
+	}
+	assertMissing(t, activePath)
+
+	enable, err := service.PlanEnable(model.ToolClaude, "alpha-sample-pack")
+	if err != nil {
+		t.Fatalf("PlanEnable() error = %v", err)
+	}
+	assertApplySuccess(t, service.Apply([]model.PlannedOperation{enable}), 1)
+	assertSymlinkTarget(t, activePath, skillDir)
+}

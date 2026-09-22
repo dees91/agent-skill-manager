@@ -24,8 +24,11 @@
   the source.
 - An exact pre-existing matching link may be adopted. Reinstalling a recorded
   source is idempotent and may add newly discovered skills.
-- One manifest source owns each skill/tool cell. Git and other local sources
-  cannot take over a recorded cell even when its active path has drifted.
+- One manifest source owns each tool/install-name cell. Git and other local
+  sources cannot take over a recorded cell even when its active path has
+  drifted. A second source that ships the same skill name can link it beside
+  the first under another install name with `--as`; the suggestion for a
+  local source uses its root basename (`alpha-sample-pack`).
 - Apply backs up existing state, revalidates source identity and ownership,
   rolls back links created by a failed apply, then persists ownership.
 - Install as OFF works identically for local sources: links go to the disabled

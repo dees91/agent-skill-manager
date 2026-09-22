@@ -470,7 +470,7 @@ func (s *Service) projectInstallCandidates(draft installDraftState, manifest sta
 		for i, candidate := range group.Candidates {
 			options[i] = candidate.RelativePath
 		}
-		candidates = append(candidates, InstallCandidate{
+		candidate := InstallCandidate{
 			Name:        group.Name,
 			Options:     options,
 			NeedsChoice: true,
@@ -478,7 +478,17 @@ func (s *Service) projectInstallCandidates(draft installDraftState, manifest sta
 			Codex:       needsChoiceCandidateCell(model.ToolCodex),
 			Muse:        needsChoiceCandidateCell(model.ToolMuse),
 			Grok:        needsChoiceCandidateCell(model.ToolGrok),
-		})
+		}
+		if installed := draftRecordedInstalledNames(draft, manifest)[group.Name]; installed != "" && installed != group.Name {
+			candidate.InstalledAs = installed
+		}
+		// Ownership does not depend on the copy, so probe it with any copy and
+		// ask for the install name together with the copy choice.
+		if suggestion := s.ownershipSuggestion(draft, manifest, group.Candidates[0], group.Candidates[0].RelativePath); suggestion.SuggestedAs != "" {
+			candidate.NeedsName = true
+			candidate.SuggestedAs = suggestion.SuggestedAs
+		}
+		candidates = append(candidates, candidate)
 	}
 	sort.SliceStable(candidates, func(i, j int) bool { return candidates[i].Name < candidates[j].Name })
 	return candidates
@@ -486,28 +496,71 @@ func (s *Service) projectInstallCandidates(draft installDraftState, manifest sta
 
 func (s *Service) projectResolvedCandidate(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill) InstallCandidate {
 	candidate := InstallCandidate{Name: skill.Name, RelativePath: skill.RelativePath}
-	candidate.Claude = s.projectCandidateCell(draft, manifest, skill, model.ToolClaude)
-	candidate.Codex = s.projectCandidateCell(draft, manifest, skill, model.ToolCodex)
-	candidate.Muse = s.projectCandidateCell(draft, manifest, skill, model.ToolMuse)
-	candidate.Grok = s.projectCandidateCell(draft, manifest, skill, model.ToolGrok)
+	if installed := draftRecordedInstalledNames(draft, manifest)[skill.Name]; installed != "" && installed != skill.Name {
+		candidate.InstalledAs = installed
+	}
+	var suggestion InstallConflict
+	project := func(tool model.Tool) InstallCandidateCell {
+		cell, conflict := s.projectCandidateCell(draft, manifest, skill, "", tool)
+		if conflict.SuggestedAs != "" && suggestion.SuggestedAs == "" {
+			suggestion = conflict
+		}
+		return cell
+	}
+	candidate.Claude = project(model.ToolClaude)
+	candidate.Codex = project(model.ToolCodex)
+	candidate.Muse = project(model.ToolMuse)
+	candidate.Grok = project(model.ToolGrok)
+	if suggestion.SuggestedAs != "" {
+		// One install name covers every tool, so the whole row waits for it.
+		message := fmt.Sprintf("choose an install name; %s is owned by %s", skill.Name, suggestion.ownerGroup)
+		candidate.NeedsName = true
+		candidate.SuggestedAs = suggestion.SuggestedAs
+		candidate.Claude = needsNameCandidateCell(model.ToolClaude, message)
+		candidate.Codex = needsNameCandidateCell(model.ToolCodex, message)
+		candidate.Muse = needsNameCandidateCell(model.ToolMuse, message)
+		candidate.Grok = needsNameCandidateCell(model.ToolGrok, message)
+	}
 	return candidate
+}
+
+// ownershipSuggestion returns the first tool conflict that carries a
+// suggested install name for skill at path, or an empty conflict.
+func (s *Service) ownershipSuggestion(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill, path string) InstallConflict {
+	for _, tool := range model.Tools() {
+		if _, conflict := s.projectCandidateCell(draft, manifest, skill, path, tool); conflict.SuggestedAs != "" {
+			return conflict
+		}
+	}
+	return InstallConflict{}
+}
+
+func needsNameCandidateCell(tool model.Tool, message string) InstallCandidateCell {
+	return InstallCandidateCell{Tool: tool.String(), Status: "needs-name", Message: message}
+}
+
+func draftRecordedInstalledNames(draft installDraftState, manifest state.Manifest) map[string]string {
+	if draft.Kind == sourceKindGit {
+		return install.RecordedGitInstalledNames(manifest, draft.Identity.Host, draft.Identity.RepoPath)
+	}
+	return install.RecordedLocalInstalledNames(manifest, draft.LocalSource.CanonicalPath)
 }
 
 func needsChoiceCandidateCell(tool model.Tool) InstallCandidateCell {
 	return InstallCandidateCell{Tool: tool.String(), Status: "needs-choice", Message: "choose which copy to install"}
 }
 
-func (s *Service) projectCandidateCell(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill, tool model.Tool) InstallCandidateCell {
-	options := install.PlanOptions{Cells: []install.InstallCell{{SkillName: skill.Name, Tool: tool}}}
+func (s *Service) projectCandidateCell(draft installDraftState, manifest state.Manifest, skill install.DiscoveredSkill, path string, tool model.Tool) (InstallCandidateCell, InstallConflict) {
+	options := install.PlanOptions{Cells: []install.InstallCell{{SkillName: skill.Name, Tool: tool, Path: path}}}
 	plan, localPlan, conflicts, err := s.planKnownDraftWithManifest(draft, manifest, options)
 	cell := InstallCandidateCell{Tool: tool.String(), Status: "available"}
 	if err != nil {
 		cell.Status, cell.Message = "conflict", err.Error()
-		return cell
+		return cell, InstallConflict{}
 	}
 	if len(conflicts) > 0 {
 		cell.Status, cell.Message = "conflict", conflicts[0].Reason
-		return cell
+		return cell, conflicts[0]
 	}
 	var already []install.AlreadyInstalled
 	if draft.Kind == sourceKindGit {
@@ -522,7 +575,7 @@ func (s *Service) projectCandidateCell(draft installDraftState, manifest state.M
 			cell.Status = "already-on"
 		}
 	}
-	return cell
+	return cell, InstallConflict{}
 }
 
 func (s *Service) planKnownDraftWithManifest(draft installDraftState, manifest state.Manifest, options install.PlanOptions) (install.InstallPlan, install.LocalInstallPlan, []InstallConflict, error) {
@@ -557,6 +610,11 @@ func (s *Service) planDraftWithManifest(draft installDraftState, manifest state.
 		if err := validateBridgeCopyChoices(discovered, options.Cells); err != nil {
 			return plan, localPlan, nil, err
 		}
+		recorded := install.RecordedGitInstalledNames(manifest, draft.Identity.Host, draft.Identity.RepoPath)
+		ownedElsewhere := func(name string) bool { return install.GitNameOwnedElsewhere(manifest, draft.Identity, name) }
+		if err := validateBridgeInstalledNames(discovered, options.Cells, recorded, ownedElsewhere); err != nil {
+			return plan, localPlan, nil, err
+		}
 		plan, planErr = install.PlanInstall(s.paths, manifest, draft.Identity, draft.CheckoutPath, discovered, options)
 	} else {
 		resolved, err := install.ResolveLocalSource(s.paths, s.paths.Home, draft.LocalSource.CanonicalPath)
@@ -571,6 +629,11 @@ func (s *Service) planDraftWithManifest(draft installDraftState, manifest state.
 			return plan, localPlan, nil, err
 		}
 		if err := validateBridgeCopyChoices(discovered, options.Cells); err != nil {
+			return plan, localPlan, nil, err
+		}
+		recorded := install.RecordedLocalInstalledNames(manifest, resolved.CanonicalPath)
+		ownedElsewhere := func(name string) bool { return install.LocalNameOwnedElsewhere(manifest, resolved.CanonicalPath, name) }
+		if err := validateBridgeInstalledNames(discovered, options.Cells, recorded, ownedElsewhere); err != nil {
 			return plan, localPlan, nil, err
 		}
 		localPlan, planErr = install.PlanLocalInstall(s.paths, manifest, resolved, discovered, options)
@@ -621,6 +684,42 @@ func validateBridgeCopyChoices(discovered install.Discovery, cells []install.Ins
 	return nil
 }
 
+// validateBridgeInstalledNames accepts an install name only where the draft
+// offered one: the skill's recorded install name, or any valid new name when
+// another source owns the plain name in the fresh manifest. Names must not
+// repeat the skill name, another discovered name, or another selection's
+// install name. Path collisions stay the planner's job.
+func validateBridgeInstalledNames(discovered install.Discovery, cells []install.InstallCell, recorded map[string]string, ownedElsewhere func(string) bool) error {
+	usedBy := map[string]string{}
+	for _, cell := range cells {
+		name := strings.TrimSpace(cell.SkillName)
+		installed := strings.TrimSpace(cell.InstalledAs)
+		if installed == "" {
+			continue
+		}
+		if !state.ValidInstalledName(installed) {
+			return fmt.Errorf("invalid install name %q for skill %q", installed, name)
+		}
+		if installed == name || discovered.HasName(installed) {
+			return fmt.Errorf("install name %q for skill %q must differ from every skill name in the source", installed, name)
+		}
+		if previous, ok := usedBy[installed]; ok && previous != name {
+			return fmt.Errorf("skills %q and %q both use install name %q", previous, name, installed)
+		}
+		usedBy[installed] = name
+		if recordedName, ok := recorded[name]; ok {
+			if recordedName != installed {
+				return fmt.Errorf("skill %q is installed as %q; uninstall the source and reinstall to rename it", name, recordedName)
+			}
+			continue
+		}
+		if !ownedElsewhere(name) {
+			return fmt.Errorf("install name for skill %q is not needed: no other source owns %q", name, name)
+		}
+	}
+	return nil
+}
+
 func convertPlanError(plan install.InstallPlan, localPlan install.LocalInstallPlan, planErr error) (install.InstallPlan, install.LocalInstallPlan, []InstallConflict, error) {
 	if planErr == nil {
 		return plan, localPlan, nil, nil
@@ -631,7 +730,7 @@ func convertPlanError(plan install.InstallPlan, localPlan install.LocalInstallPl
 	}
 	conflicts := make([]InstallConflict, 0, len(typed.Conflicts)+len(typed.MissingSkills))
 	for _, conflict := range typed.Conflicts {
-		conflicts = append(conflicts, InstallConflict{SkillName: conflict.SkillName, Tool: conflict.Tool.String(), Reason: conflict.Reason, Path: conflict.TargetPath})
+		conflicts = append(conflicts, InstallConflict{SkillName: conflict.SkillName, Tool: conflict.Tool.String(), Reason: conflict.Reason, Path: conflict.TargetPath, SuggestedAs: conflict.SuggestedAs, ownerGroup: conflict.OwnerGroup.String()})
 	}
 	for _, name := range typed.MissingSkills {
 		conflicts = append(conflicts, InstallConflict{SkillName: name, Reason: "skill is no longer present in the source"})
@@ -669,6 +768,7 @@ func normalizeInstallSelections(selections []InstallCellRequest) ([]InstallCellR
 	}
 	seen := map[string]bool{}
 	choiceByName := map[string]string{}
+	installedByName := map[string]string{}
 	normalized := make([]InstallCellRequest, 0, len(selections))
 	cells := make([]install.InstallCell, 0, len(selections))
 	for _, selection := range selections {
@@ -682,13 +782,18 @@ func normalizeInstallSelections(selections []InstallCellRequest) ([]InstallCellR
 			return nil, install.PlanOptions{}, fmt.Errorf("conflicting copies selected for skill %q", name)
 		}
 		choiceByName[name] = path
+		installedAs := strings.TrimSpace(selection.InstalledAs)
+		if previous, exists := installedByName[name]; exists && previous != installedAs {
+			return nil, install.PlanOptions{}, fmt.Errorf("conflicting install names selected for skill %q", name)
+		}
+		installedByName[name] = installedAs
 		key := tool.String() + "\x00" + name
 		if seen[key] {
 			continue
 		}
 		seen[key] = true
-		normalized = append(normalized, InstallCellRequest{SkillName: name, Tool: tool.String(), Path: path})
-		cells = append(cells, install.InstallCell{SkillName: name, Tool: tool, Path: path})
+		normalized = append(normalized, InstallCellRequest{SkillName: name, Tool: tool.String(), Path: path, InstalledAs: installedAs})
+		cells = append(cells, install.InstallCell{SkillName: name, Tool: tool, Path: path, InstalledAs: installedAs})
 	}
 	sort.SliceStable(normalized, func(i, j int) bool {
 		if normalized[i].SkillName != normalized[j].SkillName {

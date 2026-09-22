@@ -57,7 +57,7 @@ export default function SkillsView(props: SkillsViewProps) {
         if (source !== 'all' && !rowSources(row).includes(source)) return false
         if (toolScope !== 'all' && !cellForTool(row, toolScope)) return false
         if (!normalized) return true
-        return [row.name, row.description, row.group, row.source, ...rowSources(row)]
+        return [row.name, rowDisplayName(row), row.description, row.group, row.source, ...rowSources(row)]
           .filter(Boolean)
           .some((value) => value.toLowerCase().includes(normalized))
       })
@@ -285,7 +285,7 @@ function SkillsTable(props: {
           const targets = toggleableCellCount([row], props.tools)
           return (
             <tr key={row.name} className={props.selectedRow?.name === row.name ? 'selected' : ''} tabIndex={0} onClick={() => props.onSelect(row.name)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); props.onSelect(row.name) } }}>
-              <td><div className="skill-name"><span className="skill-glyph">{initials(row.name)}</span><div><strong>{row.name}</strong><small>{row.description || 'No description in SKILL.md'}</small>{props.showGroup && <span className="active-group-label"><FolderGit2 size={11} />{row.group}<i>{row.source}</i></span>}</div></div></td>
+              <td><div className="skill-name"><span className="skill-glyph">{initials(row.name)}</span><div><strong>{row.name}</strong>{rowDisplayName(row) && <span className="skill-display-name" title="Name inside SKILL.md">{rowDisplayName(row)}</span>}<small>{row.description || 'No description in SKILL.md'}</small>{props.showGroup && <span className="active-group-label"><FolderGit2 size={11} />{row.group}<i>{row.source}</i></span>}</div></div></td>
               {MANAGED_TOOLS.map((tool) => <td key={tool}><ToolCell cell={row[tool]} rowName={row.name} busy={props.busy} onToggle={props.onToggleCell} /></td>)}
               <td><div className="row-actions">{favoriteEligible(row) && <button className={`icon-button subtle favorite-button ${row.favorite ? 'active' : ''}`} title={row.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-label={`${row.favorite ? 'Remove' : 'Add'} ${row.name} ${row.favorite ? 'from' : 'to'} favorites`} aria-pressed={row.favorite} onClick={(event) => { event.stopPropagation(); props.onSetFavorite(row.name, !row.favorite) }} disabled={props.busy || props.favoritesUnavailable}><Star size={15} fill={row.favorite ? 'currentColor' : 'none'} /></button>}<button className="icon-button subtle" title="Smart-toggle this row in the selected tool scope" aria-label={`Smart-toggle ${row.name}: ${targets} eligible ${targets === 1 ? 'cell' : 'cells'}`} onClick={(event) => { event.stopPropagation(); props.onToggleSkillScope([row.name], props.tools) }} disabled={props.busy || targets === 0}><SlidersHorizontal size={15} /></button></div></td>
             </tr>
@@ -395,6 +395,16 @@ function toolsForScope(scope: SkillToolScope): ManagedTool[] {
 
 function cellForTool(row: SkillRow, tool: ManagedTool) {
   return row[tool]
+}
+
+// rowDisplayName returns the SKILL.md name when it differs from the folder
+// name, as for a skill installed under another name.
+function rowDisplayName(row: SkillRow): string {
+  for (const tool of MANAGED_TOOLS) {
+    const displayName = row[tool]?.displayName
+    if (displayName && displayName !== row.name) return displayName
+  }
+  return ''
 }
 
 function rowSources(row: SkillRow) {

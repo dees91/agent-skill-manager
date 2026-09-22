@@ -60,7 +60,8 @@ func PlanLocalInstall(p paths.Paths, manifest state.Manifest, source LocalSource
 		return LocalInstallPlan{}, fmt.Errorf("local source identity is incomplete")
 	}
 	recorded := RecordedLocalSkillPaths(manifest, source.CanonicalPath)
-	selectedCells, resolution, err := selectInstallCells(p, source.CanonicalPath, discovered, options, recorded)
+	recordedNames := RecordedLocalInstalledNames(manifest, source.CanonicalPath)
+	selectedCells, resolution, err := selectInstallCells(p, source.CanonicalPath, discovered, options, recorded, recordedNames)
 	if err != nil {
 		return LocalInstallPlan{}, err
 	}
@@ -74,21 +75,15 @@ func PlanLocalInstall(p paths.Paths, manifest state.Manifest, source LocalSource
 
 	plan := LocalInstallPlan{Source: source, Links: []LinkPlan{}, AlreadyInstalled: []AlreadyInstalled{}, Off: options.Off, ResolvedDuplicates: resolution.Resolved}
 	conflicts := []PreflightConflict{}
+	suggest := ownershipSuggester(p, manifest, discovered, selectedCells, recordedNames, LocalSourceRef(source.CanonicalPath))
 	if len(missingSkills) == 0 {
 		for _, selected := range selectedCells {
 			skill, tool := selected.Skill, selected.Tool
-			if owner := managedCellOwner(manifest, tool, skill.Name, source.CanonicalPath); owner != "" {
-				activeDir, _ := p.UserSkillsDirFor(tool)
-				conflicts = append(conflicts, PreflightConflict{
-					SkillName:  skill.Name,
-					Tool:       tool,
-					TargetPath: filepath.Join(activeDir, skill.Name),
-					Reason:     "cell is already owned by " + owner,
-					Expected:   skill.Path,
-				})
+			if owner := managedCellOwner(manifest, tool, selected.installedName(), source.CanonicalPath); owner.found() {
+				conflicts = append(conflicts, suggest(selected, owner))
 				continue
 			}
-			link, already, conflict := planSkillToolWithOptions(p, manifest, skill, tool, options.Off)
+			link, already, conflict := planSkillToolWithOptions(p, manifest, skill, tool, selected.InstalledAs, options.Off)
 			if conflict != nil {
 				conflicts = append(conflicts, *conflict)
 				continue
@@ -136,19 +131,19 @@ func (s *LocalApplyService) Apply(plan LocalInstallPlan) (LocalApplyResult, erro
 			return result, err
 		}
 	}
-	checkOwnership := func(tool model.Tool, skillName string) error {
-		if owner := managedCellOwner(manifest, tool, skillName, plan.Source.CanonicalPath); owner != "" {
-			return fmt.Errorf("install target %s/%s became owned by %s", tool, skillName, owner)
+	checkOwnership := func(tool model.Tool, installedName string) error {
+		if owner := managedCellOwner(manifest, tool, installedName, plan.Source.CanonicalPath); owner.found() {
+			return fmt.Errorf("install target %s/%s became owned by %s", tool, installedName, owner)
 		}
 		return nil
 	}
 	for _, link := range plan.Links {
-		if err := checkOwnership(link.Tool, link.Skill.Name); err != nil {
+		if err := checkOwnership(link.Tool, link.InstalledName()); err != nil {
 			return result, err
 		}
 	}
 	for _, already := range plan.AlreadyInstalled {
-		if err := checkOwnership(already.Tool, already.Skill.Name); err != nil {
+		if err := checkOwnership(already.Tool, already.InstalledName()); err != nil {
 			return result, err
 		}
 	}
@@ -191,16 +186,16 @@ func prospectiveLocalAuditAllowances(p paths.Paths, manifest state.Manifest, cel
 	links := map[string]bool{}
 	disabledCells := map[string]bool{}
 	for _, cell := range cells {
-		skill, tool := cell.Skill, cell.Tool
+		name, tool := cell.installedName(), cell.Tool
 		activeDir, _ := p.UserSkillsDirFor(tool)
-		activePath := filepath.Join(activeDir, skill.Name)
+		activePath := filepath.Join(activeDir, name)
 		if _, err := os.Lstat(activePath); err == nil {
 			links[filepath.Clean(activePath)] = true
 			continue
 		}
-		if disabled, ok := manifest.Get(tool, skill.Name); ok {
+		if disabled, ok := manifest.Get(tool, name); ok {
 			links[filepath.Clean(disabled.DisabledPath)] = true
-			disabledCells[repositoryCellKey(tool, skill.Name)] = true
+			disabledCells[repositoryCellKey(tool, name)] = true
 		}
 	}
 	return links, disabledCells
@@ -215,7 +210,7 @@ func plannedLocalAuditAllowances(plan LocalInstallPlan) (map[string]bool, map[st
 			links[filepath.Clean(already.TargetPath)] = true
 		case model.SkillStateOff:
 			links[filepath.Clean(already.DisabledPath)] = true
-			disabledCells[repositoryCellKey(already.Tool, already.Skill.Name)] = true
+			disabledCells[repositoryCellKey(already.Tool, already.InstalledName())] = true
 		}
 	}
 	return links, disabledCells
@@ -236,6 +231,14 @@ func (s *LocalApplyService) validatePlan(plan LocalInstallPlan) error {
 func (s *ApplyService) validateInstallCells(plan InstallPlan) error {
 	seenTargets := map[string]bool{}
 	seenCells := map[string]bool{}
+	installedNames := map[string]string{}
+	sameInstalledName := func(skillName, installedName string) error {
+		if previous, ok := installedNames[skillName]; ok && previous != installedName {
+			return fmt.Errorf("skill %s uses install names %s and %s", skillName, previous, installedName)
+		}
+		installedNames[skillName] = installedName
+		return nil
+	}
 	for _, link := range plan.Links {
 		if err := s.validateLinkPlan(plan.CheckoutPath, link); err != nil {
 			return err
@@ -245,11 +248,14 @@ func (s *ApplyService) validateInstallCells(plan InstallPlan) error {
 			return fmt.Errorf("duplicate install target %s", link.LinkPath())
 		}
 		seenTargets[targetKey] = true
-		cellKey := repositoryCellKey(link.Tool, link.Skill.Name)
+		cellKey := repositoryCellKey(link.Tool, link.InstalledName())
 		if seenCells[cellKey] {
-			return fmt.Errorf("duplicate install cell %s/%s", link.Tool, link.Skill.Name)
+			return fmt.Errorf("duplicate install cell %s/%s", link.Tool, link.InstalledName())
 		}
 		seenCells[cellKey] = true
+		if err := sameInstalledName(link.Skill.Name, link.InstalledName()); err != nil {
+			return err
+		}
 		if err := validatePathFreeForApply(link.TargetPath); err != nil {
 			return fmt.Errorf("validate install target %s: %w", link.TargetPath, err)
 		}
@@ -263,55 +269,77 @@ func (s *ApplyService) validateInstallCells(plan InstallPlan) error {
 		if err := s.validateAlreadyInstalledPlan(plan.CheckoutPath, already); err != nil {
 			return err
 		}
-		cellKey := repositoryCellKey(already.Tool, already.Skill.Name)
+		cellKey := repositoryCellKey(already.Tool, already.InstalledName())
 		if seenCells[cellKey] {
-			return fmt.Errorf("duplicate install cell %s/%s", already.Tool, already.Skill.Name)
+			return fmt.Errorf("duplicate install cell %s/%s", already.Tool, already.InstalledName())
 		}
 		seenCells[cellKey] = true
+		if err := sameInstalledName(already.Skill.Name, already.InstalledName()); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func managedCellOwner(manifest state.Manifest, tool model.Tool, skillName, currentLocalPath string) string {
-	if owner := localCellOwner(manifest, tool, skillName, currentLocalPath); owner != "" {
-		return owner
-	}
-	return repositoryCellOwner(manifest, tool, skillName, "", "")
+// cellOwner identifies the recorded source that owns one tool/installed-name
+// cell. The zero value means the cell is free.
+type cellOwner struct {
+	kind  string
+	id    string
+	group model.GroupLabel
 }
 
-func repositoryCellOwner(manifest state.Manifest, tool model.Tool, skillName, currentHost, currentRepoPath string) string {
+func (o cellOwner) found() bool {
+	return o.kind != ""
+}
+
+func (o cellOwner) String() string {
+	if !o.found() {
+		return ""
+	}
+	return o.kind + " " + o.id
+}
+
+func managedCellOwner(manifest state.Manifest, tool model.Tool, installedName, currentLocalPath string) cellOwner {
+	if owner := localCellOwner(manifest, tool, installedName, currentLocalPath); owner.found() {
+		return owner
+	}
+	return repositoryCellOwner(manifest, tool, installedName, "", "")
+}
+
+func repositoryCellOwner(manifest state.Manifest, tool model.Tool, installedName, currentHost, currentRepoPath string) cellOwner {
 	for _, repository := range manifest.Repositories {
 		if currentHost != "" && repository.Host == currentHost && repository.RepoPath == currentRepoPath {
 			continue
 		}
 		for _, skill := range repository.InstalledSkills {
-			if skill.Name == skillName && containsTool(skill.Tools, tool) {
-				return "repository " + repository.Host + "/" + repository.RepoPath
+			if skill.InstalledName() == installedName && containsTool(skill.Tools, tool) {
+				return cellOwner{kind: "repository", id: repository.Host + "/" + repository.RepoPath, group: repository.Group}
 			}
 		}
 	}
-	return ""
+	return cellOwner{}
 }
 
-func gitInstallCellOwner(manifest state.Manifest, tool model.Tool, skillName string, identity RepoIdentity) string {
-	if owner := localCellOwner(manifest, tool, skillName, ""); owner != "" {
+func gitInstallCellOwner(manifest state.Manifest, tool model.Tool, installedName string, identity RepoIdentity) cellOwner {
+	if owner := localCellOwner(manifest, tool, installedName, ""); owner.found() {
 		return owner
 	}
-	return repositoryCellOwner(manifest, tool, skillName, identity.Host, identity.RepoPath)
+	return repositoryCellOwner(manifest, tool, installedName, identity.Host, identity.RepoPath)
 }
 
-func localCellOwner(manifest state.Manifest, tool model.Tool, skillName, currentLocalPath string) string {
+func localCellOwner(manifest state.Manifest, tool model.Tool, installedName, currentLocalPath string) cellOwner {
 	for _, source := range manifest.LocalSources {
 		if currentLocalPath != "" && samePath(source.CanonicalPath, currentLocalPath) {
 			continue
 		}
 		for _, skill := range source.InstalledSkills {
-			if skill.Name == skillName && containsTool(skill.Tools, tool) {
-				return "local source " + source.CanonicalPath
+			if skill.InstalledName() == installedName && containsTool(skill.Tools, tool) {
+				return cellOwner{kind: "local source", id: source.CanonicalPath, group: source.Group}
 			}
 		}
 	}
-	return ""
+	return cellOwner{}
 }
 
 func containsTool(tools []model.Tool, wanted model.Tool) bool {
@@ -335,27 +363,27 @@ func localSourceEntryForPlan(plan LocalInstallPlan, manifest state.Manifest, now
 	for _, skill := range entry.InstalledSkills {
 		skills[skill.Name+"\x00"+skill.RelativePath] = skill
 	}
-	add := func(skill DiscoveredSkill, tool model.Tool) error {
+	add := func(skill DiscoveredSkill, tool model.Tool, installedAs string) error {
 		relativePath, err := filepath.Rel(plan.Source.CanonicalPath, skill.Path)
 		if err != nil {
 			return fmt.Errorf("resolve local installed skill path for %s: %w", skill.Name, err)
 		}
 		relativePath = filepath.ToSlash(relativePath)
 		key := skill.Name + "\x00" + relativePath
-		installed := skills[key]
-		installed.Name = skill.Name
-		installed.RelativePath = relativePath
-		installed.Tools = append(installed.Tools, tool)
+		installed, err := recordInstalledSkillTool(skills[key], skill.Name, relativePath, installedAs, tool)
+		if err != nil {
+			return err
+		}
 		skills[key] = installed
 		return nil
 	}
 	for _, link := range plan.Links {
-		if err := add(link.Skill, link.Tool); err != nil {
+		if err := add(link.Skill, link.Tool, link.InstalledAs); err != nil {
 			return state.LocalSourceEntry{}, err
 		}
 	}
 	for _, already := range plan.AlreadyInstalled {
-		if err := add(already.Skill, already.Tool); err != nil {
+		if err := add(already.Skill, already.Tool, already.InstalledAs); err != nil {
 			return state.LocalSourceEntry{}, err
 		}
 	}
@@ -363,5 +391,25 @@ func localSourceEntryForPlan(plan LocalInstallPlan, manifest state.Manifest, now
 	for _, skill := range skills {
 		entry.InstalledSkills = append(entry.InstalledSkills, skill)
 	}
+	if err := validateUniqueInstalledNames(entry.InstalledSkills); err != nil {
+		return state.LocalSourceEntry{}, err
+	}
 	return entry, nil
+}
+
+// recordInstalledSkillTool adds one tool to a manifest skill record. A skill
+// keeps one installed name across tools; a different name for a recorded
+// skill is drift that only uninstall plus reinstall may change.
+func recordInstalledSkillTool(installed state.InstalledSkillEntry, name, relativePath, installedAs string, tool model.Tool) (state.InstalledSkillEntry, error) {
+	if installedAs == name {
+		installedAs = ""
+	}
+	if installed.Name != "" && installed.InstalledAs != installedAs {
+		return state.InstalledSkillEntry{}, fmt.Errorf("skill %s is recorded as %s, not %s", name, installed.InstalledName(), installedNameOf(DiscoveredSkill{Name: name}, installedAs))
+	}
+	installed.Name = name
+	installed.InstalledAs = installedAs
+	installed.RelativePath = relativePath
+	installed.Tools = append(installed.Tools, tool)
+	return installed, nil
 }

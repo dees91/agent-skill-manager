@@ -69,8 +69,8 @@ func TestLoadBackwardCompatibleDisabledOnlyManifest(t *testing.T) {
 	if len(got.Repositories) != 0 {
 		t.Fatalf("Repositories = %#v, want empty", got.Repositories)
 	}
-	if got.Version != 2 || len(got.LocalSources) != 0 {
-		t.Fatalf("migrated manifest = %#v, want version 2 with no local sources", got)
+	if got.Version != manifestVersion || len(got.LocalSources) != 0 {
+		t.Fatalf("migrated manifest = %#v, want version %d with no local sources", got, manifestVersion)
 	}
 }
 
@@ -582,8 +582,8 @@ func TestSaveLoadAndManageLocalSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if got.Version != 2 || len(got.LocalSources) != 2 {
-		t.Fatalf("manifest = %#v, want version 2 and two local sources", got)
+	if got.Version != manifestVersion || len(got.LocalSources) != 2 {
+		t.Fatalf("manifest = %#v, want version %d and two local sources", got, manifestVersion)
 	}
 	if got.LocalSources[0].CanonicalPath != alpha || got.LocalSources[1].CanonicalPath != zeta {
 		t.Fatalf("LocalSources order = %#v, want canonical path order", got.LocalSources)
@@ -626,4 +626,76 @@ func sameTools(got, want []model.Tool) bool {
 		}
 	}
 	return true
+}
+
+func TestLoadMigratesVersionTwoAndRoundTripsInstalledAs(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	if err := os.MkdirAll(p.StateDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"version":2,"disabled":[],"repositories":[{"originalUrl":"https://github.com/acme/tools","host":"github.com","repoPath":"acme/tools","checkoutPath":"/x","group":"acme/tools","installedSkills":[{"name":"alpha","relativePath":"skills/alpha","tools":["claude"]}]}],"localSources":[]}`
+	if err := os.WriteFile(p.StateFile, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store := New(p)
+	got, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if got.Version != 3 {
+		t.Fatalf("Version = %d, want 3", got.Version)
+	}
+	if name := got.Repositories[0].InstalledSkills[0].InstalledName(); name != "alpha" {
+		t.Fatalf("InstalledName() = %q, want alpha", name)
+	}
+
+	got.Repositories[0].InstalledSkills = []InstalledSkillEntry{
+		{Name: "alpha", InstalledAs: "alpha-acme", RelativePath: "skills/alpha", Tools: []model.Tool{model.ToolClaude}},
+		{Name: "beta", InstalledAs: "beta", RelativePath: "skills/beta", Tools: []model.Tool{model.ToolClaude}},
+	}
+	if err := store.Save(got); err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+	data, err := os.ReadFile(p.StateFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"version": 3`) || !strings.Contains(string(data), `"installedAs": "alpha-acme"`) {
+		t.Fatalf("state.json = %s, want version 3 with installedAs", data)
+	}
+	if strings.Count(string(data), "installedAs") != 1 {
+		t.Fatalf("state.json = %s, want installedAs equal to name collapsed", data)
+	}
+	reloaded, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	skills := reloaded.Repositories[0].InstalledSkills
+	if skills[0].InstalledName() != "alpha-acme" || skills[1].InstalledAs != "" || skills[1].InstalledName() != "beta" {
+		t.Fatalf("reloaded skills = %#v", skills)
+	}
+}
+
+func TestValidInstalledName(t *testing.T) {
+	cases := map[string]bool{
+		"alpha":                 true,
+		"alpha-acme":            true,
+		"a1-b2-c3":              true,
+		"":                      false,
+		"-alpha":                false,
+		"alpha-":                false,
+		"alpha--acme":           false,
+		"Alpha":                 false,
+		"alpha_acme":            false,
+		"alpha.acme":            false,
+		"alpha/acme":            false,
+		"..":                    false,
+		strings.Repeat("a", 64): true,
+		strings.Repeat("a", 65): false,
+	}
+	for name, want := range cases {
+		if got := ValidInstalledName(name); got != want {
+			t.Errorf("ValidInstalledName(%q) = %v, want %v", name, got, want)
+		}
+	}
 }

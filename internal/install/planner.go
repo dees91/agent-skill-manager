@@ -56,30 +56,54 @@ type PlanOptions struct {
 	// Off plans new links directly at the tool's disabled path, so the skill
 	// never appears in the active skills directory until it is enabled.
 	Off bool
+	// InstalledAs maps a source skill name to the link basename it is
+	// installed under when its plain name is owned by another source.
+	InstalledAs map[string]string
 }
 
 // InstallCell identifies one exact skill/tool target. When Cells is non-empty,
 // it replaces the Cartesian Tools x SkillNames selection used by the CLI.
 // Path optionally qualifies the skill with a source-relative copy when one
-// name was discovered at several paths.
+// name was discovered at several paths. InstalledAs optionally names the
+// link basename when it differs from the source skill name.
 type InstallCell struct {
-	SkillName string
-	Tool      model.Tool
-	Path      string
+	SkillName   string
+	Tool        model.Tool
+	Path        string
+	InstalledAs string
 }
 
 type selectedInstallCell struct {
-	Skill DiscoveredSkill
-	Tool  model.Tool
+	Skill       DiscoveredSkill
+	Tool        model.Tool
+	InstalledAs string
+}
+
+func (c selectedInstallCell) installedName() string {
+	return installedNameOf(c.Skill, c.InstalledAs)
+}
+
+func installedNameOf(skill DiscoveredSkill, installedAs string) string {
+	if installedAs != "" {
+		return installedAs
+	}
+	return skill.Name
 }
 
 // LinkPlan is one symlink the installer should create. TargetPath is always
 // the active skills path; DisabledPath is set when the link is created OFF.
+// InstalledAs is set when the link basename differs from the skill name.
 type LinkPlan struct {
 	Skill        DiscoveredSkill
 	Tool         model.Tool
 	TargetPath   string
 	DisabledPath string
+	InstalledAs  string
+}
+
+// InstalledName is the link basename in the tool directory.
+func (l LinkPlan) InstalledName() string {
+	return installedNameOf(l.Skill, l.InstalledAs)
 }
 
 // LinkPath is where the symlink is created on disk.
@@ -97,6 +121,12 @@ type AlreadyInstalled struct {
 	TargetPath   string
 	DisabledPath string
 	State        model.SkillState
+	InstalledAs  string
+}
+
+// InstalledName is the link basename in the tool directory.
+func (a AlreadyInstalled) InstalledName() string {
+	return installedNameOf(a.Skill, a.InstalledAs)
 }
 
 // InstallPlan is a side-effect-free plan for installing repository skills.
@@ -111,6 +141,8 @@ type InstallPlan struct {
 }
 
 // PreflightConflict records a target that blocks install planning.
+// SuggestedAs is a free installed name offered when the plain skill name is
+// owned by another source; OwnerGroup labels that source without a path.
 type PreflightConflict struct {
 	SkillName   string
 	Tool        model.Tool
@@ -120,6 +152,8 @@ type PreflightConflict struct {
 	Expected    string
 	Disabled    string
 	Description string
+	SuggestedAs string
+	OwnerGroup  model.GroupLabel
 }
 
 // PlanError reports all install preflight failures in deterministic order.
@@ -162,11 +196,13 @@ func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, 
 	}
 
 	recorded := RecordedGitSkillPaths(manifest, identity.Host, identity.RepoPath)
-	selectedCells, resolution, err := selectInstallCells(p, checkoutPath, discovered, options, recorded)
+	recordedNames := RecordedGitInstalledNames(manifest, identity.Host, identity.RepoPath)
+	selectedCells, resolution, err := selectInstallCells(p, checkoutPath, discovered, options, recorded, recordedNames)
 	if err != nil {
 		return InstallPlan{}, err
 	}
 	missingSkills := resolution.Missing
+	suggest := ownershipSuggester(p, manifest, discovered, selectedCells, recordedNames, GitSourceRef(identity))
 
 	plan := InstallPlan{
 		Identity:           identity,
@@ -182,18 +218,11 @@ func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, 
 	if len(missingSkills) == 0 {
 		for _, selected := range selectedCells {
 			skill, tool := selected.Skill, selected.Tool
-			if owner := gitInstallCellOwner(manifest, tool, skill.Name, identity); owner != "" {
-				activeDir, _ := p.UserSkillsDirFor(tool)
-				conflicts = append(conflicts, PreflightConflict{
-					SkillName:  skill.Name,
-					Tool:       tool,
-					TargetPath: filepath.Join(activeDir, skill.Name),
-					Reason:     "cell is already owned by " + owner,
-					Expected:   skill.Path,
-				})
+			if owner := gitInstallCellOwner(manifest, tool, selected.installedName(), identity); owner.found() {
+				conflicts = append(conflicts, suggest(selected, owner))
 				continue
 			}
-			link, already, conflict := planSkillToolWithOptions(p, manifest, skill, tool, options.Off)
+			link, already, conflict := planSkillToolWithOptions(p, manifest, skill, tool, selected.InstalledAs, options.Off)
 			if conflict != nil {
 				conflicts = append(conflicts, *conflict)
 				continue
@@ -216,7 +245,11 @@ func PlanInstall(p paths.Paths, manifest state.Manifest, identity RepoIdentity, 
 	return plan, nil
 }
 
-func selectInstallCells(p paths.Paths, root string, discovered Discovery, options PlanOptions, recorded map[string]string) ([]selectedInstallCell, Resolution, error) {
+func selectInstallCells(p paths.Paths, root string, discovered Discovery, options PlanOptions, recorded, recordedNames map[string]string) ([]selectedInstallCell, Resolution, error) {
+	explicitNames, err := explicitInstalledNames(options)
+	if err != nil {
+		return nil, Resolution{}, err
+	}
 	if len(options.Cells) == 0 {
 		tools, err := normalizePlanTools(p, options.Tools)
 		if err != nil {
@@ -226,10 +259,14 @@ func selectInstallCells(p paths.Paths, root string, discovered Discovery, option
 		if err != nil {
 			return nil, Resolution{}, err
 		}
+		aliases, err := resolveSelectionInstalledNames(discovered, resolution, explicitNames, recordedNames)
+		if err != nil {
+			return nil, Resolution{}, err
+		}
 		cells := make([]selectedInstallCell, 0, len(resolution.Selected)*len(tools))
 		for _, skill := range resolution.Selected {
 			for _, tool := range tools {
-				cells = append(cells, selectedInstallCell{Skill: skill, Tool: tool})
+				cells = append(cells, selectedInstallCell{Skill: skill, Tool: tool, InstalledAs: aliases[skill.Name]})
 			}
 		}
 		return cells, resolution, nil
@@ -256,6 +293,10 @@ func selectInstallCells(p paths.Paths, root string, discovered Discovery, option
 		}
 		byName[normalized.Name] = normalized
 	}
+	aliases, err := resolveSelectionInstalledNames(discovered, resolution, explicitNames, recordedNames)
+	if err != nil {
+		return nil, Resolution{}, err
+	}
 	seen := map[string]bool{}
 	cells := make([]selectedInstallCell, 0, len(options.Cells))
 	for _, requested := range options.Cells {
@@ -272,7 +313,7 @@ func selectInstallCells(p paths.Paths, root string, discovered Discovery, option
 			continue
 		}
 		seen[key] = true
-		cells = append(cells, selectedInstallCell{Skill: skill, Tool: requested.Tool})
+		cells = append(cells, selectedInstallCell{Skill: skill, Tool: requested.Tool, InstalledAs: aliases[name]})
 	}
 	sort.SliceStable(cells, func(i, j int) bool {
 		if cells[i].Skill.Name != cells[j].Skill.Name {
@@ -284,6 +325,107 @@ func selectInstallCells(p paths.Paths, root string, discovered Discovery, option
 		return nil, Resolution{}, fmt.Errorf("at least one install cell is required")
 	}
 	return cells, resolution, nil
+}
+
+// explicitInstalledNames merges PlanOptions.InstalledAs with per-cell
+// InstalledAs values; one skill name maps to at most one installed name.
+func explicitInstalledNames(options PlanOptions) (map[string]string, error) {
+	explicit := map[string]string{}
+	add := func(name, installed string) error {
+		name, installed = strings.TrimSpace(name), strings.TrimSpace(installed)
+		if name == "" || installed == "" {
+			return fmt.Errorf("install name mapping needs a skill name and an install name")
+		}
+		if previous, ok := explicit[name]; ok && previous != installed {
+			return fmt.Errorf("conflicting install names for skill %q: %q and %q", name, previous, installed)
+		}
+		explicit[name] = installed
+		return nil
+	}
+	for name, installed := range options.InstalledAs {
+		if err := add(name, installed); err != nil {
+			return nil, err
+		}
+	}
+	for _, cell := range options.Cells {
+		if strings.TrimSpace(cell.InstalledAs) == "" {
+			continue
+		}
+		if err := add(cell.SkillName, cell.InstalledAs); err != nil {
+			return nil, err
+		}
+	}
+	return explicit, nil
+}
+
+// resolveSelectionInstalledNames skips alias resolution while skills are
+// missing, so the missing-skill report is not masked by --as errors.
+func resolveSelectionInstalledNames(discovered Discovery, resolution Resolution, explicit, recordedNames map[string]string) (map[string]string, error) {
+	if len(resolution.Missing) > 0 {
+		return map[string]string{}, nil
+	}
+	selected := make([]string, len(resolution.Selected))
+	for i, skill := range resolution.Selected {
+		selected[i] = skill.Name
+	}
+	return resolveInstalledNames(discovered, selected, explicit, recordedNames)
+}
+
+// ownershipSuggester builds the conflict for a cell owned by another source.
+// A suggestion is offered only when the plain name was requested and this
+// source has no record for the skill; a recorded plain name gets guidance
+// instead, because changing a recorded name needs uninstall plus reinstall.
+func ownershipSuggester(p paths.Paths, manifest state.Manifest, discovered Discovery, cells []selectedInstallCell, recordedNames map[string]string, source SourceRef) func(selectedInstallCell, cellOwner) PreflightConflict {
+	aliases := map[string]string{}
+	toolSet := map[model.Tool]bool{}
+	tools := []model.Tool{}
+	for _, cell := range cells {
+		if cell.InstalledAs != "" {
+			aliases[cell.Skill.Name] = cell.InstalledAs
+		}
+		if !toolSet[cell.Tool] {
+			toolSet[cell.Tool] = true
+			tools = append(tools, cell.Tool)
+		}
+	}
+	var taken func(string) bool
+	suggested := map[string]string{}
+	return func(cell selectedInstallCell, owner cellOwner) PreflightConflict {
+		activeDir, _ := p.UserSkillsDirFor(cell.Tool)
+		conflict := PreflightConflict{
+			SkillName:  cell.Skill.Name,
+			Tool:       cell.Tool,
+			TargetPath: filepath.Join(activeDir, cell.installedName()),
+			Reason:     "cell is already owned by " + owner.String(),
+			Expected:   cell.Skill.Path,
+			OwnerGroup: owner.group,
+		}
+		_, recorded := recordedNames[cell.Skill.Name]
+		switch {
+		case recorded:
+			conflict.Reason += "; uninstall this source and reinstall it with --as, or install only the other tools"
+		case cell.InstalledAs == "":
+			if _, ok := suggested[cell.Skill.Name]; !ok {
+				if taken == nil {
+					taken = installedNameTaken(p, manifest, discovered, aliases, tools)
+				}
+				name := SuggestInstalledName(cell.Skill.Name, source, func(candidate string) bool {
+					if taken(candidate) {
+						return true
+					}
+					for _, other := range suggested {
+						if other == candidate {
+							return true
+						}
+					}
+					return false
+				})
+				suggested[cell.Skill.Name] = name
+			}
+			conflict.SuggestedAs = suggested[cell.Skill.Name]
+		}
+		return conflict
+	}
 }
 
 func validatePlanIdentity(identity RepoIdentity) error {
@@ -376,9 +518,10 @@ func validateDiscoveredSkill(checkoutPath string, skill DiscoveredSkill) (Discov
 	return skill, nil
 }
 
-func planSkillTool(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill, tool model.Tool) (*LinkPlan, *AlreadyInstalled, *PreflightConflict) {
+func planSkillTool(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill, tool model.Tool, installedAs string) (*LinkPlan, *AlreadyInstalled, *PreflightConflict) {
+	installedName := installedNameOf(skill, installedAs)
 	activeDir, _ := p.UserSkillsDirFor(tool)
-	targetPath := filepath.Join(activeDir, skill.Name)
+	targetPath := filepath.Join(activeDir, installedName)
 	expectedTarget := filepath.Clean(skill.Path)
 
 	info, err := os.Lstat(targetPath)
@@ -390,10 +533,11 @@ func planSkillTool(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill
 			}
 			if samePath(resolveLinkTarget(targetPath, target), expectedTarget) {
 				return nil, &AlreadyInstalled{
-					Skill:      skill,
-					Tool:       tool,
-					TargetPath: targetPath,
-					State:      model.SkillStateOn,
+					Skill:       skill,
+					Tool:        tool,
+					TargetPath:  targetPath,
+					State:       model.SkillStateOn,
+					InstalledAs: installedAs,
 				}, nil
 			}
 			return nil, nil, conflict(skill, tool, targetPath, "target symlink points elsewhere", resolveLinkTarget(targetPath, target), expectedTarget, "", "")
@@ -408,7 +552,7 @@ func planSkillTool(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill
 		return nil, nil, conflict(skill, tool, targetPath, "cannot inspect target path", "", expectedTarget, "", err.Error())
 	}
 
-	if entry, ok := manifest.Get(tool, skill.Name); ok {
+	if entry, ok := manifest.Get(tool, installedName); ok {
 		disabledTarget := resolveLinkTarget(entry.OriginalPath, entry.SymlinkTarget)
 		if entry.EntryType == model.EntryTypeSymlink && samePath(disabledTarget, expectedTarget) {
 			return nil, &AlreadyInstalled{
@@ -417,22 +561,23 @@ func planSkillTool(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill
 				TargetPath:   targetPath,
 				DisabledPath: entry.DisabledPath,
 				State:        model.SkillStateOff,
+				InstalledAs:  installedAs,
 			}, nil
 		}
 		return nil, nil, conflict(skill, tool, targetPath, "disabled state points elsewhere", disabledTarget, expectedTarget, entry.DisabledPath, "")
 	}
 
-	return &LinkPlan{Skill: skill, Tool: tool, TargetPath: targetPath}, nil, nil
+	return &LinkPlan{Skill: skill, Tool: tool, TargetPath: targetPath, InstalledAs: installedAs}, nil, nil
 }
 
 // planSkillToolWithOptions plans one cell and, for an OFF install, moves a new
 // link to the disabled path after checking that path is free.
-func planSkillToolWithOptions(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill, tool model.Tool, off bool) (*LinkPlan, *AlreadyInstalled, *PreflightConflict) {
-	link, already, blocked := planSkillTool(p, manifest, skill, tool)
+func planSkillToolWithOptions(p paths.Paths, manifest state.Manifest, skill DiscoveredSkill, tool model.Tool, installedAs string, off bool) (*LinkPlan, *AlreadyInstalled, *PreflightConflict) {
+	link, already, blocked := planSkillTool(p, manifest, skill, tool, installedAs)
 	if link == nil || !off {
 		return link, already, blocked
 	}
-	disabledPath, err := state.New(p).DisabledPath(tool, skill.Name)
+	disabledPath, err := state.New(p).DisabledPath(tool, link.InstalledName())
 	if err != nil {
 		return nil, nil, conflict(skill, tool, link.TargetPath, "cannot resolve disabled path", "", link.Skill.Path, "", err.Error())
 	}

@@ -185,7 +185,7 @@ func (a App) runUninstall(stdout, stderr io.Writer, args []string) int {
 		}
 		fmt.Fprintf(stdout, "dry-run: uninstall %s\n", repositoryGroup(repository))
 		for _, reference := range plan.References.References {
-			fmt.Fprintf(stdout, "would remove %s %s/%s: %s\n", strings.ToLower(reference.State.String()), reference.Tool, reference.SkillName, reference.LinkPath)
+			fmt.Fprintf(stdout, "would remove %s %s: %s\n", strings.ToLower(reference.State.String()), cellLabel(reference.Tool, reference.InstalledName, reference.SkillName), reference.LinkPath)
 		}
 		fmt.Fprintf(stdout, "would remove checkout: %s\n", plan.Checkout.Path)
 		fmt.Fprintln(stdout, "would remove repository and matching disabled state entries")
@@ -231,7 +231,7 @@ func (a App) runLocalUninstall(stdout, stderr io.Writer, manifest state.Manifest
 		}
 		fmt.Fprintf(stdout, "dry-run: uninstall local source %s\n", source.CanonicalPath)
 		for _, reference := range plan.References.References {
-			fmt.Fprintf(stdout, "would remove %s %s/%s: %s\n", strings.ToLower(reference.State.String()), reference.Tool, reference.SkillName, reference.LinkPath)
+			fmt.Fprintf(stdout, "would remove %s %s: %s\n", strings.ToLower(reference.State.String()), cellLabel(reference.Tool, reference.InstalledName, reference.SkillName), reference.LinkPath)
 		}
 		fmt.Fprintln(stdout, "would remove local-source and matching disabled state entries")
 		fmt.Fprintf(stdout, "would preserve source: %s\n", source.CanonicalPath)
@@ -317,7 +317,7 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 			if discoveryErr != nil {
 				discoveryError = discoveryErr.Error()
 			}
-			reportNewSkills(stdout, stderr, plan.Repository, report, discoveryError)
+			reportNewSkills(stdout, stderr, plan.Repository, report, discoveryError, a.newSkillSuggester(manifest, plan.Repository, report))
 		}
 		return 0
 	}
@@ -338,7 +338,8 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 			upToDate++
 			fmt.Fprintf(stdout, "up-to-date %s: %s\n", repositoryGroup(repository), result.CurrentCommit)
 		}
-		reportNewSkills(stdout, stderr, result.Repository, install.NewSkillsReport{Skills: result.NewSkills, Ambiguous: result.AmbiguousNewSkills}, result.NewSkillsError)
+		report := install.NewSkillsReport{Skills: result.NewSkills, Ambiguous: result.AmbiguousNewSkills}
+		reportNewSkills(stdout, stderr, result.Repository, report, result.NewSkillsError, a.newSkillSuggester(manifest, result.Repository, report))
 	}
 	fmt.Fprintf(stdout, "updated %d repository(s); %d up-to-date\n", updated, upToDate)
 	if updated > 0 {
@@ -382,7 +383,7 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
-	plan, err := install.PlanLocalInstall(a.paths, manifest, source, discovered, install.PlanOptions{Tools: options.Tools, SkillNames: options.SkillNames, Off: options.Off})
+	plan, err := install.PlanLocalInstall(a.paths, manifest, source, discovered, install.PlanOptions{Tools: options.Tools, SkillNames: options.SkillNames, Off: options.Off, InstalledAs: options.InstalledAs})
 	if err != nil {
 		var planErr install.PlanError
 		var ambiguous install.AmbiguousSkillsError
@@ -430,6 +431,7 @@ func (a App) runLocalInstall(stdout, stderr io.Writer, options installCLIOptions
 		printAlreadyInstalled(stdout, already)
 	}
 	printOffAlreadyOnNote(stdout, options.Off, result.AlreadyInstalled)
+	printInstalledAliases(stdout, result.Created, result.AlreadyInstalled)
 	fmt.Fprintf(stdout, "installed %d skill(s)\n", len(result.Source.InstalledSkills))
 	fmt.Fprintf(stdout, "source remains in place: %s\n", result.Source.CanonicalPath)
 	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
@@ -475,6 +477,7 @@ func (a App) runInstallApply(stdout, stderr io.Writer, options installCLIOptions
 		printAlreadyInstalled(stdout, already)
 	}
 	printOffAlreadyOnNote(stdout, options.Off, applyResult.AlreadyInstalled)
+	printInstalledAliases(stdout, applyResult.Created, applyResult.AlreadyInstalled)
 	fmt.Fprintf(stdout, "installed %d skill(s)\n", len(applyResult.Repository.InstalledSkills))
 	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	return 0
@@ -532,9 +535,10 @@ func (a App) prepareInstall(stdout, stderr io.Writer, options installCLIOptions,
 		return preparedInstall{}, 1
 	}
 	plan, err := install.PlanInstall(a.paths, manifest, identity, checkoutPath, discovered, install.PlanOptions{
-		Tools:      options.Tools,
-		SkillNames: options.SkillNames,
-		Off:        options.Off,
+		Tools:       options.Tools,
+		SkillNames:  options.SkillNames,
+		Off:         options.Off,
+		InstalledAs: options.InstalledAs,
 	})
 	if err != nil {
 		var planErr install.PlanError
@@ -753,11 +757,12 @@ func parseMutationArgs(args []string) (model.Tool, string, bool, error) {
 }
 
 type installCLIOptions struct {
-	GitURL     string
-	Tools      []model.Tool
-	SkillNames []string
-	DryRun     bool
-	Off        bool
+	GitURL      string
+	Tools       []model.Tool
+	SkillNames  []string
+	InstalledAs map[string]string
+	DryRun      bool
+	Off         bool
 }
 
 type updateCLIOptions struct {
@@ -845,10 +850,10 @@ func findLocalSource(manifest state.Manifest, lookup install.LocalSourceLookup) 
 
 func parseInstallArgs(args []string) (installCLIOptions, error) {
 	if len(args) == 0 {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--off] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--as name=installed-name...] [--off] [--dry-run]")
 	}
 	if strings.HasPrefix(args[0], "-") {
-		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--off] [--dry-run]")
+		return installCLIOptions{}, fmt.Errorf("expected install <git-url|local-path> [--tool claude|codex|muse|grok|both|all] [--skill name[=path]...] [--as name=installed-name...] [--off] [--dry-run]")
 	}
 	options := installCLIOptions{GitURL: strings.TrimSpace(args[0])}
 	if options.GitURL == "" {
@@ -897,6 +902,22 @@ func parseInstallArgs(args []string) (installCLIOptions, error) {
 			}
 			options.SkillNames = append(options.SkillNames, name)
 			i++
+		case "--as":
+			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+				return installCLIOptions{}, fmt.Errorf("--as requires a <name>=<installed-name> value")
+			}
+			name, installed, err := parseInstalledAs(args[i+1])
+			if err != nil {
+				return installCLIOptions{}, err
+			}
+			if options.InstalledAs == nil {
+				options.InstalledAs = map[string]string{}
+			}
+			if previous, ok := options.InstalledAs[name]; ok && previous != installed {
+				return installCLIOptions{}, fmt.Errorf("--as gives skill %q two install names: %q and %q", name, previous, installed)
+			}
+			options.InstalledAs[name] = installed
+			i++
 		default:
 			if strings.HasPrefix(args[i], "-") {
 				return installCLIOptions{}, fmt.Errorf("unknown install flag %q", args[i])
@@ -905,6 +926,20 @@ func parseInstallArgs(args []string) (installCLIOptions, error) {
 		}
 	}
 	return options, nil
+}
+
+// parseInstalledAs splits one --as value on its first "=" into a source
+// skill name and the install name used for its links.
+func parseInstalledAs(raw string) (string, string, error) {
+	name, installed, ok := strings.Cut(raw, "=")
+	name, installed = strings.TrimSpace(name), strings.TrimSpace(installed)
+	if !ok || name == "" || installed == "" {
+		return "", "", fmt.Errorf("--as requires a <name>=<installed-name> value, got %q", printableText(raw))
+	}
+	if !state.ValidInstalledName(installed) {
+		return "", "", fmt.Errorf("invalid install name %q: use 1-64 lowercase letters, digits, and single hyphens", printableText(installed))
+	}
+	return name, installed, nil
 }
 
 type statusCounts struct {
@@ -945,7 +980,10 @@ func groupSources(summary model.GroupSummary) string {
 // as installed, with the install commands that add them for the tools the
 // repository already uses. Update itself never installs them. Ambiguous names
 // list every copy with a qualified --skill template instead of a command.
-func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry, report install.NewSkillsReport, discoveryError string) {
+//
+// When another source owns a new skill's plain name, suggest returns a free
+// install name and the pasteable command carries the matching --as.
+func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry, report install.NewSkillsReport, discoveryError string, suggest func(string) string) {
 	if discoveryError != "" {
 		fmt.Fprintf(stderr, "warning: could not check for new skills in %s: %s\n", repositoryGroup(repository), printableText(discoveryError))
 		return
@@ -967,6 +1005,15 @@ func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry,
 			for _, skill := range report.Skills {
 				args = append(args, "--skill", shellQuote(skill.Name))
 			}
+			for _, skill := range report.Skills {
+				if suggest == nil {
+					break
+				}
+				if installed := suggest(skill.Name); installed != "" {
+					fmt.Fprintf(stdout, "  %s is owned by another source; the command below installs it as %s\n", skill.Name, installed)
+					args = append(args, "--as", shellQuote(skill.Name+"="+installed))
+				}
+			}
 			printNewSkillsCommands(stdout, strings.Join(args, " "), recordedRepositoryTools(repository))
 		}
 	}
@@ -986,6 +1033,28 @@ func reportNewSkills(stdout, stderr io.Writer, repository state.RepositoryEntry,
 		}
 		template := strings.Join([]string{"skill-manager", "install", shellQuote(repositoryURL(repository)), "--skill", shellQuote(group.Name + "=<path>")}, " ")
 		printNewSkillsCommands(stdout, template, recordedRepositoryTools(repository))
+	}
+}
+
+// newSkillSuggester suggests install names for new skills whose plain name is
+// owned by another recorded source for one of the repository's tools.
+func (a App) newSkillSuggester(manifest state.Manifest, repository state.RepositoryEntry, report install.NewSkillsReport) func(string) string {
+	tools := recordedRepositoryTools(repository)
+	if len(tools) == 0 {
+		tools = model.Tools()
+	}
+	names := []string{}
+	for _, skill := range repository.InstalledSkills {
+		names = append(names, skill.Name)
+	}
+	for _, skill := range report.Skills {
+		names = append(names, skill.Name)
+	}
+	for _, group := range report.Ambiguous {
+		names = append(names, group.Name)
+	}
+	return func(name string) string {
+		return install.NewSkillInstalledNameSuggestion(a.paths, manifest, repository, name, tools, names)
 	}
 }
 
@@ -1112,6 +1181,7 @@ func printInstallPlanError(stderr io.Writer, err install.PlanError) {
 	for _, missing := range err.MissingSkills {
 		fmt.Fprintf(stderr, "missing skill: %s\n", missing)
 	}
+	defer printInstalledAsSuggestions(stderr, err.Conflicts)
 	for _, conflict := range err.Conflicts {
 		fmt.Fprintf(stderr, "conflict %s/%s: %s", conflict.Tool, conflict.SkillName, conflict.Reason)
 		if conflict.TargetPath != "" {
@@ -1130,6 +1200,68 @@ func printInstallPlanError(stderr io.Writer, err install.PlanError) {
 			fmt.Fprintf(stderr, " (%s)", conflict.Description)
 		}
 		fmt.Fprintln(stderr)
+	}
+}
+
+// printInstalledAsSuggestions prints, once per skill, the pasteable --as form
+// that installs a skill whose plain name another source owns. Values with
+// control characters show a quoted form without the pasteable line.
+func printInstalledAsSuggestions(stderr io.Writer, conflicts []install.PreflightConflict) {
+	type suggestion struct {
+		owner string
+		as    string
+		tools []string
+	}
+	order := []string{}
+	byName := map[string]*suggestion{}
+	for _, conflict := range conflicts {
+		if conflict.SuggestedAs == "" {
+			continue
+		}
+		item, ok := byName[conflict.SkillName]
+		if !ok {
+			item = &suggestion{owner: strings.TrimPrefix(conflict.Reason, "cell is already owned by "), as: conflict.SuggestedAs}
+			byName[conflict.SkillName] = item
+			order = append(order, conflict.SkillName)
+		}
+		item.tools = append(item.tools, conflict.Tool.String())
+	}
+	for _, name := range order {
+		item := byName[name]
+		fmt.Fprintf(stderr, "skill %q is owned by %s for %s; install it under another name:\n", name, printableText(item.owner), strings.Join(item.tools, ","))
+		value := name + "=" + item.as
+		if printableText(value) != value {
+			fmt.Fprintf(stderr, "  %s (pasteable --as form omitted: contains control characters)\n", printableText(value))
+			continue
+		}
+		fmt.Fprintf(stderr, "  --as %s\n", shellQuote(value))
+	}
+}
+
+// cellLabel names a tool cell by its installed name, adding the source skill
+// name when the skill is installed under another name.
+func cellLabel(tool model.Tool, installedName, skillName string) string {
+	if installedName == "" || installedName == skillName {
+		return tool.String() + "/" + skillName
+	}
+	return tool.String() + "/" + installedName + " (" + skillName + ")"
+}
+
+// printInstalledAliases confirms every skill installed under another name.
+func printInstalledAliases(stdout io.Writer, created []install.LinkPlan, already []install.AlreadyInstalled) {
+	seen := map[string]bool{}
+	report := func(name, installed string) {
+		if installed == "" || seen[name] {
+			return
+		}
+		seen[name] = true
+		fmt.Fprintf(stdout, "installed %q as %q\n", name, installed)
+	}
+	for _, link := range created {
+		report(link.Skill.Name, link.InstalledAs)
+	}
+	for _, item := range already {
+		report(item.Skill.Name, item.InstalledAs)
 	}
 }
 
@@ -1175,10 +1307,10 @@ func printAmbiguousSkills(stderr io.Writer, err install.AmbiguousSkillsError) {
 
 func printPlannedLink(stdout io.Writer, link install.LinkPlan) {
 	if link.DisabledPath != "" {
-		fmt.Fprintf(stdout, "would link %s/%s OFF: %s -> %s (restores to %s)\n", link.Tool, link.Skill.Name, link.DisabledPath, link.Skill.Path, link.TargetPath)
+		fmt.Fprintf(stdout, "would link %s OFF: %s -> %s (restores to %s)\n", cellLabel(link.Tool, link.InstalledName(), link.Skill.Name), link.DisabledPath, link.Skill.Path, link.TargetPath)
 		return
 	}
-	fmt.Fprintf(stdout, "would link %s/%s: %s -> %s\n", link.Tool, link.Skill.Name, link.TargetPath, link.Skill.Path)
+	fmt.Fprintf(stdout, "would link %s: %s -> %s\n", cellLabel(link.Tool, link.InstalledName(), link.Skill.Name), link.TargetPath, link.Skill.Path)
 }
 
 func printCreatedLinks(stdout io.Writer, off bool, created []install.LinkPlan) {
@@ -1188,7 +1320,7 @@ func printCreatedLinks(stdout io.Writer, off bool, created []install.LinkPlan) {
 	}
 	fmt.Fprintf(stdout, "created %d symlink(s) as OFF\n", len(created))
 	if len(created) > 0 {
-		fmt.Fprintf(stdout, "turn a skill ON with: skill-manager enable --tool %s %s\n", created[0].Tool, shellQuote(created[0].Skill.Name))
+		fmt.Fprintf(stdout, "turn a skill ON with: skill-manager enable --tool %s %s\n", created[0].Tool, shellQuote(created[0].InstalledName()))
 	}
 }
 
@@ -1207,9 +1339,9 @@ func printOffAlreadyOnNote(stdout io.Writer, off bool, already []install.Already
 func printAlreadyInstalled(stdout io.Writer, already install.AlreadyInstalled) {
 	switch already.State {
 	case model.SkillStateOn:
-		fmt.Fprintf(stdout, "already installed %s/%s: ON at %s\n", already.Tool, already.Skill.Name, already.TargetPath)
+		fmt.Fprintf(stdout, "already installed %s: ON at %s\n", cellLabel(already.Tool, already.InstalledName(), already.Skill.Name), already.TargetPath)
 	case model.SkillStateOff:
-		fmt.Fprintf(stdout, "already installed %s/%s: OFF at %s\n", already.Tool, already.Skill.Name, already.DisabledPath)
+		fmt.Fprintf(stdout, "already installed %s: OFF at %s\n", cellLabel(already.Tool, already.InstalledName(), already.Skill.Name), already.DisabledPath)
 	}
 }
 
@@ -1246,9 +1378,10 @@ Commands:
   status                       Summarize skill states
   groups                       Summarize detected groups
   repos                        Summarize managed repository installs
-  install <git-url|local-path> [--tool <tool>] [--skill <name>...] [--off] [--dry-run]
+  install <git-url|local-path> [--tool <tool>] [--skill <name>...] [--as <name>=<installed-name>...] [--off] [--dry-run]
                                Install or preview skills from Git or a local path;
-                               --off creates them disabled
+                               --off creates them disabled; --as links a skill
+                               under another name when its name is taken
   update [<git-url|local-path>] [--dry-run]
                                Update one or all managed repositories
   uninstall <git-url|local-path> [--dry-run]

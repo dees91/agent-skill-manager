@@ -51,10 +51,10 @@ func addDisabledRecords(manifest *state.Manifest, links []LinkPlan, classify man
 		if labels == nil {
 			labels = classify(*manifest)
 		}
-		source, group := labels(link.Tool, link.Skill.Name, link.DisabledPath)
+		source, group := labels(link.Tool, link.InstalledName(), link.DisabledPath)
 		manifest.Upsert(state.DisabledEntry{
 			Tool:          link.Tool,
-			SkillName:     link.Skill.Name,
+			SkillName:     link.InstalledName(),
 			OriginalPath:  link.TargetPath,
 			DisabledPath:  link.DisabledPath,
 			EntryType:     model.EntryTypeSymlink,

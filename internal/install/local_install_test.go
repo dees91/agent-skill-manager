@@ -40,7 +40,7 @@ func TestLocalInstallApplyCreatesLinksAndPersistsOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load state: %v", err)
 	}
-	if manifest.Version != 2 || len(manifest.LocalSources) != 1 || len(manifest.Repositories) != 0 {
+	if manifest.Version != 3 || len(manifest.LocalSources) != 1 || len(manifest.Repositories) != 0 {
 		t.Fatalf("manifest = %#v, want one local source", manifest)
 	}
 	if _, err := os.Lstat(source.CanonicalPath); err != nil {
