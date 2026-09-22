@@ -12,6 +12,14 @@
   `ranked_search_v1` capability. A version or capability mismatch fails before
   selection or activation; the current skill does not silently fall back to
   legacy substring filtering on an older local binary.
+- `implemented`: when `state.json` has a manifest version newer than the
+  binary supports (for example after the desktop app upgraded it), every
+  advisor command's JSON error uses code `STATE_VERSION_UNSUPPORTED` with a
+  path-free message naming both versions and asking to update Skill Manager.
+  `advisor search` and `recommend` otherwise keep their generic redacted
+  inventory error. `advisor status` does not read `state.json`, so it can still
+  succeed with a stale binary; the skill stops without activation when a later
+  command returns this code.
 
 ## Selection And Same-Turn Use
 

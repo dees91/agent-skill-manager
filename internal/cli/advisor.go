@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/dees91/agent-skill-manager/internal/advisor"
 	"github.com/dees91/agent-skill-manager/internal/model"
+	"github.com/dees91/agent-skill-manager/internal/state"
 )
 
 type advisorActivateOptions struct {
@@ -368,7 +370,8 @@ func searchResultCell(row model.SkillRow, tool model.Tool) *model.ToolSkill {
 }
 
 func publicAdvisorSearchError(err error, jsonOutput bool) error {
-	if jsonOutput {
+	var versionErr state.UnsupportedVersionError
+	if jsonOutput && !errors.As(err, &versionErr) {
 		return fmt.Errorf("advisor search could not read the local skill inventory")
 	}
 	return err
@@ -391,7 +394,13 @@ func advisorCommandError(stderr io.Writer, jsonOutput bool, code string, err err
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
-	output := advisorErrorOutput{APIVersion: advisor.APIVersion, Error: advisorErrorDetail{Code: code, Message: err.Error(), ReceiptID: receiptID}}
+	message := err.Error()
+	var versionErr state.UnsupportedVersionError
+	if errors.As(err, &versionErr) {
+		code = "STATE_VERSION_UNSUPPORTED"
+		message = fmt.Sprintf("local Skill Manager state uses manifest version %d, but this binary supports up to version %d; update Skill Manager", versionErr.Version, versionErr.Supported)
+	}
+	output := advisorErrorOutput{APIVersion: advisor.APIVersion, Error: advisorErrorDetail{Code: code, Message: message, ReceiptID: receiptID}}
 	if encodeErr := writeIndentedJSON(stderr, output); encodeErr != nil {
 		fmt.Fprintf(stderr, "error: %v; additionally failed to encode advisor error: %v\n", err, encodeErr)
 	}

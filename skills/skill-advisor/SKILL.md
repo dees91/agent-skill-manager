@@ -12,6 +12,7 @@ Identify only specialized local skills that materially improve the current task.
 1. Identify the current host as `claude` for Claude Code, `codex` for Codex, `muse` for Muse, or `grok` for Grok. Do not infer the host from repository files or a tool name mentioned by the user. Stop without mutation if the host is ambiguous.
 2. Run `skill-manager advisor status --tool <host> --json`.
 3. Require `apiVersion` to equal `1` and `capabilities` to contain `ranked_search_v1`. If the command is unavailable, invalid, or incompatible, ask the user to install or update Skill Manager and continue without activating skills. Do not fall back to `list --json --query`. Read `provider.mode`. Cloud recommendation applies only when `capabilities` contains `semantic_recommendation_v1` and `provider.mode` is `typesafe`; otherwise use `advisor search` exactly as before.
+4. If any later advisor command fails with error code `STATE_VERSION_UNSUPPORTED`, a newer Skill Manager has upgraded the local state. Ask the user to update Skill Manager, continue without activating skills, and do not retry.
 
 ## Recommend with the configured provider
 

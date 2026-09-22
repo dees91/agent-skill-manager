@@ -1068,3 +1068,15 @@ full Go and frontend suites.
   test binary, and call it from `TestMain` in the cli, gui, install, ops, and
   scan packages. `TestDisableAutoMaintenanceStopsCommitFromStartingMaintenance`
   fails without it.
+
+## [2026-09-22] fix | Advisor JSON names a state manifest from a newer version
+
+- A stale CLI next to an upgraded desktop app failed `advisor search` and
+  `recommend --json` with only "could not read the local skill inventory"; the
+  real cause, an unsupported `state.json` manifest version, was visible only
+  without `--json`.
+- `internal/state` now returns `UnsupportedVersionError` (message unchanged).
+  Advisor JSON errors map it to `STATE_VERSION_UNSUPPORTED` with a path-free
+  update hint for search, recommend, and activate; other search failures stay
+  redacted. The first-party skill stops without activation on that code.
+- `TestAdvisorJSONReportsStateWrittenByNewerVersion` covers all three commands.
