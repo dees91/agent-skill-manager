@@ -1028,3 +1028,29 @@ full Go and frontend suites.
 - `ExecGitRunner` now runs git with `GIT_OPTIONAL_LOCKS=0`. A new
   `TestExecGitRunnerStatusDoesNotRewriteIndex` makes the stat data stale and
   deterministically fails without the fix.
+
+## [2026-09-22] release | Prepare and publish v0.10.0 public preview
+
+- Selected a minor prerelease for the completed Iteration 24 optional TypeSafe
+  advisor, Iteration 25 duplicate skill discovery, and Iteration 26
+  cross-source skill alias work, plus the read-only git inspection fix,
+  keeping the Apple Silicon, ad-hoc-signed preview limitations.
+- Fixed the intermittent strict dry-run CI failure first (#24) so the release
+  commit could pass CI without a rerun.
+- Bumped `desktop/wails.json`, `desktop/frontend/package.json`, its lockfile,
+  and the current-version guidance in README, `docs/usage.md`, CONTRIBUTING,
+  and the wiki to `0.10.0`; added `docs/releases/v0.10.0.md` with an upgrade
+  note for manifest version 3. Third-party notices regenerated unchanged.
+- Tagged `364ed12` after the full local Apple Silicon packaging gate and public
+  Root Go plus Desktop/frontend CI succeeded for that exact commit; no open PRs
+  or Dependabot alerts remained.
+- Uploaded the desktop ZIP, CLI tarball, and SHA-256 manifest to a draft,
+  downloaded them back, and verified digests against the local manifest,
+  archive contents including LICENSE and notices, absence of absolute or parent
+  paths and symlinks, ad-hoc signatures, arm64 Mach-O format, bundle identifier
+  `io.github.dees91.skillmanager`, versions, `LSMinimumSystemVersion` 13.0,
+  `skill-manager --version`, a cross-source `install --as` from the downloaded
+  CLI against synthetic local sources in an isolated home, and an
+  isolated-home desktop launch.
+- Published the draft as a non-latest GitHub prerelease and re-verified both
+  archives from the unauthenticated public download URLs.
