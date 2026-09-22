@@ -17,8 +17,11 @@ type GitRunner interface {
 type ExecGitRunner struct{}
 
 // RunGit runs git with the provided arguments and returns trimmed output.
+// GIT_OPTIONAL_LOCKS=0 stops inspection commands such as git status from
+// opportunistically rewriting .git/index, so dry runs leave checkouts untouched.
 func (ExecGitRunner) RunGit(args ...string) (string, error) {
 	command := exec.Command("git", args...)
+	command.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
 	output, err := command.CombinedOutput()
 	trimmed := strings.TrimSpace(string(output))
 	if err != nil {

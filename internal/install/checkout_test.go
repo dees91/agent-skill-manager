@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestEnsureCheckoutClonesMissingCheckout(t *testing.T) {
@@ -278,6 +279,60 @@ func TestEnsureCheckoutValidatesInputs(t *testing.T) {
 				t.Fatalf("EnsureCheckout() error = %q, want substring %q", err, test.want)
 			}
 		})
+	}
+}
+
+func TestExecGitRunnerStatusDoesNotRewriteIndex(t *testing.T) {
+	checkout := t.TempDir()
+	runner := ExecGitRunner{}
+	for _, args := range [][]string{
+		{"init"},
+		{"config", "user.email", "skill-manager@example.test"},
+		{"config", "user.name", "Skill Manager Test"},
+		{"config", "commit.gpgsign", "false"},
+	} {
+		if _, err := runner.RunGit(append([]string{"-C", checkout}, args...)...); err != nil {
+			t.Fatalf("git %v: %v", args, err)
+		}
+	}
+	skillFile := filepath.Join(checkout, "skills", "alpha", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(skillFile), 0o755); err != nil {
+		t.Fatalf("mkdir skill: %v", err)
+	}
+	if err := os.WriteFile(skillFile, []byte("---\nname: alpha\n---\n"), 0o644); err != nil {
+		t.Fatalf("write skill: %v", err)
+	}
+	for _, args := range [][]string{{"add", "."}, {"commit", "-m", "Add alpha"}} {
+		if _, err := runner.RunGit(append([]string{"-C", checkout}, args...)...); err != nil {
+			t.Fatalf("git %v: %v", args, err)
+		}
+	}
+	// A tracked file whose stat data no longer matches the index makes a plain
+	// git status refresh and rewrite .git/index, even though content is unchanged.
+	future := time.Now().Add(time.Hour)
+	if err := os.Chtimes(skillFile, future, future); err != nil {
+		t.Fatalf("chtimes skill: %v", err)
+	}
+	indexPath := filepath.Join(checkout, ".git", "index")
+	before, err := os.ReadFile(indexPath)
+	if err != nil {
+		t.Fatalf("read index: %v", err)
+	}
+
+	status, err := runner.RunGit("-C", checkout, "status", "--porcelain", "--untracked-files=all", "--ignored")
+	if err != nil {
+		t.Fatalf("git status: %v", err)
+	}
+
+	if status != "" {
+		t.Fatalf("git status = %q, want clean", status)
+	}
+	after, err := os.ReadFile(indexPath)
+	if err != nil {
+		t.Fatalf("read index after status: %v", err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("git status rewrote .git/index; read-only inspection must not write repository files")
 	}
 }
 
