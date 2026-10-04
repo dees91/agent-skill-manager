@@ -26,9 +26,11 @@
   - The exact active and disabled links of the skill in each recorded tool.
   - The disabled records of these links.
   - The entry of the skill in `installedSkills` or in the local source entry.
-- You can identify a skill by its source name or by its install name.
-  Iteration 26 makes sure that each name identifies only one skill of a
-  source.
+- You can identify a skill by its source name or by its install name. A
+  source can gain a skill whose name is the install name of a different
+  recorded skill. Then that name identifies two skills, and the operation
+  stops with an error before it changes a file. The desktop app sends source
+  names only, because source names are unique in a source.
 - The operation uses the same reference audit as uninstall. A missing,
   changed, duplicate, or extra link of the source stops the operation before
   it changes a file.
@@ -59,6 +61,10 @@ Update failure:
 - The desktop update dialog shows the cause and a **Remove from source**
   button. The button opens a confirmation dialog for the new operation, with
   the affected skills selected.
+- When all the recorded skills are missing, the removal cannot help. The CLI
+  and the desktop app tell you to uninstall the full source, and they say that
+  this also removes the managed checkout. They do not show a removal command
+  or button for this case.
 - After the removal, the dialog does not start the update again. You start
   the update again. This keeps each source operation separately confirmed.
 - The update of all repositories continues to stop at the first failure.

@@ -140,6 +140,10 @@ func reportMissingUpstreamSkills(stderr io.Writer, repository state.RepositoryEn
 		return
 	}
 	fmt.Fprintln(stderr, "cause: the repository removed installed skills; update does not remove skills on its own")
+	if missing.All {
+		fmt.Fprintf(stderr, "every installed skill of this source was removed; run \"skill-manager uninstall %s\" to uninstall the whole source, which also deletes its managed checkout\n", shellQuote(repositoryURL(repository)))
+		return
+	}
 	args := []string{"skill-manager", "uninstall", shellQuote(repositoryURL(repository))}
 	for _, skill := range missing.Skills {
 		if printableText(skill.Name) != skill.Name {

@@ -1270,9 +1270,11 @@ the full source from the CLI and install it again.
 - The operation does not change the managed checkout, the local source
   directory, or the remote refs. It does not fetch. It does not require a
   clean checkout or a recoverable upstream.
-- You can identify a skill by its source name or by its install name.
-  Iteration 26 makes sure that each name identifies only one skill of a
-  source.
+- You can identify a skill by its source name or by its install name. A
+  source can gain a skill whose name is the install name of a different
+  recorded skill. Then that name identifies two skills, and the operation
+  stops with an error before it changes a file. The desktop app sends source
+  names only, because source names are unique in a source.
 - The full reference audit of the source runs before the first change. A
   missing, changed, duplicate, or extra link of the source stops the operation.
 - The operation does not let you select all the recorded skills of a source.
@@ -1293,7 +1295,10 @@ the full source from the CLI and install it again.
   commit, the preflight returns a typed error of the kind
   `skill-missing-upstream`. The message text does not change. The error gives
   each affected skill by source name, install name, and checkout-relative
-  path. The CLI prints the exact `uninstall --skill` remedy command.
+  path. The CLI prints the exact `uninstall --skill` remedy command. When all
+  the recorded skills are missing, the CLI and the desktop app tell you to
+  uninstall the full source, and they say that this also removes the managed
+  checkout. They do not show a removal command or button for this case.
 - Desktop: a **Remove skills** source action opens a checklist of the recorded
   skills. The confirmation shows the links that it will remove and the
   affected Skill Sets and favorites. It does not ask for the group name. The

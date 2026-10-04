@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/dees91/agent-skill-manager/internal/model"
 	"github.com/dees91/agent-skill-manager/internal/paths"
@@ -41,6 +42,17 @@ type SkillRemovalService struct {
 	mkdirTemp      func(string, string) (string, error)
 	saveManifest   func(state.Manifest) error
 	backupExisting func() (string, error)
+
+	// sourceNamesOnly matches names by source name only; see MatchSourceNamesOnly.
+	sourceNamesOnly bool
+}
+
+// MatchSourceNamesOnly makes the service match names by source name only.
+// Source names are unique within a source, so a caller that sends recorded
+// source names (the desktop app) never meets an ambiguous name.
+func (s *SkillRemovalService) MatchSourceNamesOnly() *SkillRemovalService {
+	s.sourceNamesOnly = true
+	return s
 }
 
 // NewSkillRemovalService creates a skill removal service.
@@ -104,7 +116,7 @@ func (s *SkillRemovalService) prepareRepository(repository state.RepositoryEntry
 	if !ok {
 		return removalTarget{}, fmt.Errorf("managed repository %s/%s not found in state", repository.Host, repository.RepoPath)
 	}
-	selected, err := resolveRemovalSelection(current.Group, current.InstalledSkills, names)
+	selected, err := resolveRemovalSelection(current.Group, current.InstalledSkills, names, s.sourceNamesOnly)
 	if err != nil {
 		return removalTarget{}, err
 	}
@@ -134,7 +146,7 @@ func (s *SkillRemovalService) prepareLocal(source state.LocalSourceEntry, names 
 	if !ok {
 		return removalTarget{}, fmt.Errorf("local source %s not found in state", source.CanonicalPath)
 	}
-	selected, err := resolveRemovalSelection(current.Group, current.InstalledSkills, names)
+	selected, err := resolveRemovalSelection(current.Group, current.InstalledSkills, names, s.sourceNamesOnly)
 	if err != nil {
 		return removalTarget{}, err
 	}
@@ -156,23 +168,34 @@ func (s *SkillRemovalService) prepareLocal(source state.LocalSourceEntry, names 
 }
 
 // resolveRemovalSelection maps each name, by source name or install name, to
-// one recorded skill. Iteration 26 keeps both name spaces disjoint within a
-// source, so a name never identifies two skills.
-func resolveRemovalSelection(group model.GroupLabel, installed []state.InstalledSkillEntry, names []string) ([]state.InstalledSkillEntry, error) {
+// one recorded skill. Install-time checks keep the two name spaces disjoint,
+// but a source that later gains a skill named like another skill's install
+// name makes one name identify two entries; such a name is refused.
+func resolveRemovalSelection(group model.GroupLabel, installed []state.InstalledSkillEntry, names []string, sourceNamesOnly bool) ([]state.InstalledSkillEntry, error) {
 	if len(names) == 0 {
 		return nil, fmt.Errorf("select at least one skill to remove from %s", group)
 	}
-	byName := map[string]int{}
+	byName := map[string][]int{}
 	for i, skill := range installed {
-		byName[skill.Name] = i
-		byName[skill.InstalledName()] = i
+		byName[skill.Name] = append(byName[skill.Name], i)
+		if installedName := skill.InstalledName(); !sourceNamesOnly && installedName != skill.Name {
+			byName[installedName] = append(byName[installedName], i)
+		}
 	}
 	chosen := map[int]bool{}
 	for _, name := range names {
-		index, ok := byName[name]
-		if !ok {
+		matches := byName[name]
+		if len(matches) == 0 {
 			return nil, fmt.Errorf("skill %q is not recorded for %s", name, group)
 		}
+		if len(matches) > 1 {
+			labels := make([]string, len(matches))
+			for i, match := range matches {
+				labels[i] = fmt.Sprintf("%q installed as %q", installed[match].Name, installed[match].InstalledName())
+			}
+			return nil, fmt.Errorf("skill name %q is ambiguous in %s: it matches %s; select the skill by its other name", name, group, strings.Join(labels, " and "))
+		}
+		index := matches[0]
 		if chosen[index] {
 			return nil, fmt.Errorf("skill %q is selected more than once", installed[index].Name)
 		}

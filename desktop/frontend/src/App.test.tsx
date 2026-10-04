@@ -430,7 +430,7 @@ describe('Skill Manager desktop app', () => {
         cause: 'The repository no longer contains these installed skills: beta-demo.',
         kind: 'skill-missing-upstream',
         remedy: 'Remove these skills from the source, then update again.',
-        missingSkills: ['beta-demo'],
+        missingSkills: ['beta'],
       }),
       snapshot: fixtureSnapshot(),
     }))

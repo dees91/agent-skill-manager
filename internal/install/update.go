@@ -169,6 +169,9 @@ func (s MissingUpstreamSkill) InstalledName() string {
 // (Iteration 27) unblocks the update.
 type MissingUpstreamSkillsError struct {
 	Skills []MissingUpstreamSkill
+	// All reports that every recorded skill is missing. Removal refuses to
+	// remove every skill, so only a whole-source uninstall unblocks update.
+	All bool
 }
 
 // Kind returns the stable classification of the error.
@@ -203,7 +206,7 @@ func preflightInstalledSkillsAtCommit(checkoutPath, targetCommit string, install
 		}
 	}
 	if len(missing) > 0 {
-		return MissingUpstreamSkillsError{Skills: missing}
+		return MissingUpstreamSkillsError{Skills: missing, All: len(missing) == len(installed)}
 	}
 	return nil
 }

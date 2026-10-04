@@ -189,9 +189,17 @@ func newSourceMutationFailure(stage, sourceID, group string, err error) *SourceM
 			names[i] = skill.InstalledName()
 		}
 		failure.Kind = missing.Kind()
-		failure.MissingSkills = names
 		failure.Cause = "The repository no longer contains these installed skills: " + strings.Join(names, ", ") + "."
-		failure.Remedy = "Remove these skills from the source, then update again."
+		if missing.All {
+			// Removal refuses every skill of a source, so offer no removal.
+			failure.Remedy = "Every installed skill of this source was removed. Uninstall the source, which also deletes its managed checkout."
+		} else {
+			failure.MissingSkills = make([]string, len(missing.Skills))
+			for i, skill := range missing.Skills {
+				failure.MissingSkills[i] = skill.Name
+			}
+			failure.Remedy = "Remove these skills from the source, then update again."
+		}
 	}
 	return failure
 }

@@ -63,6 +63,32 @@ func TestRunUpdateRemedyRemovesSkillDroppedUpstream(t *testing.T) {
 	}
 }
 
+// When every installed skill is gone upstream, removal would refuse, so the
+// remedy names a whole-source uninstall instead.
+func TestRunUpdateRemedyNamesWholeUninstallWhenEverySkillDropped(t *testing.T) {
+	const gitURL = "https://github.com/example/agent-skills"
+	source := createSourceRepo(t, "alpha", "beta")
+	withGitInsteadOf(t, gitURL, source)
+	p := paths.ForHome(t.TempDir())
+	var installOut, installErr strings.Builder
+	if code := RunWithPaths([]string{"install", gitURL, "--tool", "claude", "--skill", "alpha"}, &installOut, &installErr, p); code != 0 {
+		t.Fatalf("install code=%d stderr=%q", code, installErr.String())
+	}
+	if err := os.RemoveAll(filepath.Join(source, "skills", "alpha")); err != nil {
+		t.Fatalf("remove alpha upstream: %v", err)
+	}
+	runGitForTest(t, source, "add", "-A")
+	runGitForTest(t, source, "commit", "-m", "Remove alpha")
+
+	var stdout, stderr strings.Builder
+	if code := RunWithPaths([]string{"update", gitURL}, &stdout, &stderr, p); code == 0 {
+		t.Fatal("update code = 0, want blocked")
+	}
+	if !strings.Contains(stderr.String(), `run "skill-manager uninstall `+gitURL+`" to uninstall the whole source`) || strings.Contains(stderr.String(), "--skill") {
+		t.Fatalf("stderr = %q, want a whole-source uninstall remedy", stderr.String())
+	}
+}
+
 func TestRunUninstallSkillParserErrors(t *testing.T) {
 	for _, args := range [][]string{
 		{"uninstall", "https://github.com/owner/repo", "--skill"},

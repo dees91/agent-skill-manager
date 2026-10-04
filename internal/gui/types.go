@@ -324,8 +324,9 @@ type SourceMutationFailure struct {
 	Repairable     bool   `json:"repairable,omitempty"`
 	RolledBack     int    `json:"rolledBack,omitempty"`
 	CleanupPending string `json:"cleanupPending,omitempty"`
-	// MissingSkills names, by install name, the recorded skills a
+	// MissingSkills names, by source name, the recorded skills a
 	// skill-missing-upstream update failure found absent at the target commit.
+	// It is empty when every skill is missing, because removal then refuses.
 	MissingSkills []string `json:"missingSkills,omitempty"`
 }
 

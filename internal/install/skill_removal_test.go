@@ -150,6 +150,33 @@ func TestSkillRemovalRejectsInvalidSelectionWithoutChange(t *testing.T) {
 	}
 }
 
+// A source can record alpha as "beta" and later gain a skill named beta,
+// installed as "gamma". The name "beta" then identifies two entries.
+func TestSkillRemovalRefusesNameThatMatchesTwoSkills(t *testing.T) {
+	installed := []state.InstalledSkillEntry{
+		{Name: "alpha", InstalledAs: "beta", RelativePath: "skills/alpha"},
+		{Name: "beta", InstalledAs: "gamma", RelativePath: "skills/beta"},
+		{Name: "delta", RelativePath: "skills/delta"},
+	}
+	if _, err := resolveRemovalSelection("example/agent-skills", installed, []string{"beta"}, false); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("resolve(beta) error = %v, want ambiguous", err)
+	}
+	for _, tc := range []struct {
+		names           []string
+		sourceNamesOnly bool
+		want            string
+	}{
+		{names: []string{"gamma"}, want: "beta"},
+		{names: []string{"alpha"}, want: "alpha"},
+		{names: []string{"beta"}, sourceNamesOnly: true, want: "beta"},
+	} {
+		selected, err := resolveRemovalSelection("example/agent-skills", installed, tc.names, tc.sourceNamesOnly)
+		if err != nil || len(selected) != 1 || selected[0].Name != tc.want {
+			t.Fatalf("resolve(%v, sourceNamesOnly=%v) = %#v, %v; want %s", tc.names, tc.sourceNamesOnly, selected, err, tc.want)
+		}
+	}
+}
+
 func TestSkillRemovalRollsBackLinksWhenStateSaveFails(t *testing.T) {
 	fixture := newTwoSkillGitFixture(t)
 	before, _ := os.ReadFile(fixture.paths.StateFile)

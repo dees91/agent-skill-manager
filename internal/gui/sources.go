@@ -479,7 +479,7 @@ func (s *Service) RemoveSourceSkills(sourceID string, skillNames []string, inclu
 		if err != nil {
 			return err
 		}
-		removal := install.NewSkillRemovalService(s.paths)
+		removal := install.NewSkillRemovalService(s.paths).MatchSourceNamesOnly()
 		var removed install.SkillRemovalResult
 		var applyErr error
 		var group string

@@ -152,7 +152,7 @@ export default function SourcesView(props: SourcesViewProps) {
     void prepareRepair(source)
   }
 
-  // prepareRemoveSkills opens the checklist; preselected holds install names.
+  // prepareRemoveSkills opens the checklist; preselected holds source names.
   const prepareRemoveSkills = async (source: ManagedSource, preselected: string[] = []) => {
     openDialog('remove-skills', source)
     setRemovePreselected(preselected)
@@ -691,7 +691,7 @@ function UninstallDialog({ source, preview, busy, progress, error, onClose, onCo
 // RemoveSkillsDialog removes some recorded skills and keeps the source. It
 // blocks the selection of every skill, which is a whole-source uninstall.
 function RemoveSkillsDialog({ source, preview, preselected, busy, progress, error, onClose, onConfirm }: { source: ManagedSource; preview: RemoveSkillsPreview | null; preselected: string[]; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: (names: string[]) => void }) {
-  const [selected, setSelected] = useState<Set<string>>(() => new Set((preview?.skills ?? []).filter((skill) => preselected.includes(skill.installedAs || skill.name)).map((skill) => skill.name)))
+  const [selected, setSelected] = useState<Set<string>>(() => new Set((preview?.skills ?? []).filter((skill) => preselected.includes(skill.name)).map((skill) => skill.name)))
   useDialogEscape(onClose, busy)
   const skills = preview?.skills ?? []
   const chosen = skills.filter((skill) => selected.has(skill.name))
