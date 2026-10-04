@@ -151,9 +151,14 @@ sources merely because they were discovered.
 | Update / Update all | Fetch and fast-forward recorded Git repositories after safety checks. Linked folders are read directly and need no update. |
 | Extend to tool | Preview links from every recorded source to one additional tool, then confirm. |
 | Repair | Preview files blocking a dirty Git checkout, then confirm their removal and restoration of tracked paths from the current commit. |
+| Remove skills | Select some recorded skills of a source, review their links and Skill Set or favorite impact, then confirm. The source, its checkout or folder, and its other skills stay installed. |
 | Uninstall | Type the source's group name to remove its entire recorded installation. Git checkouts are removed; local source folders are preserved. |
 
 ![Extend to tool dialog with tool selection and a per-source link preview](images/sources-extend.png)
+
+When an update stops because the repository removed an installed skill, the
+update dialog names the skill and offers **Remove from source**, which opens
+Remove skills with that skill selected. Update again afterwards.
 
 Source actions have their own confirmations. Apply or clear pending Skills
 toggles first. While a source operation is running, other mutations and app
@@ -275,13 +280,15 @@ skill-manager install ~/Developer/example-skills --tool both
 skill-manager install ./skills --tool claude --skill example-skill --dry-run
 ```
 
-Update a recorded Git source or uninstall a complete recorded source:
+Update a recorded Git source, uninstall a complete recorded source, or remove
+some of its skills:
 
 ```bash
 skill-manager update --dry-run
 skill-manager update https://github.com/example/agent-skills
 skill-manager uninstall https://github.com/example/agent-skills --dry-run
 skill-manager uninstall ~/Developer/example-skills --dry-run
+skill-manager uninstall https://github.com/example/agent-skills --skill example-skill --dry-run
 ```
 
 Tool selection defaults to every supported tool. `--tool all` and the legacy
@@ -297,8 +304,15 @@ available during a real update.
 
 Git updates are fast-forward-only and require a clean, audited checkout. Local
 path sources are live links, so they do not need an update operation. Uninstall
-removes a complete recorded source; Skill Manager does not uninstall one skill
-from a source at a time.
+removes a complete recorded source. With `--skill`, it removes only the named
+skills, by skill name or install name: their links and records go, while the
+checkout or local folder and the other skills stay. It refuses to remove every
+skill of a source; uninstall the source for that.
+
+If a repository removes a skill you installed, update stops before it
+fast-forwards and prints the exact `uninstall --skill` command that removes the
+skill from the source. Run it, then update again. Update never removes skills
+on its own.
 
 Update never installs skills that a repository gained after you installed it.
 It lists them instead, with the command that adds them for the tools the

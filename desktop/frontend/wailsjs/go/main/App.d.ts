@@ -30,6 +30,8 @@ export function PrepareGitInstall(arg1:string):Promise<gui.InstallDraft>;
 
 export function PreviewExtend(arg1:string):Promise<gui.ExtendPreview>;
 
+export function PreviewRemoveSkills(arg1:string):Promise<gui.RemoveSkillsPreview>;
+
 export function PreviewRepair(arg1:string):Promise<gui.RepairPreview>;
 
 export function PreviewSkillSetToggle(arg1:string,arg2:Array<string>):Promise<gui.SkillSetTogglePreview>;
@@ -37,6 +39,8 @@ export function PreviewSkillSetToggle(arg1:string,arg2:Array<string>):Promise<gu
 export function PreviewUninstall(arg1:string):Promise<gui.UninstallPreview>;
 
 export function RemoveAdvisorKey():Promise<gui.AdvisorSettingsView>;
+
+export function RemoveSourceSkills(arg1:string,arg2:Array<string>,arg3:boolean):Promise<gui.SourceMutationResult>;
 
 export function RepairSource(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;
 

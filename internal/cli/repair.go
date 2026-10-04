@@ -131,3 +131,26 @@ func reportCheckoutConflict(stderr io.Writer, repository state.RepositoryEntry, 
 	}
 	fmt.Fprintf(stderr, "next step: %s\n", conflict.Remedy())
 }
+
+// reportMissingUpstreamSkills prints the exact command that removes skills the
+// repository dropped, so the next update can fast-forward (Iteration 27).
+func reportMissingUpstreamSkills(stderr io.Writer, repository state.RepositoryEntry, err error) {
+	var missing install.MissingUpstreamSkillsError
+	if !errors.As(err, &missing) {
+		return
+	}
+	fmt.Fprintln(stderr, "cause: the repository removed installed skills; update does not remove skills on its own")
+	if missing.All {
+		fmt.Fprintf(stderr, "every installed skill of this source was removed; run \"skill-manager uninstall %s\" to uninstall the whole source, which also deletes its managed checkout\n", shellQuote(repositoryURL(repository)))
+		return
+	}
+	args := []string{"skill-manager", "uninstall", shellQuote(repositoryURL(repository))}
+	for _, skill := range missing.Skills {
+		if printableText(skill.Name) != skill.Name {
+			fmt.Fprintln(stderr, "remove command omitted: a skill name contains control characters")
+			return
+		}
+		args = append(args, "--skill", shellQuote(skill.Name))
+	}
+	fmt.Fprintf(stderr, "run \"%s\" to remove them from this source, then update again\n", strings.Join(args, " "))
+}

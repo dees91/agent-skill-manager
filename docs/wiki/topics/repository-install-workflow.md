@@ -195,6 +195,28 @@ same ownership audit and transactional removal service.
 - A managed checkout whose installed `SKILL.md` was deleted locally stays
   blocked by the shared ownership audit (`open`: the same pre-existing
   limitation blocks update and uninstall).
+
+## Removing Skills From a Source
+
+- Iteration 27 (`implemented`, `internal/install/skill_removal.go`):
+  `SkillRemovalService` removes some recorded skills of one Git or local
+  source. It resolves each name by source or install name, refuses unknown,
+  repeated, empty, or all-skill selections, and runs the full reference audit
+  of the source before any change.
+- It stages only the selected links in `~/.skill-manager/trash/remove-skill-*`,
+  removes their disabled records, saves the reduced source record once, then
+  deletes staging; a failed save moves the links back. It never inspects or
+  changes the checkout, so a dirty checkout or a missing upstream does not
+  block it.
+- The update preflight returns `MissingUpstreamSkillsError` (kind
+  `skill-missing-upstream`, message unchanged) when a recorded skill has no
+  regular `SKILL.md` at the fetched target. The CLI prints the exact
+  `uninstall --skill` remedy; the desktop offers **Remove from source**.
+  `TestSkillRemovalUnblocksUpdateAfterUpstreamRemovedSkill` covers the whole
+  path.
+- A skill still present in the checkout reappears in the new-skill report
+  after removal, because there is no ignore list. A moved skill is not
+  relinked.
 - Dry-run never fetches or changes remote-tracking refs. It checks the current
   checkout and cached upstream and reports that exact remote preflight remains
   unavailable until a real update.

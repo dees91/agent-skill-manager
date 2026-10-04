@@ -415,6 +415,52 @@ describe('Skill Manager desktop app', () => {
     await waitFor(() => expect(backend.repairSource).toHaveBeenCalledWith('git:fixture', false))
   })
 
+  it('offers removal of skills the repository dropped from a failed update', async () => {
+    const user = userEvent.setup()
+    const backend = mockBackend()
+    backend.inspectSources = vi.fn(async () => [])
+    backend.updateAllSources = vi.fn(async () => new gui.SourceMutationResult({
+      message: 'Update stopped after 0 source(s).',
+      completed: [],
+      failure: new gui.SourceMutationFailure({
+        stage: 'update',
+        group: 'demo/skills',
+        sourceId: 'git:fixture',
+        message: 'update blocked: installed skills missing regular SKILL.md at target commit: beta (skills/beta/SKILL.md)',
+        cause: 'The repository no longer contains these installed skills: beta-demo.',
+        kind: 'skill-missing-upstream',
+        remedy: 'Remove these skills from the source, then update again.',
+        missingSkills: ['beta'],
+      }),
+      snapshot: fixtureSnapshot(),
+    }))
+    render(<App backend={backend} />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+    await user.click(screen.getByRole('button', { name: 'Update all' }))
+    const updateDialog = screen.getByRole('dialog')
+    await user.click(within(updateDialog).getByRole('button', { name: 'Update all' }))
+    expect(await within(updateDialog).findByText(/no longer contains these installed skills/)).toBeInTheDocument()
+
+    await user.click(within(updateDialog).getByRole('button', { name: /Remove from demo\/skills/ }))
+    const removeDialog = await screen.findByRole('dialog')
+    expect(within(removeDialog).getByRole('heading', { name: 'Remove skills from demo/skills?' })).toBeInTheDocument()
+    const beta = await within(removeDialog).findByRole('checkbox', { name: /beta-demo/ })
+    const alpha = within(removeDialog).getByRole('checkbox', { name: /alpha/ })
+    expect(beta).toBeChecked()
+    expect(alpha).not.toBeChecked()
+    expect(within(removeDialog).getByText('1 active, 1 disabled links · favorite')).toBeInTheDocument()
+    const confirm = within(removeDialog).getByRole('button', { name: 'Remove 1 skill' })
+
+    await user.click(alpha)
+    expect(within(removeDialog).getByRole('button', { name: /Remove 2 skills/ })).toBeDisabled()
+    expect(within(removeDialog).getByText(/uninstall the source/i)).toBeInTheDocument()
+    await user.click(alpha)
+
+    await user.click(confirm)
+    await waitFor(() => expect(backend.removeSourceSkills).toHaveBeenCalledWith('git:fixture', ['beta'], false))
+  })
+
   it('marks a dirty source as needing repair before any update is attempted', async () => {
     const user = userEvent.setup()
     const backend = mockBackend()

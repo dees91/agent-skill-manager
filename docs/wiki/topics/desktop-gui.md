@@ -109,6 +109,16 @@ checkout-relative paths only; no absolute filesystem path crosses the bridge.
 The repair confirmation lists the paths and needs no typed group name, because
 it removes generated files rather than an installation.
 
+A `skill-missing-upstream` update failure also carries `missingSkills` (install
+names). The dialog then offers **Remove from source**, which opens Remove skills
+with those skills selected (Iteration 27, `implemented`). `PreviewRemoveSkills`
+returns each recorded skill with its active and disabled link counts, favorite
+flag, and Skill Set names, computed from the read-only reference audit;
+`RemoveSourceSkills` takes the opaque source ID and skill names only. The
+dialog sums the impact client-side, so toggling a checkbox makes no bridge
+call, and blocks selecting every skill. It needs no typed group name because
+the source stays installed. The update itself is not retried automatically.
+
 Dormant Discover reads go through `internal/skillssh` and a versioned normalized
 cache. Search terms/results are memory-only and legacy cache queries are
 removed on first desktop launch. The public `App` adapter intentionally exposes

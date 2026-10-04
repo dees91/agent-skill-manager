@@ -145,24 +145,68 @@ func (s *UpdateService) Apply(repository state.RepositoryEntry) (UpdateResult, e
 	return result, nil
 }
 
+// SkillMissingUpstreamKind classifies an update blocked because the target
+// commit no longer holds a regular SKILL.md for a recorded skill.
+const SkillMissingUpstreamKind = "skill-missing-upstream"
+
+// MissingUpstreamSkill is one recorded skill absent at the update target.
+type MissingUpstreamSkill struct {
+	Name         string
+	InstalledAs  string
+	RelativePath string
+}
+
+// InstalledName is the link basename of the missing skill in tool directories.
+func (s MissingUpstreamSkill) InstalledName() string {
+	if s.InstalledAs != "" {
+		return s.InstalledAs
+	}
+	return s.Name
+}
+
+// MissingUpstreamSkillsError reports recorded skills that have no regular
+// SKILL.md at the fetched target commit. Removing them from the source
+// (Iteration 27) unblocks the update.
+type MissingUpstreamSkillsError struct {
+	Skills []MissingUpstreamSkill
+	// All reports that every recorded skill is missing. Removal refuses to
+	// remove every skill, so only a whole-source uninstall unblocks update.
+	All bool
+}
+
+// Kind returns the stable classification of the error.
+func (e MissingUpstreamSkillsError) Kind() string { return SkillMissingUpstreamKind }
+
+func (e MissingUpstreamSkillsError) Error() string {
+	parts := make([]string, len(e.Skills))
+	for i, skill := range e.Skills {
+		parts[i] = fmt.Sprintf("%s (%s)", skill.Name, skillFilePath(skill.RelativePath))
+	}
+	return "update blocked: installed skills missing regular SKILL.md at target commit: " + strings.Join(parts, ", ")
+}
+
+func skillFilePath(relativePath string) string {
+	if relativePath == "." {
+		return "SKILL.md"
+	}
+	return relativePath + "/SKILL.md"
+}
+
 func preflightInstalledSkillsAtCommit(checkoutPath, targetCommit string, installed []state.InstalledSkillEntry, runner GitRunner) error {
-	missing := []string{}
+	missing := []MissingUpstreamSkill{}
 	for _, skill := range installed {
 		_, relativePath, err := normalizeRecordedSkill(checkoutPath, skill)
 		if err != nil {
 			return err
 		}
-		skillFile := "SKILL.md"
-		if relativePath != "." {
-			skillFile = relativePath + "/SKILL.md"
-		}
+		skillFile := skillFilePath(relativePath)
 		output, err := runner.RunGit("-C", checkoutPath, "ls-tree", targetCommit, "--", skillFile)
 		if err != nil || !regularGitFile(strings.TrimSpace(output), skillFile) {
-			missing = append(missing, fmt.Sprintf("%s (%s)", skill.Name, skillFile))
+			missing = append(missing, MissingUpstreamSkill{Name: skill.Name, InstalledAs: skill.InstalledAs, RelativePath: relativePath})
 		}
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("update blocked: installed skills missing regular SKILL.md at target commit: %s", strings.Join(missing, ", "))
+		return MissingUpstreamSkillsError{Skills: missing, All: len(missing) == len(installed)}
 	}
 	return nil
 }
