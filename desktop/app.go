@@ -191,6 +191,16 @@ func (a *App) UninstallSource(sourceID, confirmation string, includeReadOnly boo
 	return a.service.UninstallSource(sourceID, confirmation, includeReadOnly)
 }
 
+// PreviewRemoveSkills lists a source's recorded skills and their removal impact.
+func (a *App) PreviewRemoveSkills(sourceID string) (gui.RemoveSkillsPreview, error) {
+	return a.service.PreviewRemoveSkills(sourceID)
+}
+
+// RemoveSourceSkills removes the named recorded skills and keeps the source.
+func (a *App) RemoveSourceSkills(sourceID string, skillNames []string, includeReadOnly bool) gui.SourceMutationResult {
+	return a.service.RemoveSourceSkills(sourceID, skillNames, includeReadOnly)
+}
+
 // GetAdvisorSettings returns the secret-free recommendation provider view.
 func (a *App) GetAdvisorSettings() (gui.AdvisorSettingsView, error) {
 	return a.service.GetAdvisorSettings()

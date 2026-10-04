@@ -262,7 +262,7 @@ Update safety:
 
 Uninstall commands and safety:
 
-- `skill-manager uninstall <git-url> [--dry-run]` removes the entire recorded repository installation. An explicit URL is always required.
+- `skill-manager uninstall <git-url> [--dry-run]` removes the entire recorded repository installation. An explicit URL is always required. Iteration 27 adds `--skill <name>...` to remove only some recorded skills; see that section.
 - Remove only exact validated active/disabled skill symlinks owned by the repository, the matching disabled records, the repository manifest entry, and the managed checkout.
 - Require a clean checkout with a recoverable `origin/*` upstream and no local-only commits. Block on missing/changed expected symlinks or extra managed-directory symlinks into the checkout.
 - An unrelated blocker at the original path of an OFF skill is not owned by Skill Manager and must be left untouched.
@@ -560,7 +560,7 @@ skill-manager update [<git-url>] [--dry-run]
 skill-manager uninstall <git-url> [--dry-run]
 ```
 
-`update` without a URL updates all managed repositories. `uninstall` always requires an explicit URL and removes the full recorded repository installation and checkout. Both commands use the strict safety and dry-run rules above.
+`update` without a URL updates all managed repositories. `uninstall` always requires an explicit URL and removes the full recorded repository installation and checkout, unless `--skill` (Iteration 27) selects only some recorded skills. Both commands use the strict safety and dry-run rules above.
 
 Iteration 5 local path commands:
 
@@ -680,6 +680,8 @@ preserving the CLI contracts and the ownership/safety rules above.
 - Uninstall removes a whole recorded source and requires typing its group name
   in the confirmation dialog. Git uninstall removes the managed checkout;
   local uninstall always preserves the user-owned source directory.
+  Iteration 27 adds a separate **Remove skills** action for some recorded
+  skills of a source.
 - **Extend to tool** links every recorded source to one tool radio after a
   per-source link preview that surfaces blocked and skipped sources with
   their conflicts. Confirm stays disabled while any source is blocked or no
@@ -1253,6 +1255,63 @@ source does not change.
 - Non-goals: an install-name offer in Discover, per-tool aliases, and
   advisor indexing of frontmatter names.
 
+### Source Skill Removal (Iteration 27)
+
+Iteration 27 lets you remove some recorded skills from one source. It also
+gives the desktop app a remedy for an update that stops because the
+repository removed an installed skill. Before this iteration, the only remedy was to uninstall
+the full source from the CLI and install it again.
+
+- The new operation removes only the selected skills of one Git or local
+  source. The source and its other skills stay installed.
+- For each selected skill, the operation removes the exact active and disabled
+  links in each recorded tool, the disabled records of these links, and the
+  entry of the skill in the source record.
+- The operation does not change the managed checkout, the local source
+  directory, or the remote refs. It does not fetch. It does not require a
+  clean checkout or a recoverable upstream.
+- You can identify a skill by its source name or by its install name.
+  Iteration 26 makes sure that each name identifies only one skill of a
+  source.
+- The full reference audit of the source runs before the first change. A
+  missing, changed, duplicate, or extra link of the source stops the operation.
+- The operation does not let you select all the recorded skills of a source.
+  To remove all of them, uninstall the source.
+- The operation stages the links in `~/.skill-manager/trash/`, saves
+  `state.json` one time, and then deletes the staging directory. If the save
+  is not successful, it moves the links back.
+- Skill Sets and favorites that use a removed install name stay unchanged. The
+  desktop confirmation shows them. They do not stop the operation. The CLI
+  does not show them, as for the uninstall of a full source.
+- If the checkout still contains the skill, the Iteration 22 new-skill report
+  shows it again. There is no ignore list.
+- The manifest version does not change.
+- CLI: `skill-manager uninstall <git-url|local-path> --skill <name>...
+  [--dry-run]`. Without `--skill`, the command removes the full source, as
+  before. An unknown name stops the command before it changes a file.
+- Update: when recorded skills have no regular `SKILL.md` at the target
+  commit, the preflight returns a typed error of the kind
+  `skill-missing-upstream`. The message text does not change. The error gives
+  each affected skill by source name, install name, and checkout-relative
+  path. The CLI prints the exact `uninstall --skill` remedy command.
+- Desktop: a **Remove skills** source action opens a checklist of the recorded
+  skills. The confirmation shows the links that it will remove and the
+  affected Skill Sets and favorites. It does not ask for the group name. The
+  confirmation button stays disabled when no skill or all the skills are
+  selected.
+- Desktop: after a `skill-missing-upstream` update error, the update dialog
+  shows the cause and a **Remove from source** button. The button opens the
+  confirmation with the affected skills selected. You start the
+  update again after the removal. The update of all repositories continues to
+  stop at the first failure.
+- The action is a source operation in the exclusive source lane. The frontend
+  sends an opaque source identifier and skill names only.
+- Do not remove a skill automatically during update. Do not combine removal
+  and update in one operation.
+- Non-goals: a relink of a skill that moved to a different path, an ignore
+  list for skills that you do not want reported, an option to continue the update of all
+  repositories after a failure, and a TUI surface.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1422,6 +1481,8 @@ Keep [planning/phase-23-install-as-off-tasks.md](./planning/phase-23-install-as-
 Keep [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-advisor-tasks.md) as the source of truth for the single-run optional TypeSafe advisor assignment and its acceptance criteria.
 
 Keep [planning/phase-26-cross-source-skill-alias-tasks.md](./planning/phase-26-cross-source-skill-alias-tasks.md) as the source of truth for Iteration 26 cross-source skill alias task status.
+
+Keep [planning/phase-27-source-skill-removal-tasks.md](./planning/phase-27-source-skill-removal-tasks.md) as the source of truth for Iteration 27 source skill removal task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

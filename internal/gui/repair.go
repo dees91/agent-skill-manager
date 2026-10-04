@@ -182,6 +182,17 @@ func newSourceMutationFailure(stage, sourceID, group string, err error) *SourceM
 		failure.Remedy = conflict.Remedy()
 		failure.Repairable = conflict.Repairable()
 	}
+	var missing install.MissingUpstreamSkillsError
+	if errors.As(err, &missing) {
+		names := make([]string, len(missing.Skills))
+		for i, skill := range missing.Skills {
+			names[i] = skill.InstalledName()
+		}
+		failure.Kind = missing.Kind()
+		failure.MissingSkills = names
+		failure.Cause = "The repository no longer contains these installed skills: " + strings.Join(names, ", ") + "."
+		failure.Remedy = "Remove these skills from the source, then update again."
+	}
 	return failure
 }
 

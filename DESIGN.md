@@ -163,6 +163,12 @@ in public documentation.
   surface.
 - **Dialogs and progress:** centered panels over a dimmed canvas. Mutating source
   operations announce their phase and prevent overlapping changes.
+- **Remove skills:** a checklist of a source's recorded skills, each with its
+  link counts, favorite, and Skill Set membership. The confirmation names the
+  count (`Remove 2 skills`) and stays disabled with no selection or with every
+  skill selected, where an inline note points to Uninstall. A failed update for
+  a skill the repository removed shows **Remove from source** next to the
+  cause and opens this dialog with that skill selected.
 
 ## Layout and Responsive Behavior
 

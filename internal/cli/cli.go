@@ -176,6 +176,12 @@ func (a App) runUninstall(stdout, stderr io.Writer, args []string) int {
 		return 1
 	}
 	repository := repositories[0]
+	if len(options.Skills) > 0 {
+		removal := install.NewSkillRemovalService(a.paths)
+		return runSkillRemoval(stdout, stderr, options, repositoryGroup(repository), "keep checkout: "+repository.CheckoutPath,
+			func() (install.SkillRemovalPlan, error) { return removal.PlanRepository(repository, options.Skills) },
+			func() (install.SkillRemovalResult, error) { return removal.ApplyRepository(repository, options.Skills) })
+	}
 	service := install.NewUninstallService(a.paths, nil)
 	if options.DryRun {
 		plan, err := service.Plan(repository)
@@ -222,6 +228,12 @@ func (a App) runLocalUninstall(stdout, stderr io.Writer, manifest state.Manifest
 		fmt.Fprintf(stderr, "error: local source %s not found in state\n", lookup.OriginalPath)
 		return 1
 	}
+	if len(options.Skills) > 0 {
+		removal := install.NewSkillRemovalService(a.paths)
+		return runSkillRemoval(stdout, stderr, options, source.Group.String(), "keep source: "+source.CanonicalPath,
+			func() (install.SkillRemovalPlan, error) { return removal.PlanLocal(source, options.Skills) },
+			func() (install.SkillRemovalResult, error) { return removal.ApplyLocal(source, options.Skills) })
+	}
 	service := install.NewLocalUninstallService(a.paths)
 	if options.DryRun {
 		plan, err := service.Plan(source)
@@ -254,6 +266,52 @@ func (a App) runLocalUninstall(stdout, stderr io.Writer, manifest state.Manifest
 	fmt.Fprintf(stdout, "uninstalled local source %s\n", result.Source.Group)
 	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
 	return 0
+}
+
+// runSkillRemoval removes some recorded skills of one source (Iteration 27).
+// The source, its checkout or folder, and its other skills stay installed.
+func runSkillRemoval(stdout, stderr io.Writer, options uninstallCLIOptions, group, kept string, plan func() (install.SkillRemovalPlan, error), apply func() (install.SkillRemovalResult, error)) int {
+	if options.DryRun {
+		planned, err := plan()
+		if err != nil {
+			fmt.Fprintf(stderr, "error: remove skills from %s: %v\n", group, err)
+			return 1
+		}
+		fmt.Fprintf(stdout, "dry-run: remove %s from %s\n", removedSkillLabels(planned.Skills), group)
+		for _, reference := range planned.References {
+			fmt.Fprintf(stdout, "would remove %s %s: %s\n", strings.ToLower(reference.State.String()), cellLabel(reference.Tool, reference.InstalledName, reference.SkillName), reference.LinkPath)
+		}
+		fmt.Fprintln(stdout, "would remove skill records and matching disabled state entries")
+		fmt.Fprintf(stdout, "would %s\n", kept)
+		return 0
+	}
+	result, err := apply()
+	if err != nil {
+		fmt.Fprintf(stderr, "error: remove skills from %s: %v\n", group, err)
+		if len(result.RolledBack) > 0 {
+			fmt.Fprintf(stderr, "rolled back %d staged path(s)\n", len(result.RolledBack))
+		}
+		if result.CleanupPending != "" {
+			fmt.Fprintf(stderr, "cleanup pending: %s\n", result.CleanupPending)
+		}
+		return 1
+	}
+	fmt.Fprintf(stdout, "removed %d active symlink(s)\n", len(result.RemovedActive))
+	fmt.Fprintf(stdout, "removed %d disabled symlink(s)\n", len(result.RemovedDisabled))
+	fmt.Fprintf(stdout, "removed %s from %s\n", removedSkillLabels(result.Skills), group)
+	fmt.Fprintln(stdout, "start a new Claude/Codex/Muse/Grok session for guaranteed skill detection")
+	return 0
+}
+
+func removedSkillLabels(skills []state.InstalledSkillEntry) string {
+	labels := make([]string, len(skills))
+	for i, skill := range skills {
+		labels[i] = printableText(skill.InstalledName())
+		if skill.InstalledName() != skill.Name {
+			labels[i] += " (" + printableText(skill.Name) + ")"
+		}
+	}
+	return strings.Join(labels, ", ")
 }
 
 func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
@@ -329,6 +387,7 @@ func (a App) runUpdate(stdout, stderr io.Writer, args []string) int {
 		if err != nil {
 			fmt.Fprintf(stderr, "error: update %s: %v\n", repositoryGroup(repository), err)
 			reportCheckoutConflict(stderr, repository, err)
+			reportMissingUpstreamSkills(stderr, repository, err)
 			return 1
 		}
 		if result.Updated {
@@ -772,22 +831,32 @@ type updateCLIOptions struct {
 
 type uninstallCLIOptions struct {
 	GitURL string
+	Skills []string
 	DryRun bool
 }
 
 func parseUninstallArgs(args []string) (uninstallCLIOptions, error) {
-	if len(args) != 1 && len(args) != 2 {
-		return uninstallCLIOptions{}, fmt.Errorf("expected uninstall <git-url|local-path> [--dry-run]")
-	}
-	if strings.HasPrefix(args[0], "-") || strings.TrimSpace(args[0]) == "" {
-		return uninstallCLIOptions{}, fmt.Errorf("expected uninstall <git-url|local-path> [--dry-run]")
+	usage := fmt.Errorf("expected uninstall <git-url|local-path> [--skill <name>...] [--dry-run]")
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") || strings.TrimSpace(args[0]) == "" {
+		return uninstallCLIOptions{}, usage
 	}
 	options := uninstallCLIOptions{GitURL: strings.TrimSpace(args[0])}
-	if len(args) == 2 {
-		if args[1] != "--dry-run" {
-			return uninstallCLIOptions{}, fmt.Errorf("expected uninstall <git-url|local-path> [--dry-run]")
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--dry-run":
+			if options.DryRun {
+				return uninstallCLIOptions{}, usage
+			}
+			options.DryRun = true
+		case "--skill":
+			if i+1 >= len(args) || strings.TrimSpace(args[i+1]) == "" || strings.HasPrefix(args[i+1], "-") {
+				return uninstallCLIOptions{}, usage
+			}
+			options.Skills = append(options.Skills, strings.TrimSpace(args[i+1]))
+			i++
+		default:
+			return uninstallCLIOptions{}, usage
 		}
-		options.DryRun = true
 	}
 	return options, nil
 }
@@ -1384,8 +1453,9 @@ Commands:
                                under another name when its name is taken
   update [<git-url|local-path>] [--dry-run]
                                Update one or all managed repositories
-  uninstall <git-url|local-path> [--dry-run]
-                               Remove a managed source and all its links
+  uninstall <git-url|local-path> [--skill <name>...] [--dry-run]
+                               Remove a managed source and all its links;
+                               --skill removes only the named skills
   repair <git-url> [--dry-run]
                                Clear worktree changes blocking a managed checkout
   extend --tool <tool> [--dry-run]

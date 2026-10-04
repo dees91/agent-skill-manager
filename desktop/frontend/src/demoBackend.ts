@@ -254,6 +254,23 @@ class DemoBackend implements Backend {
     this.sources = this.sources.filter((source) => source.sourceId !== sourceID)
     return this.sourceResult('Uninstalled demo source.')
   }
+  async previewRemoveSkills(sourceID: string) {
+    const source = this.sources.find((item) => item.sourceId === sourceID)!
+    const skills = this.rows.filter((row) => row.group === source.group).map((row) => ({
+      name: row.name,
+      activeLinks: MANAGED_TOOLS.filter((tool) => row[tool]?.state === 'ON').length,
+      disabledLinks: MANAGED_TOOLS.filter((tool) => row[tool]?.state === 'OFF').length,
+      skillSets: [],
+      favorite: this.favorites.has(row.name),
+    })).sort((a, b) => a.name.localeCompare(b.name))
+    return { sourceId: sourceID, group: source.group, skills } as never
+  }
+  async removeSourceSkills(sourceID: string, skillNames: string[]) {
+    const source = this.sources.find((item) => item.sourceId === sourceID)!
+    this.rows = this.rows.filter((row) => row.group !== source.group || !skillNames.includes(row.name))
+    source.skillCount -= skillNames.length
+    return this.sourceResult(`Removed ${skillNames.length} skill(s) from ${source.group}.`)
+  }
   async previewExtend(tool: string) {
     const sources = this.sources.map((source) => {
       const names = this.rows.filter((row) => row.group === source.group).map((row) => row.name)

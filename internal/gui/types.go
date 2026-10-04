@@ -324,6 +324,9 @@ type SourceMutationFailure struct {
 	Repairable     bool   `json:"repairable,omitempty"`
 	RolledBack     int    `json:"rolledBack,omitempty"`
 	CleanupPending string `json:"cleanupPending,omitempty"`
+	// MissingSkills names, by install name, the recorded skills a
+	// skill-missing-upstream update failure found absent at the target commit.
+	MissingSkills []string `json:"missingSkills,omitempty"`
 }
 
 // SourceHealth is the explicit read-only diagnosis of one managed Git source.
@@ -388,6 +391,27 @@ type UninstallPreview struct {
 	SkillSetImpactWarning string           `json:"skillSetImpactWarning,omitempty"`
 	AffectedFavorites     []string         `json:"affectedFavorites"`
 	FavoriteImpactWarning string           `json:"favoriteImpactWarning,omitempty"`
+}
+
+// RemoveSkillsPreview lists the recorded skills of one source with the links
+// a removal of each would delete. It never carries filesystem paths.
+type RemoveSkillsPreview struct {
+	SourceID              string           `json:"sourceId"`
+	Group                 string           `json:"group"`
+	Skills                []RemovableSkill `json:"skills"`
+	SkillSetImpactWarning string           `json:"skillSetImpactWarning,omitempty"`
+	FavoriteImpactWarning string           `json:"favoriteImpactWarning,omitempty"`
+}
+
+// RemovableSkill is one recorded skill of a source and its removal impact.
+// SkillSets names the Skill Sets that contain its install name.
+type RemovableSkill struct {
+	Name          string   `json:"name"`
+	InstalledAs   string   `json:"installedAs,omitempty"`
+	ActiveLinks   int      `json:"activeLinks"`
+	DisabledLinks int      `json:"disabledLinks"`
+	SkillSets     []string `json:"skillSets"`
+	Favorite      bool     `json:"favorite"`
 }
 
 // SkillSetImpact is a non-blocking source-uninstall dependency warning.

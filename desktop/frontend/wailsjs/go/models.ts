@@ -1138,6 +1138,66 @@ export namespace gui {
 	}
 	
 	
+	export class RemovableSkill {
+	    name: string;
+	    installedAs?: string;
+	    activeLinks: number;
+	    disabledLinks: number;
+	    skillSets: string[];
+	    favorite: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RemovableSkill(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.installedAs = source["installedAs"];
+	        this.activeLinks = source["activeLinks"];
+	        this.disabledLinks = source["disabledLinks"];
+	        this.skillSets = source["skillSets"];
+	        this.favorite = source["favorite"];
+	    }
+	}
+	export class RemoveSkillsPreview {
+	    sourceId: string;
+	    group: string;
+	    skills: RemovableSkill[];
+	    skillSetImpactWarning?: string;
+	    favoriteImpactWarning?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RemoveSkillsPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourceId = source["sourceId"];
+	        this.group = source["group"];
+	        this.skills = this.convertValues(source["skills"], RemovableSkill);
+	        this.skillSetImpactWarning = source["skillSetImpactWarning"];
+	        this.favoriteImpactWarning = source["favoriteImpactWarning"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class RepairEntry {
 	    path: string;
 	    class: string;
@@ -1330,6 +1390,7 @@ export namespace gui {
 	    repairable?: boolean;
 	    rolledBack?: number;
 	    cleanupPending?: string;
+	    missingSkills?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new SourceMutationFailure(source);
@@ -1347,6 +1408,7 @@ export namespace gui {
 	        this.repairable = source["repairable"];
 	        this.rolledBack = source["rolledBack"];
 	        this.cleanupPending = source["cleanupPending"];
+	        this.missingSkills = source["missingSkills"];
 	    }
 	}
 	export class SourceMutationItem {

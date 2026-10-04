@@ -430,6 +430,123 @@ func (s *Service) UninstallSource(sourceID, confirmation string, includeReadOnly
 	return result
 }
 
+// PreviewRemoveSkills lists the recorded skills of one source with the links
+// and the Skill Set and favorite impact of removing each. It mutates nothing.
+func (s *Service) PreviewRemoveSkills(sourceID string) (RemoveSkillsPreview, error) {
+	var result RemoveSkillsPreview
+	err := s.runSourceOperation("remove-skills", "", func() error {
+		manifest, err := s.store.Load()
+		if err != nil {
+			return err
+		}
+		var group string
+		var installed []state.InstalledSkillEntry
+		var references []install.RepositoryReference
+		if repository, ok := findRepositoryByID(manifest, sourceID); ok {
+			audit, err := install.AuditRepositoryReferences(s.paths, manifest, repository)
+			if err != nil {
+				return err
+			}
+			group, installed, references = repository.Group.String(), repository.InstalledSkills, audit.References
+		} else if source, ok := findLocalSourceByID(manifest, sourceID); ok {
+			audit, err := install.AuditLocalSourceReferences(s.paths, manifest, source, false)
+			if err != nil {
+				return err
+			}
+			group, installed, references = source.Group.String(), source.InstalledSkills, audit.References
+		} else {
+			return fmt.Errorf("managed source not found")
+		}
+		setImpacts, setWarning := s.sourceSkillSetImpacts(installed)
+		favorites, favoriteWarning := s.sourceFavoriteImpacts(installed)
+		result = RemoveSkillsPreview{SourceID: sourceID, Group: group, Skills: removableSkills(installed, references, setImpacts, favorites), SkillSetImpactWarning: setWarning, FavoriteImpactWarning: favoriteWarning}
+		return nil
+	})
+	return result, err
+}
+
+// RemoveSourceSkills removes the named recorded skills from one source. The
+// source, its checkout or folder, and its other skills stay installed.
+func (s *Service) RemoveSourceSkills(sourceID string, skillNames []string, includeReadOnly bool) SourceMutationResult {
+	result := SourceMutationResult{Completed: []SourceMutationItem{}}
+	refreshed := false
+	err := s.runSourceOperation("remove-skills", "", func() error {
+		defer func() {
+			s.refreshSourceResult(&result, includeReadOnly)
+			refreshed = true
+		}()
+		manifest, err := s.store.Load()
+		if err != nil {
+			return err
+		}
+		removal := install.NewSkillRemovalService(s.paths)
+		var removed install.SkillRemovalResult
+		var applyErr error
+		var group string
+		if repository, ok := findRepositoryByID(manifest, sourceID); ok {
+			group = repository.Group.String()
+			s.emitProgress(SourceProgress{Operation: "remove-skills", Phase: "stage", Group: group, Message: "Staging skill links…"})
+			removed, applyErr = removal.ApplyRepository(repository, skillNames)
+		} else if source, ok := findLocalSourceByID(manifest, sourceID); ok {
+			group = source.Group.String()
+			s.emitProgress(SourceProgress{Operation: "remove-skills", Phase: "stage", Group: group, Message: "Staging skill links…"})
+			removed, applyErr = removal.ApplyLocal(source, skillNames)
+		} else {
+			return fmt.Errorf("managed source not found")
+		}
+		result.RemovedActive, result.RemovedDisabled = len(removed.RemovedActive), len(removed.RemovedDisabled)
+		if applyErr != nil {
+			result.Failure = &SourceMutationFailure{Stage: "remove-skills", Group: group, SourceID: sourceID, Message: applyErr.Error(), RolledBack: len(removed.RolledBack), CleanupPending: removed.CleanupPending}
+			return applyErr
+		}
+		result.Completed = append(result.Completed, SourceMutationItem{SourceID: sourceID, Group: group, Status: "skills-removed"})
+		return nil
+	})
+	if err != nil {
+		if result.Failure == nil {
+			result.Failure = &SourceMutationFailure{Stage: "preflight", SourceID: sourceID, Message: err.Error()}
+		}
+		result.Message = "Skill removal failed."
+	} else {
+		result.Message = fmt.Sprintf("Removed %d skill(s) and %d active, %d disabled link(s).", len(skillNames), result.RemovedActive, result.RemovedDisabled)
+	}
+	if !refreshed {
+		s.attachCurrentSnapshot(&result)
+	}
+	return result
+}
+
+func removableSkills(installed []state.InstalledSkillEntry, references []install.RepositoryReference, setImpacts []SkillSetImpact, favorites []string) []RemovableSkill {
+	favorite := map[string]bool{}
+	for _, name := range favorites {
+		favorite[name] = true
+	}
+	setsByName := map[string][]string{}
+	for _, impact := range setImpacts {
+		for _, name := range impact.Skills {
+			setsByName[name] = append(setsByName[name], impact.Name)
+		}
+	}
+	skills := make([]RemovableSkill, 0, len(installed))
+	for _, entry := range installed {
+		name := entry.InstalledName()
+		skill := RemovableSkill{Name: entry.Name, InstalledAs: entry.InstalledAs, SkillSets: append([]string{}, setsByName[name]...), Favorite: favorite[name]}
+		for _, reference := range references {
+			if reference.InstalledName != name {
+				continue
+			}
+			if reference.State == model.SkillStateOff {
+				skill.DisabledLinks++
+			} else {
+				skill.ActiveLinks++
+			}
+		}
+		skills = append(skills, skill)
+	}
+	sort.SliceStable(skills, func(i, j int) bool { return skills[i].Name < skills[j].Name })
+	return skills
+}
+
 func (s *Service) runSourceOperation(operation, group string, action func() error) error {
 	if !s.sourceBusy.CompareAndSwap(false, true) {
 		return fmt.Errorf("a source operation is already in progress")

@@ -22,9 +22,12 @@
   report that no update is required. It lists skills a repository gained that
   are not installed, with the exact `install --skill` command, and never
   installs them.
-- `uninstall <git-url|local-path> [--dry-run]` removes one complete audited
-  installation and always requires an explicit source. Local source data is
-  preserved.
+- `uninstall <git-url|local-path> [--skill <name>...] [--dry-run]` removes one
+  complete audited installation and always requires an explicit source. Local
+  source data is preserved. Repeated `--skill` (Iteration 27) removes only the
+  named skills, by source or install name, and keeps the source; selecting
+  every skill is refused. `update` prints the exact `uninstall --skill` command
+  when a repository removed an installed skill (`skill-missing-upstream`).
 - `repair <git-url> [--dry-run]` clears worktree changes blocking a managed Git
   checkout and always requires an explicit URL. It lists the offending paths by
   class, has no `--all`, `--force`, or prompt, and `update` prints the exact

@@ -58,6 +58,10 @@ export function PreviewExtend(arg1) {
   return window['go']['main']['App']['PreviewExtend'](arg1);
 }
 
+export function PreviewRemoveSkills(arg1) {
+  return window['go']['main']['App']['PreviewRemoveSkills'](arg1);
+}
+
 export function PreviewRepair(arg1) {
   return window['go']['main']['App']['PreviewRepair'](arg1);
 }
@@ -72,6 +76,10 @@ export function PreviewUninstall(arg1) {
 
 export function RemoveAdvisorKey() {
   return window['go']['main']['App']['RemoveAdvisorKey']();
+}
+
+export function RemoveSourceSkills(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RemoveSourceSkills'](arg1, arg2, arg3);
 }
 
 export function RepairSource(arg1, arg2) {

@@ -1080,3 +1080,17 @@ full Go and frontend suites.
   update hint for search, recommend, and activate; other search failures stay
   redacted. The first-party skill stops without activation on that code.
 - `TestAdvisorJSONReportsStateWrittenByNewerVersion` covers all three commands.
+
+## [2026-10-04] feature | Remove some skills from a source (Iteration 27)
+
+- A managed repository can remove a skill recorded as installed. The update
+  preflight then stops with "installed skills missing regular SKILL.md at
+  target commit", and update-all stops at that repository. Before this change
+  the remedy was a CLI uninstall and reinstall of the whole source, and the
+  desktop app had none.
+- Added `SkillRemovalService`, `uninstall --skill`, the typed
+  `skill-missing-upstream` update error with a printed remedy command, and the
+  desktop Remove skills dialog plus the **Remove from source** action in the
+  failed-update dialog.
+- Skill Set and favorite impact stays desktop-only, matching whole-source
+  uninstall, because the CLI does not read those stores.

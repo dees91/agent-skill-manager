@@ -13,10 +13,12 @@ import {
   MeasureContextBudgets,
   PrepareGitInstall,
   PreviewExtend,
+  PreviewRemoveSkills,
   PreviewRepair,
   PreviewSkillSetToggle,
   PreviewUninstall,
   RemoveAdvisorKey,
+  RemoveSourceSkills,
   RepairSource,
   ReviewInstall,
   SaveAdvisorProvider,
@@ -55,6 +57,7 @@ export type InstallReview = gui.InstallReview
 export type InstallCellRequest = gui.InstallCellRequest
 export type SourceMutationResult = gui.SourceMutationResult
 export type UninstallPreview = gui.UninstallPreview
+export type RemoveSkillsPreview = gui.RemoveSkillsPreview
 export type ExtendPreview = gui.ExtendPreview
 export type ExtendPreviewSource = gui.ExtendPreviewSource
 export type SourceHealth = gui.SourceHealth
@@ -115,6 +118,8 @@ export interface Backend {
   previewExtend(tool: string): Promise<ExtendPreview>
   extendSources(tool: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   inspectSources(): Promise<SourceHealth[]>
+  previewRemoveSkills(sourceID: string): Promise<RemoveSkillsPreview>
+  removeSourceSkills(sourceID: string, skillNames: string[], includeReadOnly: boolean): Promise<SourceMutationResult>
   previewRepair(sourceID: string): Promise<RepairPreview>
   repairSource(sourceID: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   getAdvisorSettings(): Promise<AdvisorSettingsView>
@@ -153,6 +158,8 @@ const generatedBackend: Backend = {
   previewExtend: PreviewExtend,
   extendSources: ExtendSources,
   inspectSources: InspectSources,
+  previewRemoveSkills: PreviewRemoveSkills,
+  removeSourceSkills: RemoveSourceSkills,
   previewRepair: PreviewRepair,
   repairSource: RepairSource,
   getAdvisorSettings: GetAdvisorSettings,
@@ -198,6 +205,8 @@ export const wailsBackend: Backend = {
   previewExtend: async (...args) => (await activeBackend()).previewExtend(...args),
   extendSources: async (...args) => (await activeBackend()).extendSources(...args),
   inspectSources: async (...args) => (await activeBackend()).inspectSources(...args),
+  previewRemoveSkills: async (...args) => (await activeBackend()).previewRemoveSkills(...args),
+  removeSourceSkills: async (...args) => (await activeBackend()).removeSourceSkills(...args),
   previewRepair: async (...args) => (await activeBackend()).previewRepair(...args),
   repairSource: async (...args) => (await activeBackend()).repairSource(...args),
   getAdvisorSettings: async (...args) => (await activeBackend()).getAdvisorSettings(...args),

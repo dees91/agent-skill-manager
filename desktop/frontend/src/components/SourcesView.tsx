@@ -6,6 +6,7 @@ import {
   FolderOpen,
   GitBranch,
   HardDrive,
+  ListX,
   LoaderCircle,
   PackagePlus,
   PowerOff,
@@ -24,6 +25,7 @@ import type {
   InstallReview,
   ManagedSource,
   ManagedTool,
+  RemoveSkillsPreview,
   RepairPreview,
   SourceHealth,
   SourceMutationFailure,
@@ -46,7 +48,7 @@ interface SourcesViewProps {
 }
 
 type InstallMode = 'git' | 'local'
-type Dialog = 'install' | 'install-new' | 'update-all' | 'update-one' | 'uninstall' | 'extend' | 'repair' | null
+type Dialog = 'install' | 'install-new' | 'update-all' | 'update-one' | 'uninstall' | 'remove-skills' | 'extend' | 'repair' | null
 type ColumnSelectionState = 'ON' | 'OFF' | 'MIXED' | 'N/A'
 
 // NewSkillsTarget starts the install dialog from a recorded Git source and
@@ -65,6 +67,8 @@ export default function SourcesView(props: SourcesViewProps) {
   const [dialogError, setDialogError] = useState<string | null>(null)
   const [dialogFailure, setDialogFailure] = useState<SourceMutationFailure | null>(null)
   const [repairPreview, setRepairPreview] = useState<RepairPreview | null>(null)
+  const [removePreview, setRemovePreview] = useState<RemoveSkillsPreview | null>(null)
+  const [removePreselected, setRemovePreselected] = useState<string[]>([])
   const [health, setHealth] = useState<Map<string, SourceHealth>>(new Map())
   const installButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
@@ -88,6 +92,7 @@ export default function SourcesView(props: SourcesViewProps) {
     setSelectedSource(source)
     setUninstallPreview(null)
     setRepairPreview(null)
+    setRemovePreview(null)
     setDialogError(null)
     setDialogFailure(null)
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -100,6 +105,7 @@ export default function SourcesView(props: SourcesViewProps) {
     setSelectedSource(null)
     setUninstallPreview(null)
     setRepairPreview(null)
+    setRemovePreview(null)
     setDialogError(null)
     setDialogFailure(null)
     window.setTimeout(() => (returnFocusRef.current ?? installButtonRef.current)?.focus(), 0)
@@ -144,6 +150,27 @@ export default function SourcesView(props: SourcesViewProps) {
     const source = sources.find((candidate) => candidate.sourceId === failure?.sourceId)
     if (!source) return
     void prepareRepair(source)
+  }
+
+  // prepareRemoveSkills opens the checklist; preselected holds install names.
+  const prepareRemoveSkills = async (source: ManagedSource, preselected: string[] = []) => {
+    openDialog('remove-skills', source)
+    setRemovePreselected(preselected)
+    onBusy(true)
+    try {
+      setRemovePreview(await backend.previewRemoveSkills(source.sourceId))
+    } catch (reason) {
+      setDialogError(errorMessage(reason))
+    } finally {
+      onBusy(false)
+    }
+  }
+
+  const removeSkillsFromFailure = () => {
+    const failure = dialogFailure
+    const source = sources.find((candidate) => candidate.sourceId === failure?.sourceId)
+    if (!source) return
+    void prepareRemoveSkills(source, failure?.missingSkills ?? [])
   }
 
   const prepareUninstall = async (source: ManagedSource) => {
@@ -210,6 +237,7 @@ export default function SourcesView(props: SourcesViewProps) {
                     {newSkillsOf(health.get(source.sourceId)).length > 0 && <button aria-label={`Install new skills from ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('install-new', source)}><PackagePlus size={12} /> Install new</button>}
                     {health.get(source.sourceId)?.repairable && <button aria-label={`Repair ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => void prepareRepair(source)}><Wrench size={12} /> Repair</button>}
                     {source.canUpdate && <button aria-label={`Update ${source.group}`} className="secondary-button compact-button" disabled={busy || pendingCount > 0} onClick={() => openDialog('update-one', source)}><RefreshCw size={12} /> Update</button>}
+                    {source.skillCount > 1 && <button aria-label={`Remove skills from ${source.group}`} className="ghost-button compact-button" disabled={busy || pendingCount > 0} onClick={() => void prepareRemoveSkills(source)}><ListX size={12} /> Remove skills</button>}
                     <button aria-label={`Uninstall ${source.group}`} className="ghost-button compact-button destructive" disabled={busy || pendingCount > 0} onClick={() => void prepareUninstall(source)}><Trash2 size={12} /> Uninstall</button>
                   </div></td>
                 </tr>
@@ -226,7 +254,7 @@ export default function SourcesView(props: SourcesViewProps) {
         <InstallDialog backend={backend} busy={busy} progress={progress} includeReadOnly={includeReadOnly} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} onAnnounce={onAnnounce} newSkills={newSkillsTarget(selectedSource, health.get(selectedSource.sourceId))} />
       )}
       {(dialog === 'update-all' || dialog === 'update-one') && (
-        <ConfirmDialog title={dialog === 'update-all' ? 'Update all repositories?' : `Update ${selectedSource?.group}?`} description={dialog === 'update-all' ? 'Repositories are processed in deterministic order and the batch stops at the first failure.' : 'Skill Manager will fetch origin, validate installed paths, and fast-forward only.'} confirmLabel={dialog === 'update-all' ? 'Update all' : 'Update'} busy={busy} progress={progress} error={dialogError} failure={dialogFailure} onRepair={repairFromFailure} onClose={closeDialog} onConfirm={() => void runMutation(() => dialog === 'update-all' ? backend.updateAllSources(includeReadOnly) : backend.updateSource(selectedSource!.sourceId, includeReadOnly))} />
+        <ConfirmDialog title={dialog === 'update-all' ? 'Update all repositories?' : `Update ${selectedSource?.group}?`} description={dialog === 'update-all' ? 'Repositories are processed in deterministic order and the batch stops at the first failure.' : 'Skill Manager will fetch origin, validate installed paths, and fast-forward only.'} confirmLabel={dialog === 'update-all' ? 'Update all' : 'Update'} busy={busy} progress={progress} error={dialogError} failure={dialogFailure} onRepair={repairFromFailure} onRemoveSkills={removeSkillsFromFailure} onClose={closeDialog} onConfirm={() => void runMutation(() => dialog === 'update-all' ? backend.updateAllSources(includeReadOnly) : backend.updateSource(selectedSource!.sourceId, includeReadOnly))} />
       )}
       {dialog === 'repair' && selectedSource && (
         <RepairDialog source={selectedSource} preview={repairPreview} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={() => void runMutation(() => backend.repairSource(selectedSource.sourceId, includeReadOnly))} />
@@ -234,6 +262,9 @@ export default function SourcesView(props: SourcesViewProps) {
 
       {dialog === 'uninstall' && selectedSource && (
         <UninstallDialog source={selectedSource} preview={uninstallPreview} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={(confirmation) => void runMutation(() => backend.uninstallSource(selectedSource.sourceId, confirmation, includeReadOnly))} />
+      )}
+      {dialog === 'remove-skills' && selectedSource && (
+        <RemoveSkillsDialog key={removePreview ? 'loaded' : 'loading'} source={selectedSource} preview={removePreview} preselected={removePreselected} busy={busy} progress={progress} error={dialogError} onClose={closeDialog} onConfirm={(names) => void runMutation(() => backend.removeSourceSkills(selectedSource.sourceId, names, includeReadOnly))} />
       )}
       {dialog === 'extend' && (
         <ExtendDialog sources={sources} backend={backend} busy={busy} progress={progress} includeReadOnly={includeReadOnly} error={dialogError} onBusy={onBusy} onResult={onResult} onError={setDialogError} onClose={closeDialog} />
@@ -555,12 +586,12 @@ function extendSourceBlockage(source: ExtendPreviewSource): string {
   return `${source.status}${details.length > 0 ? ` — ${details.join('; ')}` : ''}`
 }
 
-function ConfirmDialog({ title, description, confirmLabel, busy, progress, error, failure, onRepair, onClose, onConfirm }: { title: string; description: string; confirmLabel: string; busy: boolean; progress: SourceProgress | null; error: string | null; failure?: SourceMutationFailure | null; onRepair?: () => void; onClose: () => void; onConfirm: () => void }) {
+function ConfirmDialog({ title, description, confirmLabel, busy, progress, error, failure, onRepair, onRemoveSkills, onClose, onConfirm }: { title: string; description: string; confirmLabel: string; busy: boolean; progress: SourceProgress | null; error: string | null; failure?: SourceMutationFailure | null; onRepair?: () => void; onRemoveSkills?: () => void; onClose: () => void; onConfirm: () => void }) {
   useDialogEscape(onClose, busy)
-  return <Modal title={title} onClose={onClose} busy={busy}><p className="dialog-description">{description}</p>{error && <DialogError message={error} />}<FailureDiagnosis failure={failure} busy={busy} onRepair={onRepair} />{busy && <ProgressState progress={progress} />}<DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy} onClick={onConfirm}>{confirmLabel}</button></DialogActions></Modal>
+  return <Modal title={title} onClose={onClose} busy={busy}><p className="dialog-description">{description}</p>{error && <DialogError message={error} />}<FailureDiagnosis failure={failure} busy={busy} onRepair={onRepair} onRemoveSkills={onRemoveSkills} />{busy && <ProgressState progress={progress} />}<DialogActions onClose={onClose} busy={busy}><button className="primary-button" disabled={busy} onClick={onConfirm}>{confirmLabel}</button></DialogActions></Modal>
 }
 
-function FailureDiagnosis({ failure, busy, onRepair }: { failure?: SourceMutationFailure | null; busy: boolean; onRepair?: () => void }) {
+function FailureDiagnosis({ failure, busy, onRepair, onRemoveSkills }: { failure?: SourceMutationFailure | null; busy: boolean; onRepair?: () => void; onRemoveSkills?: () => void }) {
   if (!failure?.cause) return null
   return <div className="source-diagnosis">
     <Wrench size={15} />
@@ -569,6 +600,9 @@ function FailureDiagnosis({ failure, busy, onRepair }: { failure?: SourceMutatio
       <p>{failure.remedy}</p>
       {failure.repairable && onRepair && failure.sourceId && (
         <button className="secondary-button compact-button" disabled={busy} onClick={onRepair}>Repair{failure.group ? ` ${failure.group}` : ''}…</button>
+      )}
+      {failure.kind === 'skill-missing-upstream' && (failure.missingSkills?.length ?? 0) > 0 && onRemoveSkills && failure.sourceId && (
+        <button className="secondary-button compact-button" disabled={busy} onClick={onRemoveSkills}>Remove from{failure.group ? ` ${failure.group}` : ' source'}…</button>
       )}
     </div>
   </div>
@@ -651,6 +685,34 @@ function UninstallDialog({ source, preview, busy, progress, error, onClose, onCo
     {!preview && busy ? <ProgressState progress={progress} /> : preview && <><div className="uninstall-impact"><Trash2 size={21} /><div><strong>This removes the complete managed source</strong><p>{preview.activeLinks} active and {preview.disabledLinks} disabled link{preview.activeLinks + preview.disabledLinks === 1 ? '' : 's'}.</p><p>{preview.removesCheckout ? 'The managed Git checkout will be deleted.' : 'The local source folder will be preserved.'}</p></div></div>{preview.affectedSkillSets?.length > 0 && <div className="skill-set-uninstall-impact"><AlertTriangle size={16} /><div><strong>{preview.affectedSkillSets.length} Skill Set{preview.affectedSkillSets.length === 1 ? '' : 's'} {preview.affectedSkillSets.length === 1 ? 'contains' : 'contain'} skills installed by this source</strong>{preview.affectedSkillSets.map((set) => <p key={set.setId}>{set.name}: {set.skills.join(', ')}</p>)}<p>Recipes are kept; removed tool cells may become unavailable.</p></div></div>}{preview.affectedFavorites?.length > 0 && <div className="skill-set-uninstall-impact favorite-uninstall-impact"><AlertTriangle size={16} /><div><strong>{preview.affectedFavorites.length} favorite skill{preview.affectedFavorites.length === 1 ? '' : 's'} {preview.affectedFavorites.length === 1 ? 'is' : 'are'} installed by this source</strong><p>{preview.affectedFavorites.join(', ')}</p><p>Favorites are remembered; removed skills may become unavailable until reinstalled.</p></div></div>}{preview.skillSetImpactWarning && <div className="dialog-error"><AlertTriangle size={14} /><span>Skill Set impact could not be checked: {preview.skillSetImpactWarning}</span></div>}{preview.favoriteImpactWarning && <div className="dialog-error"><AlertTriangle size={14} /><span>Favorite impact could not be checked: {preview.favoriteImpactWarning}</span></div>}<label className="dialog-field"><span>Type <strong>{source.group}</strong> to confirm</span><input autoFocus value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label></>}
     {error && <DialogError message={error} />}{busy && preview && <ProgressState progress={progress} />}
     <DialogActions onClose={onClose} busy={busy}><button className="danger-button" disabled={busy || !preview || confirmation !== source.group} onClick={() => onConfirm(confirmation)}>Uninstall source</button></DialogActions>
+  </Modal>
+}
+
+// RemoveSkillsDialog removes some recorded skills and keeps the source. It
+// blocks the selection of every skill, which is a whole-source uninstall.
+function RemoveSkillsDialog({ source, preview, preselected, busy, progress, error, onClose, onConfirm }: { source: ManagedSource; preview: RemoveSkillsPreview | null; preselected: string[]; busy: boolean; progress: SourceProgress | null; error: string | null; onClose: () => void; onConfirm: (names: string[]) => void }) {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set((preview?.skills ?? []).filter((skill) => preselected.includes(skill.installedAs || skill.name)).map((skill) => skill.name)))
+  useDialogEscape(onClose, busy)
+  const skills = preview?.skills ?? []
+  const chosen = skills.filter((skill) => selected.has(skill.name))
+  const every = skills.length > 0 && chosen.length === skills.length
+  const active = chosen.reduce((total, skill) => total + skill.activeLinks, 0)
+  const disabled = chosen.reduce((total, skill) => total + skill.disabledLinks, 0)
+  const toggle = (name: string) => setSelected((current) => { const next = new Set(current); if (next.has(name)) next.delete(name); else next.add(name); return next })
+  return <Modal title={`Remove skills from ${source.group}?`} onClose={onClose} busy={busy}>
+    {!preview && busy ? <ProgressState progress={progress} /> : preview && <>
+      <p className="dialog-description">The source and its other skills stay installed. {source.kind === 'git' ? 'The managed checkout is not changed.' : 'The local source folder is not changed.'}</p>
+      <ul className="remove-skill-list">{skills.map((skill) => {
+        const label = skill.installedAs ? `${skill.installedAs} (${skill.name})` : skill.name
+        return <li key={skill.name}><label><input type="checkbox" checked={selected.has(skill.name)} disabled={busy} onChange={() => toggle(skill.name)} /><span><strong>{label}</strong><small>{skill.activeLinks} active, {skill.disabledLinks} disabled link{skill.activeLinks + skill.disabledLinks === 1 ? '' : 's'}{skill.favorite ? ' · favorite' : ''}{skill.skillSets.length > 0 ? ` · in ${skill.skillSets.join(', ')}` : ''}</small></span></label></li>
+      })}</ul>
+      {chosen.length > 0 && !every && <div className="uninstall-impact"><ListX size={21} /><div><strong>This removes {active} active and {disabled} disabled link{active + disabled === 1 ? '' : 's'}</strong><p>Favorites and Skill Sets are kept; removed skills may become unavailable until reinstalled.</p></div></div>}
+      {every && <div className="dialog-error"><AlertTriangle size={14} /><span>To remove every skill, uninstall the source instead.</span></div>}
+      {preview.skillSetImpactWarning && <div className="dialog-error"><AlertTriangle size={14} /><span>Skill Set impact could not be checked: {preview.skillSetImpactWarning}</span></div>}
+      {preview.favoriteImpactWarning && <div className="dialog-error"><AlertTriangle size={14} /><span>Favorite impact could not be checked: {preview.favoriteImpactWarning}</span></div>}
+    </>}
+    {error && <DialogError message={error} />}{busy && preview && <ProgressState progress={progress} />}
+    <DialogActions onClose={onClose} busy={busy}><button className="danger-button" disabled={busy || !preview || chosen.length === 0 || every} onClick={() => onConfirm(chosen.map((skill) => skill.name))}>Remove {chosen.length} skill{chosen.length === 1 ? '' : 's'}</button></DialogActions>
   </Modal>
 }
 
