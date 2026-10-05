@@ -1472,6 +1472,8 @@ Commands:
                                Recommend skills from local search or TypeSafe
   advisor cleanup --receipt <id> [--dry-run] [--json]
                                Release one exact advisor receipt
+  advisor forget --receipt <id> [--dry-run] [--json]
+                               Drop a blocked receipt without changing skill links
   advisor status [--tool <tool>] [--json]
                                List outstanding advisor receipts
   advisor provider <status|use|set-key|remove|check> [--json]

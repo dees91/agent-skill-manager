@@ -3,9 +3,10 @@ import type { AdvisorSettingsView, Backend } from '../api'
 
 interface AdvisorSettingsProps {
   backend: Backend
+  children?: React.ReactNode
 }
 
-export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
+export default function AdvisorSettings({ backend, children }: AdvisorSettingsProps) {
   const [view, setView] = useState<AdvisorSettingsView | null>(null)
   const [selectedMode, setSelectedMode] = useState('local')
   const [keyValue, setKeyValue] = useState('')
@@ -123,6 +124,7 @@ export default function AdvisorSettings({ backend }: AdvisorSettingsProps) {
         </article>
       )}
       {error && <p className="advisor-error" role="alert">{error}</p>}
+      {children}
     </section>
   )
 }

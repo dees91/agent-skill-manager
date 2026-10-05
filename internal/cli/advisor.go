@@ -57,7 +57,7 @@ type advisorErrorDetail struct {
 
 func (a App) runAdvisor(stdout, stderr io.Writer, args []string) int {
 	if len(args) == 0 {
-		return usageError(stderr, "expected advisor <search|recommend|activate|cleanup|status|provider>")
+		return usageError(stderr, "expected advisor <search|recommend|activate|cleanup|forget|status|provider>")
 	}
 	switch args[0] {
 	case "recommend":
@@ -105,7 +105,7 @@ func (a App) runAdvisor(stdout, stderr io.Writer, args []string) int {
 		printAdvisorActivation(stdout, result)
 		return 0
 	case "cleanup":
-		options, err := parseAdvisorCleanupArgs(args[1:])
+		options, err := parseAdvisorReceiptArgs("cleanup", args[1:])
 		if err != nil {
 			return advisorUsageError(stderr, containsArgument(args, "--json"), err)
 		}
@@ -117,6 +117,20 @@ func (a App) runAdvisor(stdout, stderr io.Writer, args []string) int {
 			return writeAdvisorJSON(stdout, stderr, result)
 		}
 		printAdvisorCleanup(stdout, result)
+		return 0
+	case "forget":
+		options, err := parseAdvisorReceiptArgs("forget", args[1:])
+		if err != nil {
+			return advisorUsageError(stderr, containsArgument(args, "--json"), err)
+		}
+		result, err := advisor.New(a.paths).Forget(options.ReceiptID, options.DryRun)
+		if err != nil {
+			return advisorCommandError(stderr, options.JSON, "FORGET_FAILED", err, options.ReceiptID)
+		}
+		if options.JSON {
+			return writeAdvisorJSON(stdout, stderr, result)
+		}
+		printAdvisorForget(stdout, result)
 		return 0
 	case "status":
 		options, err := parseAdvisorStatusArgs(args[1:])
@@ -236,13 +250,14 @@ func parseAdvisorActivateArgs(args []string) (advisorActivateOptions, error) {
 	return options, nil
 }
 
-func parseAdvisorCleanupArgs(args []string) (advisorCleanupOptions, error) {
+// parseAdvisorReceiptArgs parses the arguments shared by advisor cleanup and forget.
+func parseAdvisorReceiptArgs(command string, args []string) (advisorCleanupOptions, error) {
 	options := advisorCleanupOptions{}
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--receipt":
 			if options.ReceiptID != "" || index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
-				return advisorCleanupOptions{}, fmt.Errorf("advisor cleanup requires one --receipt <id>")
+				return advisorCleanupOptions{}, fmt.Errorf("advisor %s requires one --receipt <id>", command)
 			}
 			options.ReceiptID = strings.TrimSpace(args[index+1])
 			index++
@@ -257,11 +272,11 @@ func parseAdvisorCleanupArgs(args []string) (advisorCleanupOptions, error) {
 			}
 			options.JSON = true
 		default:
-			return advisorCleanupOptions{}, fmt.Errorf("unknown advisor cleanup argument %q", args[index])
+			return advisorCleanupOptions{}, fmt.Errorf("unknown advisor %s argument %q", command, args[index])
 		}
 	}
 	if options.ReceiptID == "" {
-		return advisorCleanupOptions{}, fmt.Errorf("advisor cleanup requires --receipt <id>")
+		return advisorCleanupOptions{}, fmt.Errorf("advisor %s requires --receipt <id>", command)
 	}
 	return options, nil
 }
@@ -317,6 +332,23 @@ func printAdvisorCleanup(stdout io.Writer, result advisor.CleanupResult) {
 	for _, action := range result.Actions {
 		verb := advisorActionVerb(action.Action, result.DryRun)
 		fmt.Fprintf(stdout, "%s %s/%s\n", verb, result.Tool, action.Skill)
+	}
+}
+
+func printAdvisorForget(stdout io.Writer, result advisor.ForgetResult) {
+	if result.DryRun {
+		fmt.Fprintf(stdout, "dry-run: advisor forget %s\n", result.ReceiptID)
+	} else {
+		fmt.Fprintf(stdout, "forgot receipt: %s\n", result.ReceiptID)
+	}
+	if result.Cause != "" {
+		fmt.Fprintf(stdout, "blocked: %s\n", result.Cause)
+	}
+	for _, skill := range result.Skills {
+		fmt.Fprintf(stdout, "left unchanged %s/%s\n", result.Tool, skill)
+	}
+	if !result.DryRun {
+		fmt.Fprintln(stdout, "skill links were not changed; toggle these skills yourself if necessary")
 	}
 }
 

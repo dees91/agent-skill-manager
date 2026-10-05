@@ -415,6 +415,41 @@ type RemovableSkill struct {
 	Favorite      bool     `json:"favorite"`
 }
 
+// AdvisorReceipt is one recorded advisor receipt with its cleanup preview.
+// CreatedAt is RFC 3339 in UTC. A blocked receipt has a path-free Cause and
+// skills without actions.
+type AdvisorReceipt struct {
+	ReceiptID string                `json:"receiptId"`
+	Tool      string                `json:"tool"`
+	CreatedAt string                `json:"createdAt"`
+	Skills    []AdvisorReceiptSkill `json:"skills"`
+	Blocked   bool                  `json:"blocked"`
+	Cause     string                `json:"cause,omitempty"`
+}
+
+// AdvisorReceiptSkill is one skill of a receipt and the action of a cleanup:
+// disable, release, or already_off.
+type AdvisorReceiptSkill struct {
+	Name   string `json:"name"`
+	Action string `json:"action,omitempty"`
+}
+
+// AdvisorReceiptFailure explains a failed receipt operation without paths.
+type AdvisorReceiptFailure struct {
+	ReceiptID string `json:"receiptId,omitempty"`
+	Message   string `json:"message"`
+}
+
+// AdvisorReceiptResult returns a receipt operation with fresh receipts and snapshot.
+type AdvisorReceiptResult struct {
+	Message   string                 `json:"message"`
+	Cleaned   []string               `json:"cleaned"`
+	Forgotten []string               `json:"forgotten"`
+	Failure   *AdvisorReceiptFailure `json:"failure,omitempty"`
+	Receipts  []AdvisorReceipt       `json:"receipts"`
+	Snapshot  Snapshot               `json:"snapshot"`
+}
+
 // SkillSetImpact is a non-blocking source-uninstall dependency warning.
 type SkillSetImpact struct {
 	SetID  string   `json:"setId"`

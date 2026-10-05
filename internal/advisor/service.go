@@ -271,51 +271,51 @@ func (s *Service) planCleanup(contents file, currentReceipt receipt) ([]Action, 
 	for _, skillName := range currentReceipt.Skills {
 		leaseIndex := contents.leaseIndex(currentReceipt.Tool, skillName)
 		if leaseIndex < 0 {
-			return nil, nil, fmt.Errorf("advisor receipt %s has no lease for %s/%s", currentReceipt.ID, currentReceipt.Tool, skillName)
+			return nil, nil, blockedError(BlockedMissing, currentReceipt.Tool, skillName, fmt.Sprintf("advisor receipt %s has no lease for %s/%s", currentReceipt.ID, currentReceipt.Tool, skillName))
 		}
 		currentLease := contents.Leases[leaseIndex]
 		cell, ok := cells[skillName]
 		if len(currentLease.ReceiptIDs) > 1 {
 			if !ok {
-				return nil, nil, fmt.Errorf("advisor lease drift for %s/%s: skill is missing", currentReceipt.Tool, skillName)
+				return nil, nil, blockedError(BlockedMissing, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s: skill is missing", currentReceipt.Tool, skillName))
 			}
 			switch cell.State {
 			case model.SkillStateOn:
 				if !activeCellMatchesLease(cell, currentLease) {
-					return nil, nil, fmt.Errorf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName)
+					return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName))
 				}
 			case model.SkillStateOff:
 				if !disabledCellMatchesLease(cell, currentLease) {
-					return nil, nil, fmt.Errorf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName)
+					return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName))
 				}
 			case model.SkillStateConflict:
-				return nil, nil, fmt.Errorf("advisor cleanup conflict for %s/%s", currentReceipt.Tool, skillName)
+				return nil, nil, blockedError(BlockedConflict, currentReceipt.Tool, skillName, fmt.Sprintf("advisor cleanup conflict for %s/%s", currentReceipt.Tool, skillName))
 			default:
-				return nil, nil, fmt.Errorf("advisor lease drift for %s/%s: state %s", currentReceipt.Tool, skillName, cell.State)
+				return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s: state %s", currentReceipt.Tool, skillName, cell.State))
 			}
 			actions = append(actions, Action{Skill: skillName, Action: ActionRelease})
 			continue
 		}
 		if !ok {
-			return nil, nil, fmt.Errorf("advisor lease drift for %s/%s: skill is missing", currentReceipt.Tool, skillName)
+			return nil, nil, blockedError(BlockedMissing, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s: skill is missing", currentReceipt.Tool, skillName))
 		}
 		switch cell.State {
 		case model.SkillStateOn:
 			if !activeCellMatchesLease(cell, currentLease) {
-				return nil, nil, fmt.Errorf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName)
+				return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName))
 			}
 			actions = append(actions, Action{Skill: skillName, Action: ActionDisable})
 			requests = append(requests, ops.PlanRequest{Kind: model.OperationDisable, Tool: currentReceipt.Tool, SkillName: skillName})
 			lastClaimSkills = append(lastClaimSkills, skillName)
 		case model.SkillStateOff:
 			if !disabledCellMatchesLease(cell, currentLease) {
-				return nil, nil, fmt.Errorf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName)
+				return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName))
 			}
 			actions = append(actions, Action{Skill: skillName, Action: ActionAlreadyOff})
 		case model.SkillStateConflict:
-			return nil, nil, fmt.Errorf("advisor cleanup conflict for %s/%s", currentReceipt.Tool, skillName)
+			return nil, nil, blockedError(BlockedConflict, currentReceipt.Tool, skillName, fmt.Sprintf("advisor cleanup conflict for %s/%s", currentReceipt.Tool, skillName))
 		default:
-			return nil, nil, fmt.Errorf("advisor lease drift for %s/%s: state %s", currentReceipt.Tool, skillName, cell.State)
+			return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s: state %s", currentReceipt.Tool, skillName, cell.State))
 		}
 	}
 	operations, err := ops.New(s.paths).PlanBatch(requests)
@@ -325,10 +325,62 @@ func (s *Service) planCleanup(contents file, currentReceipt receipt) ([]Action, 
 	for index, operation := range operations {
 		leaseIndex := contents.leaseIndex(currentReceipt.Tool, lastClaimSkills[index])
 		if leaseIndex < 0 || !disableOperationMatchesLease(operation, contents.Leases[leaseIndex]) {
-			return nil, nil, fmt.Errorf("advisor lease drift for %s/%s", currentReceipt.Tool, lastClaimSkills[index])
+			return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, lastClaimSkills[index], fmt.Sprintf("advisor lease drift for %s/%s", currentReceipt.Tool, lastClaimSkills[index]))
 		}
 	}
 	return actions, operations, nil
+}
+
+// Forget removes a blocked receipt and its lease claims without touching any
+// skill link, disabled entry, or state.json (Iteration 28). A receipt that
+// cleanup can release is refused, so activated skills never lose their owner
+// while a safe cleanup exists.
+func (s *Service) Forget(receiptID string, dryRun bool) (result ForgetResult, err error) {
+	receiptID = strings.TrimSpace(receiptID)
+	result = ForgetResult{APIVersion: APIVersion, DryRun: dryRun, ReceiptID: receiptID, Skills: []string{}}
+	if !validReceiptID(receiptID) {
+		return result, fmt.Errorf("invalid advisor receipt ID %q", receiptID)
+	}
+	lock, err := s.store.lock(!dryRun)
+	if err != nil {
+		return result, err
+	}
+	defer func() {
+		if closeErr := lock.close(); err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
+	contents, err := s.store.load()
+	if err != nil {
+		return result, err
+	}
+	receiptIndex := contents.receiptIndex(receiptID)
+	if receiptIndex < 0 {
+		return result, fmt.Errorf("advisor receipt %s not found", receiptID)
+	}
+	current := contents.Receipts[receiptIndex]
+	result.Tool = current.Tool
+	result.Skills = append(result.Skills, current.Skills...)
+	_, _, planErr := s.planCleanup(contents, current)
+	var blocked CleanupBlockedError
+	if planErr == nil {
+		return result, fmt.Errorf("advisor receipt %s is not blocked; release it with advisor cleanup", receiptID)
+	}
+	if !errors.As(planErr, &blocked) {
+		return result, planErr
+	}
+	result.Cause = blocked.Cause()
+	if dryRun {
+		return result, nil
+	}
+	if err := s.store.backupExisting(); err != nil {
+		return result, err
+	}
+	contents.forgetReceipt(receiptIndex)
+	if err := s.store.save(contents); err != nil {
+		return result, err
+	}
+	return result, nil
 }
 
 // Status lists outstanding receipts without exposing filesystem paths.

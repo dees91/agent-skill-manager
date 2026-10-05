@@ -21,7 +21,8 @@ Before making code or documentation changes:
 15. If working on duplicate skill names inside one install source, read [planning/phase-25-duplicate-skill-discovery-tasks.md](./planning/phase-25-duplicate-skill-discovery-tasks.md).
 16. If working on installing a skill under another name when another source owns its name (`--as`), read [planning/phase-26-cross-source-skill-alias-tasks.md](./planning/phase-26-cross-source-skill-alias-tasks.md).
 17. If working on removing some recorded skills from a source, or on the update failure when a repository removed an installed skill, read [planning/phase-27-source-skill-removal-tasks.md](./planning/phase-27-source-skill-removal-tasks.md).
-18. Follow the task status rules in the relevant planning file before starting and after finishing work.
+18. If working on the desktop advisor receipts view or on forgetting a blocked advisor receipt, read [planning/phase-28-advisor-receipts-view-tasks.md](./planning/phase-28-advisor-receipts-view-tasks.md).
+19. Follow the task status rules in the relevant planning file before starting and after finishing work.
 
 After non-trivial work that creates reusable knowledge, update the relevant wiki topic/source pages and append to [docs/wiki/log.md](./docs/wiki/log.md). The wiki is a synthesis layer; verify current behavior against code and tests and keep accepted product decisions in `AGENTS.md` and the relevant planning file.
 

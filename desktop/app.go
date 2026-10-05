@@ -201,6 +201,26 @@ func (a *App) RemoveSourceSkills(sourceID string, skillNames []string, includeRe
 	return a.service.RemoveSourceSkills(sourceID, skillNames, includeReadOnly)
 }
 
+// ListAdvisorReceipts returns recorded advisor receipts with cleanup previews.
+func (a *App) ListAdvisorReceipts() ([]gui.AdvisorReceipt, error) {
+	return a.service.ListAdvisorReceipts()
+}
+
+// CleanupAdvisorReceipt releases one advisor receipt.
+func (a *App) CleanupAdvisorReceipt(receiptID string, includeReadOnly bool) gui.AdvisorReceiptResult {
+	return a.service.CleanupAdvisorReceipt(receiptID, includeReadOnly)
+}
+
+// CleanupAllAdvisorReceipts releases every advisor receipt that is not blocked.
+func (a *App) CleanupAllAdvisorReceipts(includeReadOnly bool) gui.AdvisorReceiptResult {
+	return a.service.CleanupAllAdvisorReceipts(includeReadOnly)
+}
+
+// ForgetAdvisorReceipt drops a blocked advisor receipt without changing links.
+func (a *App) ForgetAdvisorReceipt(receiptID string, includeReadOnly bool) gui.AdvisorReceiptResult {
+	return a.service.ForgetAdvisorReceipt(receiptID, includeReadOnly)
+}
+
 // GetAdvisorSettings returns the secret-free recommendation provider view.
 func (a *App) GetAdvisorSettings() (gui.AdvisorSettingsView, error) {
 	return a.service.GetAdvisorSettings()
