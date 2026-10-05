@@ -25,7 +25,11 @@
   - A short form of the receipt ID.
 - The section gets the actions from a cleanup dry-run of each receipt. When
   the dry-run stops on drift or on a conflict, the receipt is **blocked**. A
-  blocked receipt shows the cause and no cleanup action.
+  conflict includes an unrecorded entry at the disabled destination of a skill
+  that cleanup must turn off. A blocked receipt shows the cause and no cleanup
+  action. A dry-run that stops on another error, for example a scan failure,
+  also shows the receipt as blocked, with a fixed message. Forget of that
+  receipt stops with an error until the cause is fixed.
 - Actions:
   - **Clean up** releases one receipt. This is the same operation as
     `skill-manager advisor cleanup --receipt <id>`.
@@ -45,7 +49,10 @@
   not apply stop them, as for the source operations. After each action, the snapshot is
   loaded again.
 - No filesystem path crosses the desktop bridge. A blocked cause names the
-  tool and the skill only.
+  tool and the skill only. Other receipt failures, such as scan or filesystem
+  errors, show a fixed message that points to the CLI dry-run for details.
+- The confirmation keeps keyboard focus inside the dialog (Tab and Shift+Tab)
+  and returns focus to the control that opened it.
 - CLI: `skill-manager advisor forget --receipt <id> [--dry-run] [--json]`. The
   command stops with an error when the cleanup of the receipt is possible. For
   that receipt, use `advisor cleanup`.
@@ -98,6 +105,8 @@ GUI service and desktop `App`:
   - Forget of a blocked receipt keeps the skill links and `state.json`.
   - Forget of a shared lease removes only the claim of that receipt.
   - Forget of a receipt that cleanup can release stops with an error.
+  - Forget of a receipt blocked by an unrecorded entry at the disabled
+    destination keeps both entries.
 
 ### P28-T02: CLI
 

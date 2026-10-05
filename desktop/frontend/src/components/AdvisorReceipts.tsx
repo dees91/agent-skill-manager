@@ -121,12 +121,31 @@ export default function AdvisorReceipts({ backend, includeReadOnly, pendingCount
 
 function ReceiptDialog({ title, confirmLabel, danger, busy, error, onClose, onConfirm, children }: { title: string; confirmLabel: string; danger: boolean; busy: boolean; error: string | null; onClose: () => void; onConfirm: () => void; children: React.ReactNode }) {
   const ref = useRef<HTMLElement>(null)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  // Contain focus like the source dialogs, and return it to the trigger on close.
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus()
-    const handler = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    const modal = ref.current
+    if (!modal) return
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { closeRef.current(); return }
+      if (event.key !== 'Tab') return
+      const focusable = [...modal.querySelectorAll<HTMLElement>('button:not(:disabled)')]
+      if (focusable.length === 0) { event.preventDefault(); modal.focus(); return }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (!modal.contains(document.activeElement) || document.activeElement === modal) { event.preventDefault(); (event.shiftKey ? last : first).focus() }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+    ;(modal.querySelector<HTMLElement>('button:not(:disabled)') ?? modal).focus()
+    return () => {
+      window.removeEventListener('keydown', handler)
+      if (trigger?.isConnected) trigger.focus()
+    }
+  }, [])
   return <div className="modal-backdrop" role="presentation"><section ref={ref} tabIndex={-1} className="source-modal" role="dialog" aria-modal="true" aria-labelledby="receipt-modal-title">
     <header><h2 id="receipt-modal-title">{title}</h2><button className="icon-button subtle" aria-label="Close dialog" disabled={busy} onClick={onClose}><X size={15} /></button></header>
     <div className="source-modal-body">

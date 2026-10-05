@@ -1327,7 +1327,10 @@ remedy for a receipt whose cleanup stops on drift.
   shows its tool, its activation time, and each skill with the action of a
   cleanup dry-run: `disable`, `release`, or `already off`. A receipt whose
   dry-run stops on drift or on a conflict is **blocked** and shows a path-free
-  cause.
+  cause. An unrecorded entry at the disabled destination of a skill that
+  cleanup must turn off is a conflict. Other dry-run failures, such as a scan
+  error, show a fixed path-free message; no raw filesystem error crosses the
+  desktop bridge.
 - **Clean up** runs `advisor cleanup` on one receipt. **Clean up all**
   cleans each receipt that is not blocked, in list order, and stops at the
   first failure.

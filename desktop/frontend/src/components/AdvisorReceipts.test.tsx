@@ -70,6 +70,26 @@ describe('AdvisorReceipts', () => {
     await waitFor(() => expect(backend.forgetAdvisorReceipt).toHaveBeenCalledWith(BLOCKED, false))
   })
 
+  it('keeps keyboard focus inside the confirmation and returns it to the trigger', async () => {
+    const user = userEvent.setup()
+    setup()
+    const trigger = await screen.findByRole('button', { name: 'Clean up all' })
+    await user.click(trigger)
+    const dialog = screen.getByRole('dialog')
+    const close = within(dialog).getByRole('button', { name: 'Close dialog' })
+    const confirm = within(dialog).getByRole('button', { name: 'Clean up 1 receipt' })
+
+    confirm.focus()
+    await user.tab()
+    expect(close).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(confirm).toHaveFocus()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
   it('blocks receipt actions while skill changes are pending', async () => {
     setup(2)
     expect(await screen.findByText(/Apply or clear pending skill changes/)).toBeInTheDocument()

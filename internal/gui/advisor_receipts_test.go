@@ -60,6 +60,32 @@ func TestAdvisorReceiptsCleanUpAllSkipsBlockedAndForgetDropsIt(t *testing.T) {
 	}
 }
 
+// A scan failure under a skills root outside the home directory must not put
+// that path in the receipt cause or the cleanup failure.
+func TestAdvisorReceiptsKeepScanFailurePathsOffTheBridge(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	disabledAdvisorSkills(t, p, "alpha")
+	receiptID := activateAdvisorSkill(t, p, "alpha")
+	outside := t.TempDir()
+	p.MuseUserSkills = filepath.Join(outside, "skills")
+	if err := os.WriteFile(p.MuseUserSkills, []byte("not a directory"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	service := New(p)
+
+	receipts, err := service.ListAdvisorReceipts()
+	if err != nil || len(receipts) != 1 || !receipts[0].Blocked {
+		t.Fatalf("ListAdvisorReceipts() = %#v, %v; want one blocked receipt", receipts, err)
+	}
+	if strings.Contains(receipts[0].Cause, outside) || strings.Contains(receipts[0].Cause, p.Home) {
+		t.Fatalf("cause = %q, want no filesystem path", receipts[0].Cause)
+	}
+	result := service.CleanupAdvisorReceipt(receiptID, false)
+	if result.Failure == nil || strings.Contains(result.Failure.Message, outside) || strings.Contains(result.Failure.Message, p.Home) {
+		t.Fatalf("CleanupAdvisorReceipt() failure = %#v, want a path-free failure", result.Failure)
+	}
+}
+
 func disabledAdvisorSkills(t *testing.T, p paths.Paths, names ...string) {
 	t.Helper()
 	manifest := state.Manifest{}

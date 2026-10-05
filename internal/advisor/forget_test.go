@@ -106,6 +106,28 @@ func TestForgetSharedLeaseRemovesOnlyThatClaim(t *testing.T) {
 	}
 }
 
+func TestForgetReceiptBlockedByOccupiedDisabledDestination(t *testing.T) {
+	p := paths.ForHome(t.TempDir())
+	disableFixture(t, p, model.ToolCodex, "alpha", model.EntryTypeDir, "")
+	service := fixedService(p, receiptA)
+	if _, err := service.Activate(model.ToolCodex, []string{"alpha"}, false); err != nil {
+		t.Fatalf("Activate() error = %v", err)
+	}
+	disabledPath := filepath.Join(p.CodexDisabledDir, "alpha")
+	makeSkill(t, disabledPath)
+
+	_, err := service.Cleanup(receiptA, true)
+	var blocked CleanupBlockedError
+	if !errors.As(err, &blocked) || blocked.Reason != BlockedConflict || blocked.Skill != "alpha" {
+		t.Fatalf("Cleanup() error = %v, want a conflict block", err)
+	}
+	if _, err := service.Forget(receiptA, false); err != nil {
+		t.Fatalf("Forget() error = %v", err)
+	}
+	assertExists(t, filepath.Join(p.CodexUserSkills, "alpha", "SKILL.md"))
+	assertExists(t, filepath.Join(disabledPath, "SKILL.md"))
+}
+
 func TestForgetRefusesReceiptThatCleanupCanRelease(t *testing.T) {
 	p := paths.ForHome(t.TempDir())
 	disableFixture(t, p, model.ToolCodex, "ffmpeg", model.EntryTypeDir, "")
@@ -116,7 +138,7 @@ func TestForgetRefusesReceiptThatCleanupCanRelease(t *testing.T) {
 
 	_, err := service.Forget(receiptA, false)
 
-	if err == nil || !strings.Contains(err.Error(), "advisor cleanup") {
+	if !errors.Is(err, ErrReceiptNotBlocked) || !strings.Contains(err.Error(), "advisor cleanup") {
 		t.Fatalf("Forget() error = %v, want a pointer to advisor cleanup", err)
 	}
 	if status, _ := service.Status(nil); len(status.Receipts) != 1 {

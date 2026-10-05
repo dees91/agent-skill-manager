@@ -3,7 +3,6 @@ package gui
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/dees91/agent-skill-manager/internal/advisor"
@@ -16,7 +15,7 @@ func (s *Service) ListAdvisorReceipts() ([]AdvisorReceipt, error) {
 	service := advisor.New(s.paths)
 	status, err := service.Status(nil)
 	if err != nil {
-		return nil, errors.New(s.redactHome(err.Error()))
+		return nil, errors.New("Skill Manager could not read the advisor receipts.")
 	}
 	receipts := make([]AdvisorReceipt, 0, len(status.Receipts))
 	for _, current := range status.Receipts {
@@ -24,7 +23,7 @@ func (s *Service) ListAdvisorReceipts() ([]AdvisorReceipt, error) {
 		preview, previewErr := service.Cleanup(current.ReceiptID, true)
 		if previewErr != nil {
 			receipt.Blocked = true
-			receipt.Cause = s.advisorCause(previewErr)
+			receipt.Cause = advisorCause(previewErr)
 			for _, name := range current.Skills {
 				receipt.Skills = append(receipt.Skills, AdvisorReceiptSkill{Name: name})
 			}
@@ -42,7 +41,7 @@ func (s *Service) ListAdvisorReceipts() ([]AdvisorReceipt, error) {
 func (s *Service) CleanupAdvisorReceipt(receiptID string, includeReadOnly bool) AdvisorReceiptResult {
 	return s.runAdvisorReceiptOperation(includeReadOnly, func(result *AdvisorReceiptResult) error {
 		if _, err := advisor.New(s.paths).Cleanup(receiptID, false); err != nil {
-			result.Failure = &AdvisorReceiptFailure{ReceiptID: receiptID, Message: s.advisorCause(err)}
+			result.Failure = &AdvisorReceiptFailure{ReceiptID: receiptID, Message: advisorCause(err)}
 			return err
 		}
 		result.Cleaned = append(result.Cleaned, receiptID)
@@ -67,7 +66,7 @@ func (s *Service) CleanupAllAdvisorReceipts(includeReadOnly bool) AdvisorReceipt
 				continue
 			}
 			if _, err := service.Cleanup(receipt.ReceiptID, false); err != nil {
-				result.Failure = &AdvisorReceiptFailure{ReceiptID: receipt.ReceiptID, Message: s.advisorCause(err)}
+				result.Failure = &AdvisorReceiptFailure{ReceiptID: receipt.ReceiptID, Message: advisorCause(err)}
 				return err
 			}
 			result.Cleaned = append(result.Cleaned, receipt.ReceiptID)
@@ -81,7 +80,7 @@ func (s *Service) CleanupAllAdvisorReceipts(includeReadOnly bool) AdvisorReceipt
 func (s *Service) ForgetAdvisorReceipt(receiptID string, includeReadOnly bool) AdvisorReceiptResult {
 	return s.runAdvisorReceiptOperation(includeReadOnly, func(result *AdvisorReceiptResult) error {
 		if _, err := advisor.New(s.paths).Forget(receiptID, false); err != nil {
-			result.Failure = &AdvisorReceiptFailure{ReceiptID: receiptID, Message: s.redactHome(err.Error())}
+			result.Failure = &AdvisorReceiptFailure{ReceiptID: receiptID, Message: advisorCause(err)}
 			return err
 		}
 		result.Forgotten = append(result.Forgotten, receiptID)
@@ -96,7 +95,8 @@ func (s *Service) runAdvisorReceiptOperation(includeReadOnly bool, action func(*
 	result := AdvisorReceiptResult{Cleaned: []string{}, Forgotten: []string{}, Receipts: []AdvisorReceipt{}}
 	err := s.runSourceOperation("advisor", "", func() error { return action(&result) })
 	if err != nil && result.Failure == nil {
-		result.Failure = &AdvisorReceiptFailure{Message: s.redactHome(err.Error())}
+		// Only lane and list errors reach here; both are fixed, path-free text.
+		result.Failure = &AdvisorReceiptFailure{Message: err.Error()}
 	}
 	if result.Failure != nil && result.Message == "" {
 		result.Message = "The receipt operation failed."
@@ -106,7 +106,7 @@ func (s *Service) runAdvisorReceiptOperation(includeReadOnly bool, action func(*
 	result.Snapshot = s.snapshotLocked()
 	s.mu.Unlock()
 	if reloadErr != nil && result.Failure == nil {
-		result.Failure = &AdvisorReceiptFailure{Message: s.redactHome(reloadErr.Error())}
+		result.Failure = &AdvisorReceiptFailure{Message: "Skill Manager could not rescan the skills."}
 		result.Message = "The operation finished, but the follow-up scan failed."
 	}
 	if receipts, listErr := s.ListAdvisorReceipts(); listErr == nil {
@@ -115,19 +115,21 @@ func (s *Service) runAdvisorReceiptOperation(includeReadOnly bool, action func(*
 	return result
 }
 
-// advisorCause explains a failed cleanup without filesystem paths.
-func (s *Service) advisorCause(err error) string {
+// advisorCause explains a failed receipt operation without filesystem paths.
+// Only classified advisor errors keep their detail; raw filesystem and
+// scan errors map to a fixed message, since they can name any directory.
+func advisorCause(err error) string {
 	var blocked advisor.CleanupBlockedError
-	if errors.As(err, &blocked) {
+	switch {
+	case errors.As(err, &blocked):
 		return blocked.Cause()
+	case errors.Is(err, advisor.ErrReceiptNotFound):
+		return "The receipt is no longer recorded."
+	case errors.Is(err, advisor.ErrReceiptNotBlocked):
+		return "The receipt is not blocked; clean it up instead."
+	default:
+		return unclassifiedAdvisorFailure
 	}
-	return s.redactHome(err.Error())
 }
 
-// redactHome replaces the home directory so no absolute path crosses the bridge.
-func (s *Service) redactHome(message string) string {
-	if s.paths.Home == "" {
-		return message
-	}
-	return strings.ReplaceAll(message, s.paths.Home, "~")
-}
+const unclassifiedAdvisorFailure = "Skill Manager could not read or change the skills of this receipt. Run skill-manager advisor cleanup --receipt <receipt-id> --dry-run in a terminal for details."

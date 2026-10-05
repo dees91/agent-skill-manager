@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -223,9 +224,9 @@ func (s *Service) Cleanup(receiptID string, dryRun bool) (result CleanupResult, 
 	}
 	receiptIndex := contents.receiptIndex(receiptID)
 	if receiptIndex < 0 {
-		return result, fmt.Errorf("advisor receipt %s not found", receiptID)
+		return result, receiptError{ErrReceiptNotFound, fmt.Sprintf("advisor receipt %s not found", receiptID)}
 	}
-	currentReceipt := contents.Receipts[receiptIndex]
+	currentReceipt :=contents.Receipts[receiptIndex]
 	result.Tool = currentReceipt.Tool
 	plans, operations, err := s.planCleanup(contents, currentReceipt)
 	if err != nil {
@@ -304,6 +305,13 @@ func (s *Service) planCleanup(contents file, currentReceipt receipt) ([]Action, 
 			if !activeCellMatchesLease(cell, currentLease) {
 				return nil, nil, blockedError(BlockedDrift, currentReceipt.Tool, skillName, fmt.Sprintf("advisor lease drift for %s/%s", currentReceipt.Tool, skillName))
 			}
+			// An unrecorded entry at the disabled destination blocks the
+			// move; report it as a conflict so the receipt can be forgotten.
+			if _, statErr := os.Lstat(currentLease.DisabledPath); statErr == nil {
+				return nil, nil, blockedError(BlockedConflict, currentReceipt.Tool, skillName, fmt.Sprintf("advisor cleanup conflict for %s/%s: disabled destination already exists", currentReceipt.Tool, skillName))
+			} else if !errors.Is(statErr, os.ErrNotExist) {
+				return nil, nil, statErr
+			}
 			actions = append(actions, Action{Skill: skillName, Action: ActionDisable})
 			requests = append(requests, ops.PlanRequest{Kind: model.OperationDisable, Tool: currentReceipt.Tool, SkillName: skillName})
 			lastClaimSkills = append(lastClaimSkills, skillName)
@@ -356,15 +364,15 @@ func (s *Service) Forget(receiptID string, dryRun bool) (result ForgetResult, er
 	}
 	receiptIndex := contents.receiptIndex(receiptID)
 	if receiptIndex < 0 {
-		return result, fmt.Errorf("advisor receipt %s not found", receiptID)
+		return result, receiptError{ErrReceiptNotFound, fmt.Sprintf("advisor receipt %s not found", receiptID)}
 	}
-	current := contents.Receipts[receiptIndex]
+	current :=contents.Receipts[receiptIndex]
 	result.Tool = current.Tool
 	result.Skills = append(result.Skills, current.Skills...)
 	_, _, planErr := s.planCleanup(contents, current)
 	var blocked CleanupBlockedError
 	if planErr == nil {
-		return result, fmt.Errorf("advisor receipt %s is not blocked; release it with advisor cleanup", receiptID)
+		return result, receiptError{ErrReceiptNotBlocked, fmt.Sprintf("advisor receipt %s is not blocked; release it with advisor cleanup", receiptID)}
 	}
 	if !errors.As(planErr, &blocked) {
 		return result, planErr

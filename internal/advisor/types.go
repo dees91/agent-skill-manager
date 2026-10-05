@@ -2,6 +2,7 @@
 package advisor
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -64,6 +65,23 @@ const (
 	BlockedConflict = "conflict"
 	BlockedMissing  = "missing"
 )
+
+var (
+	// ErrReceiptNotFound reports a receipt ID that is not recorded.
+	ErrReceiptNotFound = errors.New("advisor receipt not found")
+	// ErrReceiptNotBlocked reports a forget request for a receipt that cleanup
+	// can release.
+	ErrReceiptNotBlocked = errors.New("advisor receipt is not blocked")
+)
+
+// receiptError keeps the historical message and matches its sentinel.
+type receiptError struct {
+	kind    error
+	message string
+}
+
+func (e receiptError) Error() string { return e.message }
+func (e receiptError) Unwrap() error { return e.kind }
 
 // CleanupBlockedError reports a receipt whose cleanup would touch an entry
 // that no longer matches its lease. Error keeps the historical message; Cause
