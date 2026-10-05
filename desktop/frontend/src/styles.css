@@ -277,6 +277,11 @@ kbd { padding: 2px 4px; border-radius: 4px; border: 1px solid #3b3b3f; backgroun
 .advisor-status { color: var(--text-soft); font-size: 11px; }
 .advisor-key-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .advisor-key-note .advisor-status { margin: 0; }
+.receipts-heading { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }.receipts-heading .dialog-description { margin: 4px 0 0; }.receipts-heading .secondary-button { flex: 0 0 auto; display: inline-flex; gap: 6px; align-items: center; }
+.receipt-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }.receipt-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 6px 16px; align-items: start; padding: 10px 0; border-top: 1px solid var(--border-soft); }.receipt-row:first-child { border-top: 0; }
+.receipt-meta { display: flex; flex-direction: column; gap: 3px; }.receipt-meta strong { font-size: 11px; color: var(--text); }.receipt-meta time { font-size: 10px; color: var(--text-soft); }.receipt-meta code { font-size: 9px; color: var(--muted); }
+.receipt-skills { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; }.receipt-skills li { display: flex; gap: 6px; align-items: baseline; font-size: 11px; color: var(--text); }.receipt-skills small { font-size: 9px; color: var(--muted); }
+.receipt-cause { grid-column: 2; display: flex; gap: 6px; align-items: center; margin: 0; color: var(--orange); font-size: 10px; }.receipt-actions { grid-column: 3; grid-row: 1; }
 .advisor-error { color: var(--red); font-size: 11px; }
 
 @media (max-width: 1120px) {

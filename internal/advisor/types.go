@@ -2,6 +2,7 @@
 package advisor
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -46,6 +47,68 @@ type CleanupResult struct {
 	ReceiptID  string     `json:"receiptId"`
 	Tool       model.Tool `json:"tool"`
 	Actions    []Action   `json:"actions"`
+}
+
+// ForgetResult is returned by advisor forget.
+type ForgetResult struct {
+	APIVersion int        `json:"apiVersion"`
+	DryRun     bool       `json:"dryRun"`
+	ReceiptID  string     `json:"receiptId"`
+	Tool       model.Tool `json:"tool"`
+	Skills     []string   `json:"skills"`
+	Cause      string     `json:"cause,omitempty"`
+}
+
+// Reasons a receipt cleanup is blocked.
+const (
+	BlockedDrift    = "drift"
+	BlockedConflict = "conflict"
+	BlockedMissing  = "missing"
+)
+
+var (
+	// ErrReceiptNotFound reports a receipt ID that is not recorded.
+	ErrReceiptNotFound = errors.New("advisor receipt not found")
+	// ErrReceiptNotBlocked reports a forget request for a receipt that cleanup
+	// can release.
+	ErrReceiptNotBlocked = errors.New("advisor receipt is not blocked")
+)
+
+// receiptError keeps the historical message and matches its sentinel.
+type receiptError struct {
+	kind    error
+	message string
+}
+
+func (e receiptError) Error() string { return e.message }
+func (e receiptError) Unwrap() error { return e.kind }
+
+// CleanupBlockedError reports a receipt whose cleanup would touch an entry
+// that no longer matches its lease. Error keeps the historical message; Cause
+// is a path-free explanation for interfaces.
+type CleanupBlockedError struct {
+	Tool    model.Tool
+	Skill   string
+	Reason  string
+	message string
+}
+
+func blockedError(reason string, tool model.Tool, skill, message string) CleanupBlockedError {
+	return CleanupBlockedError{Tool: tool, Skill: skill, Reason: reason, message: message}
+}
+
+func (e CleanupBlockedError) Error() string { return e.message }
+
+// Cause explains the block by tool and skill name only.
+func (e CleanupBlockedError) Cause() string {
+	switch e.Reason {
+	case BlockedMissing:
+		return fmt.Sprintf("%s/%s is no longer installed where the advisor enabled it.", e.Tool, e.Skill)
+	case BlockedConflict:
+		return fmt.Sprintf("%s/%s has both an active and a disabled entry.", e.Tool, e.Skill)
+	default:
+		return fmt.Sprintf("%s/%s changed after the advisor enabled it.", e.Tool, e.Skill)
+	}
 }
 
 // ReceiptStatus is the public, path-free view of one outstanding receipt.
@@ -131,6 +194,22 @@ func (f *file) removeClaim(receiptID string, tool model.Tool, skillName string) 
 	}
 	f.normalizeOrder()
 	return nil
+}
+
+// forgetReceipt drops one receipt and its claims, and every lease left
+// without claims. It never touches the filesystem.
+func (f *file) forgetReceipt(receiptIndex int) {
+	id := f.Receipts[receiptIndex].ID
+	f.Receipts = append(f.Receipts[:receiptIndex], f.Receipts[receiptIndex+1:]...)
+	kept := f.Leases[:0]
+	for _, current := range f.Leases {
+		current.ReceiptIDs = removeString(current.ReceiptIDs, id)
+		if len(current.ReceiptIDs) > 0 {
+			kept = append(kept, current)
+		}
+	}
+	f.Leases = kept
+	f.normalizeOrder()
 }
 
 func (f *file) normalizeOrder() {

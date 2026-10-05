@@ -10,6 +10,10 @@ export function CheckAdvisorConnection():Promise<gui.AdvisorConnectionCheck>;
 
 export function ChooseLocalInstall():Promise<gui.InstallDraft>;
 
+export function CleanupAdvisorReceipt(arg1:string,arg2:boolean):Promise<gui.AdvisorReceiptResult>;
+
+export function CleanupAllAdvisorReceipts(arg1:boolean):Promise<gui.AdvisorReceiptResult>;
+
 export function ClearPending():Promise<gui.ActionResult>;
 
 export function CreateSkillSet(arg1:string,arg2:string,arg3:Array<string>):Promise<gui.SkillSetMutationResult>;
@@ -18,11 +22,15 @@ export function DeleteSkillSet(arg1:string):Promise<gui.SkillSetMutationResult>;
 
 export function ExtendSources(arg1:string,arg2:boolean):Promise<gui.SourceMutationResult>;
 
+export function ForgetAdvisorReceipt(arg1:string,arg2:boolean):Promise<gui.AdvisorReceiptResult>;
+
 export function GetAdvisorSettings():Promise<gui.AdvisorSettingsView>;
 
 export function GetSnapshot(arg1:boolean):Promise<gui.Snapshot>;
 
 export function InspectSources():Promise<Array<gui.SourceHealth>>;
+
+export function ListAdvisorReceipts():Promise<Array<gui.AdvisorReceipt>>;
 
 export function MeasureContextBudgets():Promise<gui.Snapshot>;
 

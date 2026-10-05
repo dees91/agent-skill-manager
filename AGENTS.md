@@ -917,7 +917,8 @@ semantics.
   failure preserves and reports the receipt plus the exact recovery command.
 - Never automatically clean a receipt not returned by the current invocation
   or infer staleness from age. Do not add automatic expiry, hooks, plugins, or
-  a GUI cleanup surface in this iteration.
+  a GUI cleanup surface in this iteration. Iteration 28 adds the desktop
+  surface.
 
 ### Skill Favorites (Iteration 16)
 
@@ -1317,6 +1318,36 @@ the full source from the CLI and install it again.
   list for skills that you do not want reported, an option to continue the update of all
   repositories after a failure, and a TUI surface.
 
+### Advisor Receipts View (Iteration 28)
+
+Iteration 28 adds a desktop surface for recorded advisor receipts and a
+remedy for a receipt whose cleanup stops on drift.
+
+- The desktop **Advisor** view shows a **Receipts** section. Each receipt
+  shows its tool, its activation time, and each skill with the action of a
+  cleanup dry-run: `disable`, `release`, or `already off`. A receipt whose
+  dry-run stops on drift or on a conflict is **blocked** and shows a path-free
+  cause. An unrecorded entry at the disabled destination of a skill that
+  cleanup must turn off is a conflict. Other dry-run failures, such as a scan
+  error, show a fixed path-free message; no raw filesystem error crosses the
+  desktop bridge.
+- **Clean up** runs `advisor cleanup` on one receipt. **Clean up all**
+  cleans each receipt that is not blocked, in list order, and stops at the
+  first failure.
+- **Forget** is available only for a blocked receipt. It removes the receipt
+  and its lease claims, and removes a lease without claims. It does not change
+  a link, a disabled entry, or `state.json`. The CLI form is
+  `skill-manager advisor forget --receipt <id> [--dry-run] [--json]`. It stops
+  with an error when cleanup of the receipt is possible.
+- Each action has a confirmation that tells you that an open agent session
+  can still use these skills. Advisor actions use the exclusive source lane.
+  Skills toggles that you did not apply stop them.
+- A receipt is cleaned or forgotten only on a user action. Its age is not a
+  cause for an action. The first-party skill does not change and never uses
+  `forget`.
+- Non-goals: a CLI command that cleans all receipts, a receipt badge outside
+  the Advisor view, and an automatic expiry.
+
 ## Skill Context Budget Dashboard (Iteration 7)
 
 Iteration 7 adds read-only context-cost visibility to the existing Dashboard.
@@ -1488,6 +1519,8 @@ Keep [planning/phase-24-typesafe-advisor-tasks.md](./planning/phase-24-typesafe-
 Keep [planning/phase-26-cross-source-skill-alias-tasks.md](./planning/phase-26-cross-source-skill-alias-tasks.md) as the source of truth for Iteration 26 cross-source skill alias task status.
 
 Keep [planning/phase-27-source-skill-removal-tasks.md](./planning/phase-27-source-skill-removal-tasks.md) as the source of truth for Iteration 27 source skill removal task status.
+
+Keep [planning/phase-28-advisor-receipts-view-tasks.md](./planning/phase-28-advisor-receipts-view-tasks.md) as the source of truth for Iteration 28 advisor receipts view task status.
 
 Keep [docs/wiki/README.md](./docs/wiki/README.md) as the source of truth for wiki maintenance rules, [docs/wiki/index.md](./docs/wiki/index.md) as the wiki content map, and [docs/wiki/log.md](./docs/wiki/log.md) as the append-only maintenance history.
 

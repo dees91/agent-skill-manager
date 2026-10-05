@@ -14,7 +14,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

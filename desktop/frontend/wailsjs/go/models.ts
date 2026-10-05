@@ -376,61 +376,71 @@ export namespace gui {
 	        this.outputTokens = source["outputTokens"];
 	    }
 	}
-	export class AdvisorSettingsView {
-	    mode: string;
-	    settingsWarning?: string;
-	    environmentKey: boolean;
-	    storedKey: string;
-	    credentialStore: string;
-	    model: string;
+	export class AdvisorReceiptSkill {
+	    name: string;
+	    action?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new AdvisorSettingsView(source);
+	        return new AdvisorReceiptSkill(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.mode = source["mode"];
-	        this.settingsWarning = source["settingsWarning"];
-	        this.environmentKey = source["environmentKey"];
-	        this.storedKey = source["storedKey"];
-	        this.credentialStore = source["credentialStore"];
-	        this.model = source["model"];
+	        this.name = source["name"];
+	        this.action = source["action"];
 	    }
 	}
-	export class AppliedChange {
+	export class AdvisorReceipt {
+	    receiptId: string;
 	    tool: string;
-	    skillName: string;
-	    operation: string;
+	    createdAt: string;
+	    skills: AdvisorReceiptSkill[];
+	    blocked: boolean;
+	    cause?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new AppliedChange(source);
+	        return new AdvisorReceipt(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.receiptId = source["receiptId"];
 	        this.tool = source["tool"];
-	        this.skillName = source["skillName"];
-	        this.operation = source["operation"];
+	        this.createdAt = source["createdAt"];
+	        this.skills = this.convertValues(source["skills"], AdvisorReceiptSkill);
+	        this.blocked = source["blocked"];
+	        this.cause = source["cause"];
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
-	export class ApplyFailure {
-	    stage: string;
-	    tool?: string;
-	    skillName?: string;
-	    operation?: string;
+	export class AdvisorReceiptFailure {
+	    receiptId?: string;
 	    message: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new ApplyFailure(source);
+	        return new AdvisorReceiptFailure(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.stage = source["stage"];
-	        this.tool = source["tool"];
-	        this.skillName = source["skillName"];
-	        this.operation = source["operation"];
+	        this.receiptId = source["receiptId"];
 	        this.message = source["message"];
 	    }
 	}
@@ -775,6 +785,105 @@ export namespace gui {
 		    }
 		    return a;
 		}
+	}
+	export class AdvisorReceiptResult {
+	    message: string;
+	    cleaned: string[];
+	    forgotten: string[];
+	    failure?: AdvisorReceiptFailure;
+	    receipts: AdvisorReceipt[];
+	    snapshot: Snapshot;
+	
+	    static createFrom(source: any = {}) {
+	        return new AdvisorReceiptResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.message = source["message"];
+	        this.cleaned = source["cleaned"];
+	        this.forgotten = source["forgotten"];
+	        this.failure = this.convertValues(source["failure"], AdvisorReceiptFailure);
+	        this.receipts = this.convertValues(source["receipts"], AdvisorReceipt);
+	        this.snapshot = this.convertValues(source["snapshot"], Snapshot);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class AdvisorSettingsView {
+	    mode: string;
+	    settingsWarning?: string;
+	    environmentKey: boolean;
+	    storedKey: string;
+	    credentialStore: string;
+	    model: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AdvisorSettingsView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.settingsWarning = source["settingsWarning"];
+	        this.environmentKey = source["environmentKey"];
+	        this.storedKey = source["storedKey"];
+	        this.credentialStore = source["credentialStore"];
+	        this.model = source["model"];
+	    }
+	}
+	export class AppliedChange {
+	    tool: string;
+	    skillName: string;
+	    operation: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppliedChange(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.skillName = source["skillName"];
+	        this.operation = source["operation"];
+	    }
+	}
+	export class ApplyFailure {
+	    stage: string;
+	    tool?: string;
+	    skillName?: string;
+	    operation?: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ApplyFailure(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.stage = source["stage"];
+	        this.tool = source["tool"];
+	        this.skillName = source["skillName"];
+	        this.operation = source["operation"];
+	        this.message = source["message"];
+	    }
 	}
 	export class ApplyResult {
 	    completed: AppliedChange[];

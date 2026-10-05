@@ -478,6 +478,15 @@ normal final response, the agent cleans the exact receipt created by its own
 invocation instead of asking the user to paste a command. If cleanup fails, it
 preserves and reports the receipt and recovery command. It never infers that an
 unknown receipt is stale.
+
+A session that ends before its cleanup leaves its receipt recorded. The desktop
+**Advisor** view lists every receipt with its tool, activation time, and the
+action a cleanup takes on each skill. **Clean up** releases one receipt and
+**Clean up all** releases every receipt that is not blocked. A receipt whose
+skill changed after activation is blocked; **Forget** drops it without changing
+any skill, and you toggle the skills yourself in Skills if necessary. The CLI
+form is `skill-manager advisor forget --receipt <receipt-id> [--dry-run]
+[--json]`, which refuses a receipt that cleanup can release.
 If a provider cannot see a newly installed advisor, start a new provider
 session.
 

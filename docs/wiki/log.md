@@ -1094,3 +1094,13 @@ full Go and frontend suites.
   failed-update dialog.
 - Skill Set and favorite impact stays desktop-only, matching whole-source
   uninstall, because the CLI does not read those stores.
+
+## [2026-10-05] feature | Desktop advisor receipts view (Iteration 28)
+
+- A session that ends before its cleanup leaves an advisor receipt recorded,
+  and a receipt whose skill changed after activation could never be released.
+- Added a Receipts panel to the desktop Advisor view with Clean up, Clean up
+  all, and Forget, plus `advisor forget` in the CLI. Cleanup errors are now
+  typed (`CleanupBlockedError`) so interfaces show a path-free cause.
+- Forget is limited to blocked receipts so that a receipt cleanup can release
+  never leaves its skills ON without an owner.

@@ -18,6 +18,14 @@ export function ChooseLocalInstall() {
   return window['go']['main']['App']['ChooseLocalInstall']();
 }
 
+export function CleanupAdvisorReceipt(arg1, arg2) {
+  return window['go']['main']['App']['CleanupAdvisorReceipt'](arg1, arg2);
+}
+
+export function CleanupAllAdvisorReceipts(arg1) {
+  return window['go']['main']['App']['CleanupAllAdvisorReceipts'](arg1);
+}
+
 export function ClearPending() {
   return window['go']['main']['App']['ClearPending']();
 }
@@ -34,6 +42,10 @@ export function ExtendSources(arg1, arg2) {
   return window['go']['main']['App']['ExtendSources'](arg1, arg2);
 }
 
+export function ForgetAdvisorReceipt(arg1, arg2) {
+  return window['go']['main']['App']['ForgetAdvisorReceipt'](arg1, arg2);
+}
+
 export function GetAdvisorSettings() {
   return window['go']['main']['App']['GetAdvisorSettings']();
 }
@@ -44,6 +56,10 @@ export function GetSnapshot(arg1) {
 
 export function InspectSources() {
   return window['go']['main']['App']['InspectSources']();
+}
+
+export function ListAdvisorReceipts() {
+  return window['go']['main']['App']['ListAdvisorReceipts']();
 }
 
 export function MeasureContextBudgets() {

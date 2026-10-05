@@ -39,6 +39,10 @@ function installedAs(skill: SkillRow, displayName: string): SkillRow {
 
 class DemoBackend implements Backend {
   private rows = seedRows
+  private receipts = [
+    { receiptId: '3f2a9c1e5b7d4a608c1e2f3a4b5c6d7e', tool: 'claude', createdAt: new Date(Date.now() - 26 * 3_600_000).toISOString(), blocked: false, cause: '', skills: [{ name: 'release-checklist', action: 'disable' }, { name: 'dependency-review', action: 'release' }] },
+    { receiptId: '9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e', tool: 'codex', createdAt: new Date(Date.now() - 9 * 86_400_000).toISOString(), blocked: true, cause: 'codex/incident-summary changed after the advisor enabled it.', skills: [{ name: 'incident-summary', action: '' }] },
+  ]
   private pending: PendingChange[] = []
   private favorites = new Set(['dependency-review', 'media-compose'])
   private diagnosticsMeasured = false
@@ -253,6 +257,25 @@ class DemoBackend implements Backend {
   async uninstallSource(sourceID: string) {
     this.sources = this.sources.filter((source) => source.sourceId !== sourceID)
     return this.sourceResult('Uninstalled demo source.')
+  }
+  async listAdvisorReceipts() {
+    return this.receipts.map((receipt) => ({ ...receipt })) as never
+  }
+  async cleanupAdvisorReceipt(receiptID: string) {
+    this.receipts = this.receipts.filter((receipt) => receipt.receiptId !== receiptID)
+    return this.receiptResult('Cleaned up 1 receipt.', [receiptID], [])
+  }
+  async cleanupAllAdvisorReceipts() {
+    const cleaned = this.receipts.filter((receipt) => !receipt.blocked).map((receipt) => receipt.receiptId)
+    this.receipts = this.receipts.filter((receipt) => receipt.blocked)
+    return this.receiptResult(`Cleaned up ${cleaned.length} receipt(s); ${this.receipts.length} blocked receipt(s) left.`, cleaned, [])
+  }
+  async forgetAdvisorReceipt(receiptID: string) {
+    this.receipts = this.receipts.filter((receipt) => receipt.receiptId !== receiptID)
+    return this.receiptResult('Forgot 1 receipt. Skill links were not changed.', [], [receiptID])
+  }
+  private async receiptResult(message: string, cleaned: string[], forgotten: string[]) {
+    return { message, cleaned, forgotten, receipts: await this.listAdvisorReceipts(), snapshot: await this.snapshot(false) } as never
   }
   async previewRemoveSkills(sourceID: string) {
     const source = this.sources.find((item) => item.sourceId === sourceID)!

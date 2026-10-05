@@ -13,6 +13,10 @@ import {
   MeasureContextBudgets,
   PrepareGitInstall,
   PreviewExtend,
+  ListAdvisorReceipts,
+  CleanupAdvisorReceipt,
+  CleanupAllAdvisorReceipts,
+  ForgetAdvisorReceipt,
   PreviewRemoveSkills,
   PreviewRepair,
   PreviewSkillSetToggle,
@@ -58,6 +62,8 @@ export type InstallCellRequest = gui.InstallCellRequest
 export type SourceMutationResult = gui.SourceMutationResult
 export type UninstallPreview = gui.UninstallPreview
 export type RemoveSkillsPreview = gui.RemoveSkillsPreview
+export type AdvisorReceipt = gui.AdvisorReceipt
+export type AdvisorReceiptResult = gui.AdvisorReceiptResult
 export type ExtendPreview = gui.ExtendPreview
 export type ExtendPreviewSource = gui.ExtendPreviewSource
 export type SourceHealth = gui.SourceHealth
@@ -118,6 +124,10 @@ export interface Backend {
   previewExtend(tool: string): Promise<ExtendPreview>
   extendSources(tool: string, includeReadOnly: boolean): Promise<SourceMutationResult>
   inspectSources(): Promise<SourceHealth[]>
+  listAdvisorReceipts(): Promise<AdvisorReceipt[]>
+  cleanupAdvisorReceipt(receiptID: string, includeReadOnly: boolean): Promise<AdvisorReceiptResult>
+  cleanupAllAdvisorReceipts(includeReadOnly: boolean): Promise<AdvisorReceiptResult>
+  forgetAdvisorReceipt(receiptID: string, includeReadOnly: boolean): Promise<AdvisorReceiptResult>
   previewRemoveSkills(sourceID: string): Promise<RemoveSkillsPreview>
   removeSourceSkills(sourceID: string, skillNames: string[], includeReadOnly: boolean): Promise<SourceMutationResult>
   previewRepair(sourceID: string): Promise<RepairPreview>
@@ -158,6 +168,10 @@ const generatedBackend: Backend = {
   previewExtend: PreviewExtend,
   extendSources: ExtendSources,
   inspectSources: InspectSources,
+  listAdvisorReceipts: ListAdvisorReceipts,
+  cleanupAdvisorReceipt: CleanupAdvisorReceipt,
+  cleanupAllAdvisorReceipts: CleanupAllAdvisorReceipts,
+  forgetAdvisorReceipt: ForgetAdvisorReceipt,
   previewRemoveSkills: PreviewRemoveSkills,
   removeSourceSkills: RemoveSourceSkills,
   previewRepair: PreviewRepair,
@@ -205,6 +219,10 @@ export const wailsBackend: Backend = {
   previewExtend: async (...args) => (await activeBackend()).previewExtend(...args),
   extendSources: async (...args) => (await activeBackend()).extendSources(...args),
   inspectSources: async (...args) => (await activeBackend()).inspectSources(...args),
+  listAdvisorReceipts: async () => (await activeBackend()).listAdvisorReceipts(),
+  cleanupAdvisorReceipt: async (...args) => (await activeBackend()).cleanupAdvisorReceipt(...args),
+  cleanupAllAdvisorReceipts: async (...args) => (await activeBackend()).cleanupAllAdvisorReceipts(...args),
+  forgetAdvisorReceipt: async (...args) => (await activeBackend()).forgetAdvisorReceipt(...args),
   previewRemoveSkills: async (...args) => (await activeBackend()).previewRemoveSkills(...args),
   removeSourceSkills: async (...args) => (await activeBackend()).removeSourceSkills(...args),
   previewRepair: async (...args) => (await activeBackend()).previewRepair(...args),

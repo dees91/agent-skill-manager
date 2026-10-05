@@ -120,6 +120,14 @@ in public documentation.
   environment key is summarized in one status line beneath the cards with a
   Remove key action, without the input. Saving a key keeps an unsaved TypeSafe
   selection; saving the provider or removing the key follows the saved mode.
+- **Advisor receipts:** a Receipts panel below the provider settings. Each row
+  shows the tool, a relative activation time with the local date and time as a
+  tooltip, a short receipt ID, and each skill with its cleanup action (`turns
+  off`, `stays on, shared`, `already off`). A blocked row shows its cause in
+  orange and offers Forget instead of Clean up. Clean up all sits in the panel
+  header, counts only receipts that are not blocked, and is disabled while
+  Skills changes are pending. Every action opens a confirmation that warns that
+  an open agent session can still use the skills.
   The screen never displays the stored secret.
 - **Native About:** the standard macOS application menu exposes the app icon,
   product name, current build version, and short description without repeating

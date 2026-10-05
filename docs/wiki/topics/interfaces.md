@@ -52,13 +52,17 @@
   line.
 - `advisor cleanup --receipt <id> [--dry-run] [--json]` releases one exact
   receipt and restores cells whose final lease claim is removed.
+- `advisor forget --receipt <id> [--dry-run] [--json]` (Iteration 28) drops a
+  receipt whose cleanup is blocked by drift or a conflict, without changing any
+  skill link, and fails with `FORGET_FAILED` when cleanup can release it.
 - `advisor status [--tool claude|codex|muse|grok] [--json]` lists outstanding receipts
   without exposing filesystem paths. JSON status advertises
   `ranked_search_v1` and `semantic_recommendation_v1` under API version 1.
 
 The first-party skill invokes exact-receipt cleanup itself before each normal
 final response. The CLI remains receipt-specific; it does not infer stale
-receipts or expose bulk/expiry cleanup.
+receipts or expose bulk/expiry cleanup. Bulk cleanup exists only as the desktop
+Clean up all action, which a user starts.
 
 There is no CLI uninstall-all, force mode, separate `repo remove`, local-source
 listing command, or TUI source-management screen. `repos` intentionally lists

@@ -11,12 +11,13 @@ import {
   Sparkles,
 } from 'lucide-react'
 import AdvisorSettings from './components/AdvisorSettings'
+import AdvisorReceipts from './components/AdvisorReceipts'
 import Dashboard from './components/Dashboard'
 import PendingBar from './components/PendingBar'
 import SkillsView from './components/SkillsView'
 import SkillSetsView, { type SkillSetEditorRequest } from './components/SkillSetsView'
 import SourcesView from './components/SourcesView'
-import type { ActionResult, Backend, FavoriteMutationResult, SkillRow, SkillSetMutationResult, Snapshot, SourceMutationResult, SourceProgress } from './api'
+import type { ActionResult, AdvisorReceiptResult, Backend, FavoriteMutationResult, SkillRow, SkillSetMutationResult, Snapshot, SourceMutationResult, SourceProgress } from './api'
 import { MANAGED_TOOLS, favoriteEligible, joinList, projectPending, toolDisplayName, wailsBackend } from './api'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 
@@ -167,6 +168,11 @@ export default function App({ backend = wailsBackend }: AppProps) {
     announce(result.failure ? `${result.message} ${result.failure.message}` : result.message)
   }, [announce])
 
+  const acceptReceiptResult = useCallback((result: AdvisorReceiptResult) => {
+    setSnapshot(result.snapshot)
+    announce(result.failure ? `${result.message} ${result.failure.message}` : result.message)
+  }, [announce])
+
   const focusSearch = useCallback(() => {
     setView('skills')
     window.setTimeout(() => document.getElementById('skill-search')?.focus(), 0)
@@ -307,7 +313,9 @@ export default function App({ backend = wailsBackend }: AppProps) {
             />
           )}
           {snapshot && view === 'advisor' && (
-            <AdvisorSettings backend={backend} />
+            <AdvisorSettings backend={backend}>
+              <AdvisorReceipts backend={backend} includeReadOnly={includeReadOnly} pendingCount={snapshot.pending.length} busy={busy} onBusy={setBusy} onResult={acceptReceiptResult} />
+            </AdvisorSettings>
           )}
           {snapshot && view === 'sources' && (
             <SourcesView

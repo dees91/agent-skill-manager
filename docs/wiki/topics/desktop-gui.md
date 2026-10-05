@@ -34,6 +34,11 @@
 - `implemented`: Iteration 24 adds an Advisor settings screen for Local versus
   TypeSafe recommendation consent and a masked, non-retained API key. Ordinary
   snapshot refresh does not read the secret or call TypeSafe.
+- `implemented`: Iteration 28 adds a Receipts panel to the Advisor view
+  (`internal/gui/advisor_receipts.go`). `ListAdvisorReceipts` is read-only and
+  runs outside the source lane; Clean up, Clean up all, and Forget run in the
+  exclusive source lane, refuse pending Skills changes, and return fresh
+  receipts plus a fresh snapshot. Messages replace the home directory with `~`.
 
 ## Security And State Boundary
 

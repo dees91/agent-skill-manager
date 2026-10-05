@@ -69,6 +69,14 @@ selected tool + 1-5 ON/OFF skill names
   skill reports the recovery command. Receipts not returned to the current
   invocation remain explicit-only; there is no age-based expiry or inference
   that another receipt is stale.
+- Iteration 28 (`implemented`): planned cleanup errors are
+  `CleanupBlockedError` (reason `drift`, `conflict`, or `missing`, message
+  unchanged) with a path-free `Cause()`. `Service.Forget` drops only a blocked
+  receipt, its claims, and leases left without claims, and never touches
+  links, disabled entries, or `state.json`; it refuses a receipt that cleanup
+  can release. The desktop Advisor view lists receipts from a cleanup dry-run of
+  each and offers Clean up, Clean up all (skips blocked receipts, stops at the
+  first failure), and Forget. The first-party skill never forgets.
 
 ## Persistence And Concurrency
 
